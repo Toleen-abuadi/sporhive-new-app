@@ -1,0 +1,209 @@
+{
+  "common": {
+    "loading": "جاري التحميل...",
+    "comingSoon": "قريبًا",
+    "language": {
+      "switch": "English",
+      "current": "العربية",
+      "nextLabel": "English",
+      "switchTo": "التحويل إلى {{language}}"
+    },
+    "entryMode": {
+      "label": "وضع الدخول",
+      "player": "لاعب",
+      "public": "مستخدم عام"
+    },
+    "actions": {
+      "back": "رجوع",
+      "continue": "متابعة",
+      "goHome": "الانتقال للرئيسية",
+      "logout": "تسجيل الخروج"
+    },
+    "accessibility": {
+      "closeToast": "إغلاق الإشعار",
+      "languageSwitch": "تبديل اللغة"
+    }
+  },
+  "welcome": {
+    "logoLabel": "شعار سبورهايف",
+    "title": "بداية لعبتك مع سبورهايف",
+    "subtitle": "احجز الملاعب، اكتشف الأكاديميات، وابدأ رحلتك كلاعب داخل تطبيق واحد متكامل.",
+    "cta": "ابدأ رحلتك",
+    "hint": "يمكنك تغيير اللغة في أي وقت."
+  },
+  "entry": {
+    "tagline": "حجوزات رياضية ووصول اللاعبين",
+    "title": "كيف تود المتابعة؟",
+    "public": {
+      "title": "المتابعة كمستخدم عام",
+      "desc": "تصفح الملاعب واكتشف الأكاديميات قبل إنشاء حساب لاعب كامل.",
+      "chip": "استكشف أولًا"
+    },
+    "player": {
+      "title": "تسجيل الدخول كلاعب",
+      "desc": "ادخل إلى بوابة اللاعب والحجوزات وخدمات الأكاديمية عبر حسابك الآمن.",
+      "chip": "وصول اللاعبين"
+    },
+    "notSure": "غير متأكد؟ ابدأ كمستخدم عام",
+    "footerHint": "يمكنك تغيير وضع الدخول لاحقًا من الإعدادات."
+  },
+  "auth": {
+    "title": "تسجيل الدخول",
+    "description": "مسار المصادقة جاهز للربط مع الخلفية.",
+    "mode": {
+      "public": "مستخدم عام",
+      "player": "لاعب"
+    },
+    "countries": {
+      "jordan": "الأردن",
+      "saudi": "السعودية",
+      "uae": "الإمارات",
+      "kuwait": "الكويت",
+      "qatar": "قطر",
+      "egypt": "مصر",
+      "palestine": "فلسطين",
+      "unitedStates": "الولايات المتحدة",
+      "unitedKingdom": "المملكة المتحدة"
+    },
+    "fields": {
+      "countryCode": "مفتاح الدولة",
+      "phone": "رقم الهاتف",
+      "password": "كلمة المرور",
+      "academy": "الأكاديمية",
+      "username": "اسم المستخدم",
+      "firstName": "الاسم الأول",
+      "lastName": "اسم العائلة",
+      "newPassword": "كلمة المرور الجديدة",
+      "confirmPassword": "تأكيد كلمة المرور",
+      "otp": "رمز التحقق"
+    },
+    "placeholders": {
+      "phone": "أدخل رقم الهاتف",
+      "password": "أدخل كلمة المرور",
+      "username": "أدخل اسم المستخدم",
+      "firstName": "أدخل الاسم الأول",
+      "lastName": "أدخل اسم العائلة",
+      "confirmPassword": "تأكيد كلمة المرور",
+      "otp": "أدخل رمز التحقق",
+      "searchCountry": "ابحث عن مفتاح الدولة",
+      "searchAcademy": "ابحث عن أكاديمية",
+      "selectAcademy": "اختر الأكاديمية"
+    },
+    "academy": {
+      "helper": "اختر أكاديميتك للمتابعة.",
+      "noResults": "لا توجد نتائج مطابقة."
+    },
+    "login": {
+      "title": "مرحبًا بعودتك",
+      "subtitle": "سجّل الدخول لمتابعة رحلتك في سبورهايف.",
+      "modeLocked": "تم تثبيت الوضع حسب المسار الذي اخترته.",
+      "modeLockedHint": "أنت تتابع كـ {{mode}} وفق اختيارك السابق.",
+      "redirectHint": "سيتم تحويلك إلى الصفحة المطلوبة بعد تسجيل الدخول.",
+      "playerAccountHint": "حسابات اللاعبين يتم تزويدها من الأكاديمية."
+    },
+    "signup": {
+      "title": "إنشاء حساب عام",
+      "subtitle": "أنشئ حسابًا للوصول إلى اكتشاف الأكاديميات والحجز."
+    },
+    "reset": {
+      "title": "إعادة تعيين كلمة المرور",
+      "subtitle": "اتبع خطوات التحقق الآمنة لاستعادة الوصول.",
+      "stepIdentify": "التحقق من الهوية",
+      "stepVerify": "التحقق",
+      "stepFinish": "الإنهاء",
+      "otpHint": "أدخل رمز التحقق المكوّن من 6 أرقام المرسل إلى هاتفك.",
+      "otpSentTo": "تم إرسال الرمز إلى: {{phone}}",
+      "resendCountdown": "إعادة الإرسال خلال {{seconds}} ثانية",
+      "resendReady": "لم يصلك الرمز؟",
+      "publicSuccessTitle": "تم تحديث كلمة المرور",
+      "publicSuccessSubtitle": "تمت إعادة تعيين كلمة المرور بنجاح ويمكنك الآن تسجيل الدخول.",
+      "generatedPassword": "كلمة المرور المولدة للاعب",
+      "generatedPasswordFallback": "لم يتم إرجاع كلمة مرور.",
+      "generatedPasswordHint": "احفظ كلمة المرور هذه بشكل آمن قبل المتابعة."
+    },
+    "actions": {
+      "loginPublic": "الدخول كمستخدم عام",
+      "loginPlayer": "الدخول كلاعب",
+      "signup": "إنشاء الحساب",
+      "createAccount": "إنشاء حساب",
+      "forgotPassword": "نسيت كلمة المرور؟",
+      "sendCode": "إرسال الرمز",
+      "resendCode": "إعادة الإرسال",
+      "verifyCode": "تحقق من الرمز",
+      "resetPassword": "تحديث كلمة المرور",
+      "backToLogin": "العودة لتسجيل الدخول",
+      "changeMode": "تغيير الوضع",
+      "revealPassword": "إظهار",
+      "hidePassword": "إخفاء",
+      "copyPassword": "نسخ"
+    },
+    "messages": {
+      "loginSuccess": "تم تسجيل الدخول بنجاح.",
+      "signupSuccess": "تم إنشاء الحساب بنجاح.",
+      "otpSent": "إذا كان الحساب موجودًا، تم إرسال رمز تحقق.",
+      "otpVerified": "تم قبول رمز التحقق.",
+      "passwordResetDone": "تمت إعادة تعيين كلمة المرور.",
+      "passwordCopied": "تم نسخ كلمة المرور.",
+      "copyUnavailable": "النسخ غير متاح على هذا الجهاز. اضغط مطولًا للنسخ يدويًا."
+    },
+    "passwordHints": {
+      "minLength": "على الأقل {{count}} أحرف",
+      "hasLetter": "تحتوي على أحرف",
+      "hasNumber": "تحتوي على أرقام",
+      "match": "كلمتا المرور متطابقتان"
+    },
+    "phoneRuleHint": "الطول المتوقع: {{min}}-{{max}} أرقام",
+    "errors": {
+      "generic": "حدث خطأ. يرجى المحاولة مرة أخرى.",
+      "network": "مشكلة في الشبكة. تحقق من الاتصال.",
+      "server": "مشكلة في الخادم. حاول مرة أخرى بعد قليل.",
+      "loginFailed": "تعذر تسجيل الدخول. حاول مرة أخرى.",
+      "signupFailed": "تعذر إنشاء الحساب. حاول مرة أخرى.",
+      "resetRequestFailed": "تعذر إرسال رمز التحقق. حاول مرة أخرى.",
+      "resetConfirmFailed": "تعذر إعادة تعيين كلمة المرور. حاول مرة أخرى.",
+      "invalidCredentials": "بيانات الدخول غير صحيحة.",
+      "academyUnavailable": "خدمة الأكاديمية غير متاحة حاليًا.",
+      "academyNotConfigured": "هذه الأكاديمية غير مهيأة بعد.",
+      "phoneAlreadyRegistered": "رقم الهاتف مسجل مسبقًا.",
+      "invalidOtp": "رمز التحقق غير صالح أو منتهي.",
+      "resetContextMissing": "يرجى طلب رمز تحقق جديد ثم المحاولة مرة أخرى.",
+      "firstNameRequired": "الاسم الأول مطلوب.",
+      "lastNameRequired": "اسم العائلة مطلوب.",
+      "phoneRequired": "رقم الهاتف مطلوب.",
+      "phoneInvalid": "يرجى إدخال رقم هاتف صحيح.",
+      "academyRequired": "الأكاديمية مطلوبة.",
+      "usernameRequired": "اسم المستخدم مطلوب.",
+      "passwordRequired": "كلمة المرور مطلوبة.",
+      "passwordTooShort": "كلمة المرور يجب أن تكون {{count}} أحرف على الأقل.",
+      "confirmPasswordRequired": "يرجى تأكيد كلمة المرور.",
+      "passwordMismatch": "كلمتا المرور غير متطابقتين.",
+      "otpRequired": "رمز التحقق مطلوب.",
+      "otpLength": "يجب أن يتكون الرمز من {{count}} أرقام."
+    }
+  },
+  "public": {
+    "title": "الرئيسية العامة للاستكشاف",
+    "description": "مسار التصفح العام جاهز لوحدات اكتشاف الملاعب والأكاديميات.",
+    "switchToPlayer": "التحويل إلى تسجيل دخول اللاعب",
+    "welcomeUser": "مرحبًا، {{name}}",
+    "goToBooking": "الانتقال إلى الحجز"
+  },
+  "player": {
+    "title": "الرئيسية لبوابة اللاعب",
+    "description": "هيكل مسار اللاعب جاهز لوحدات البوابة التي تتطلب تسجيل الدخول.",
+    "logout": "مسح الجلسة وتسجيل الخروج",
+    "welcomeUser": "مرحبًا، {{name}}",
+    "academyContext": "رقم الأكاديمية: {{id}}",
+    "externalPlayerContext": "المعرف الخارجي للاعب: {{id}}",
+    "portalReady": "رمز بوابة الأكاديمية متاح.",
+    "goToBooking": "الانتقال إلى الحجز"
+  },
+  "booking": {
+    "title": "مركز الحجز",
+    "description": "مسارات الحجز محمية وجاهزة للربط.",
+    "backToPublic": "العودة إلى الصفحة العامة"
+  },
+  "errors": {
+    "couldNotSaveChoice": "تعذر حفظ اختيارك. حاول مرة أخرى."
+  }
+}

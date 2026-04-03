@@ -1,0 +1,209 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "comingSoon": "Coming soon",
+    "language": {
+      "switch": "العربية",
+      "current": "English",
+      "nextLabel": "العربية",
+      "switchTo": "Switch language to {{language}}"
+    },
+    "entryMode": {
+      "label": "Entry mode",
+      "player": "Player",
+      "public": "Public user"
+    },
+    "actions": {
+      "back": "Back",
+      "continue": "Continue",
+      "goHome": "Go to home",
+      "logout": "Log out"
+    },
+    "accessibility": {
+      "closeToast": "Dismiss notification",
+      "languageSwitch": "Language switch"
+    }
+  },
+  "welcome": {
+    "logoLabel": "SporHive logo",
+    "title": "Your game starts with SporHive",
+    "subtitle": "Book venues, explore academies, and unlock your player journey in one premium app.",
+    "cta": "Start your journey",
+    "hint": "You can change language anytime."
+  },
+  "entry": {
+    "tagline": "Sports booking and player access",
+    "title": "How would you like to continue?",
+    "public": {
+      "title": "Continue as Public User",
+      "desc": "Browse venues and discover academies before creating a full player account.",
+      "chip": "Explore first"
+    },
+    "player": {
+      "title": "Sign in as Player",
+      "desc": "Access your player portal, bookings, and academy tools with your secure account.",
+      "chip": "Player access"
+    },
+    "notSure": "Not sure yet? Start as Public",
+    "footerHint": "You can switch your mode later from settings."
+  },
+  "auth": {
+    "title": "Sign In",
+    "description": "Authentication route is configured for backend integration.",
+    "mode": {
+      "public": "Public User",
+      "player": "Player"
+    },
+    "countries": {
+      "jordan": "Jordan",
+      "saudi": "Saudi Arabia",
+      "uae": "United Arab Emirates",
+      "kuwait": "Kuwait",
+      "qatar": "Qatar",
+      "egypt": "Egypt",
+      "palestine": "Palestine",
+      "unitedStates": "United States",
+      "unitedKingdom": "United Kingdom"
+    },
+    "fields": {
+      "countryCode": "Country code",
+      "phone": "Phone number",
+      "password": "Password",
+      "academy": "Academy",
+      "username": "Username",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm password",
+      "otp": "OTP code"
+    },
+    "placeholders": {
+      "phone": "Enter phone number",
+      "password": "Enter password",
+      "username": "Enter username",
+      "firstName": "Enter first name",
+      "lastName": "Enter last name",
+      "confirmPassword": "Confirm password",
+      "otp": "Enter verification code",
+      "searchCountry": "Search country code",
+      "searchAcademy": "Search academy",
+      "selectAcademy": "Select academy"
+    },
+    "academy": {
+      "helper": "Choose your academy to continue.",
+      "noResults": "No academies match your search."
+    },
+    "login": {
+      "title": "Welcome Back",
+      "subtitle": "Sign in to continue your SporHive journey.",
+      "modeLocked": "Mode is locked based on your selected entry path.",
+      "modeLockedHint": "You are continuing as {{mode}} based on your entry selection.",
+      "redirectHint": "You will be redirected to your requested page after login.",
+      "playerAccountHint": "Player accounts are provided by your academy."
+    },
+    "signup": {
+      "title": "Create Public Account",
+      "subtitle": "Register to unlock academy discovery and booking."
+    },
+    "reset": {
+      "title": "Reset Password",
+      "subtitle": "Follow the secure verification flow to recover access.",
+      "stepIdentify": "Identify",
+      "stepVerify": "Verify",
+      "stepFinish": "Finish",
+      "otpHint": "Enter the 6-digit code sent to your phone.",
+      "otpSentTo": "Code destination: {{phone}}",
+      "resendCountdown": "Resend code in {{seconds}}s",
+      "resendReady": "Didn't receive code?",
+      "publicSuccessTitle": "Password updated",
+      "publicSuccessSubtitle": "Your password has been reset successfully. You can now sign in.",
+      "generatedPassword": "Generated player password",
+      "generatedPasswordFallback": "No password returned.",
+      "generatedPasswordHint": "Save this password securely before continuing."
+    },
+    "actions": {
+      "loginPublic": "Sign in as Public User",
+      "loginPlayer": "Sign in as Player",
+      "signup": "Create account",
+      "createAccount": "Create account",
+      "forgotPassword": "Forgot password?",
+      "sendCode": "Send code",
+      "resendCode": "Resend code",
+      "verifyCode": "Verify code",
+      "resetPassword": "Update password",
+      "backToLogin": "Back to login",
+      "changeMode": "Change mode",
+      "revealPassword": "Reveal",
+      "hidePassword": "Hide",
+      "copyPassword": "Copy"
+    },
+    "messages": {
+      "loginSuccess": "Logged in successfully.",
+      "signupSuccess": "Account created successfully.",
+      "otpSent": "If the account exists, a verification code was sent.",
+      "otpVerified": "Verification code accepted.",
+      "passwordResetDone": "Password reset completed.",
+      "passwordCopied": "Password copied to clipboard.",
+      "copyUnavailable": "Copy is unavailable on this device. Long press to copy manually."
+    },
+    "passwordHints": {
+      "minLength": "At least {{count}} characters",
+      "hasLetter": "Contains letters",
+      "hasNumber": "Contains numbers",
+      "match": "Passwords match"
+    },
+    "phoneRuleHint": "Expected length: {{min}}-{{max}} digits",
+    "errors": {
+      "generic": "Something went wrong. Please try again.",
+      "network": "Network issue. Please check your connection.",
+      "server": "Server issue. Please try again in a moment.",
+      "loginFailed": "Unable to sign in. Please try again.",
+      "signupFailed": "Unable to create account. Please try again.",
+      "resetRequestFailed": "Unable to send verification code. Please try again.",
+      "resetConfirmFailed": "Unable to reset password. Please try again.",
+      "invalidCredentials": "Invalid credentials. Please check your details.",
+      "academyUnavailable": "Academy service is currently unavailable.",
+      "academyNotConfigured": "This academy is not configured yet.",
+      "phoneAlreadyRegistered": "This phone number is already registered.",
+      "invalidOtp": "Invalid or expired verification code.",
+      "resetContextMissing": "Please request a new verification code and try again.",
+      "firstNameRequired": "First name is required.",
+      "lastNameRequired": "Last name is required.",
+      "phoneRequired": "Phone number is required.",
+      "phoneInvalid": "Please enter a valid phone number.",
+      "academyRequired": "Academy is required.",
+      "usernameRequired": "Username is required.",
+      "passwordRequired": "Password is required.",
+      "passwordTooShort": "Password must be at least {{count}} characters.",
+      "confirmPasswordRequired": "Please confirm your password.",
+      "passwordMismatch": "Passwords do not match.",
+      "otpRequired": "Verification code is required.",
+      "otpLength": "Code must be exactly {{count}} digits."
+    }
+  },
+  "public": {
+    "title": "Public Discovery Home",
+    "description": "Public browsing route is ready for venue and academy discovery modules.",
+    "switchToPlayer": "Switch to Player Sign-In",
+    "welcomeUser": "Welcome, {{name}}",
+    "goToBooking": "Go to Booking"
+  },
+  "player": {
+    "title": "Player Portal Home",
+    "description": "Player route shell is ready for authenticated portal modules.",
+    "logout": "Clear session and sign out",
+    "welcomeUser": "Welcome, {{name}}",
+    "academyContext": "Academy ID: {{id}}",
+    "externalPlayerContext": "External player ID: {{id}}",
+    "portalReady": "Portal proxy token is available.",
+    "goToBooking": "Go to Booking"
+  },
+  "booking": {
+    "title": "Booking Hub",
+    "description": "Booking routes are protected and ready for integration.",
+    "backToPublic": "Back to Public Home"
+  },
+  "errors": {
+    "couldNotSaveChoice": "Could not save your choice. Please try again."
+  }
+}
