@@ -1,25 +1,20 @@
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { I18nProvider } from '../services/i18n/i18n';
 import { AuthProvider } from '../services/auth';
 import { ThemeProvider } from '../theme/ThemeProvider';
 import { ToastProvider } from '../components/feedback/ToastHost';
+import { FullScreenLoader } from '../components/ui/Loader';
 import { useI18n } from '../hooks/useI18n';
 import { useTheme } from '../hooks/useTheme';
-import { spacing } from '../theme/tokens';
 
 function ProvidersReadyGate({ children }) {
-  const { isReady: isI18nReady } = useI18n();
-  const { colors, isReady: isThemeReady } = useTheme();
+  const { isReady: isI18nReady, t } = useI18n();
+  const { isReady: isThemeReady } = useTheme();
 
   if (isI18nReady && isThemeReady) {
     return children;
   }
 
-  return (
-    <View style={[styles.boot, { backgroundColor: colors.background }]}>
-      <ActivityIndicator size="large" color={colors.accentOrange} />
-    </View>
-  );
+  return <FullScreenLoader label={t('common.loading')} />;
 }
 
 export function AppProviders({ children }) {
@@ -35,12 +30,3 @@ export function AppProviders({ children }) {
     </ThemeProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  boot: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.xl,
-  },
-});

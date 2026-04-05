@@ -6,7 +6,9 @@ import { AppScreen } from '../../../components/ui/AppScreen';
 import { Button } from '../../../components/ui/Button';
 import { LanguageSwitch } from '../../../components/ui/LanguageSwitch';
 import { ScreenHeader } from '../../../components/ui/ScreenHeader';
+import { Surface } from '../../../components/ui/Surface';
 import { Text } from '../../../components/ui/Text';
+import { ThemeModeSwitch } from '../../../components/ui/ThemeModeSwitch';
 import { ROUTES, buildAuthLoginRoute } from '../../../constants/routes';
 import { useI18n } from '../../../hooks/useI18n';
 import { useTheme } from '../../../hooks/useTheme';
@@ -50,6 +52,10 @@ export function PublicHomePlaceholderScreen() {
           </Text>
         ) : null}
       </FeaturePlaceholder>
+
+      <Surface variant="elevated" padding="md" style={{ marginTop: spacing.md }}>
+        <ThemeModeSwitch />
+      </Surface>
 
       <Button fullWidth size="lg" onPress={() => router.push(ROUTES.BOOKING_HOME)} style={{ marginTop: spacing.xl }}>
         {t('public.goToBooking')}

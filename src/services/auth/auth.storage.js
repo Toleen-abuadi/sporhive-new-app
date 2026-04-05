@@ -40,6 +40,7 @@ const clearSensitiveKeys = async () => {
   await Promise.all([
     secureStorage.removeItem(AUTH_STORAGE_KEYS.SESSION),
     secureStorage.removeItem(AUTH_STORAGE_KEYS.TOKEN),
+    secureStorage.removeItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN),
     secureStorage.removeItem(AUTH_STORAGE_KEYS.PORTAL_TOKENS),
   ]);
 };
@@ -72,6 +73,7 @@ export async function saveSession(session) {
   await Promise.all([
     secureStorage.setItem(AUTH_STORAGE_KEYS.SESSION, normalized),
     secureStorage.setItem(AUTH_STORAGE_KEYS.TOKEN, normalized.token),
+    secureStorage.setItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN, normalized.refreshToken || null),
     secureStorage.setItem(AUTH_STORAGE_KEYS.PORTAL_TOKENS, normalized.portalTokens || {}),
   ]);
 
@@ -87,9 +89,10 @@ export async function clearSession() {
 }
 
 export async function restoreSession() {
-  const [rawSession, rawToken, rawPortalTokens, lastSelectedAcademyId] = await Promise.all([
+  const [rawSession, rawToken, rawRefreshToken, rawPortalTokens, lastSelectedAcademyId] = await Promise.all([
     readSecureValue(AUTH_STORAGE_KEYS.SESSION),
     readSecureValue(AUTH_STORAGE_KEYS.TOKEN),
+    readSecureValue(AUTH_STORAGE_KEYS.REFRESH_TOKEN),
     readSecureValue(AUTH_STORAGE_KEYS.PORTAL_TOKENS),
     getLastSelectedAcademyId(),
   ]);
@@ -97,8 +100,9 @@ export async function restoreSession() {
   const sessionPayload = parseMaybeJsonObject(rawSession);
   const portalTokens = parseMaybeJsonObject(rawPortalTokens);
   const token = typeof rawToken === 'string' ? rawToken.trim() : null;
+  const refreshToken = typeof rawRefreshToken === 'string' ? rawRefreshToken.trim() : null;
 
-  if (!sessionPayload && !token) {
+  if (!sessionPayload && !token && !refreshToken) {
     return {
       session: null,
       lastSelectedAcademyId,
@@ -109,6 +113,7 @@ export async function restoreSession() {
     ...(sessionPayload || {}),
     ...(sessionPayload?.portalTokens ? {} : { portalTokens }),
     ...(sessionPayload?.token ? {} : { token }),
+    ...(sessionPayload?.refreshToken ? {} : { refreshToken }),
   };
 
   const normalized = normalizeSessionPayload(merged);

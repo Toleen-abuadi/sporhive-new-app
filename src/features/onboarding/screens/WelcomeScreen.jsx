@@ -16,6 +16,7 @@ import { AppScreen } from '../../../components/ui/AppScreen';
 import { Button } from '../../../components/ui/Button';
 import { LanguageSwitch } from '../../../components/ui/LanguageSwitch';
 import { Text } from '../../../components/ui/Text';
+import { ThemeModeToggle } from '../../../components/ui/ThemeModeSwitch';
 import { useI18n } from '../../../hooks/useI18n';
 import { useTheme } from '../../../hooks/useTheme';
 import { useAuth } from '../../../services/auth';
@@ -157,7 +158,18 @@ export function WelcomeScreen() {
         </View>
 
         <View style={styles.topBar}>
-          <LanguageSwitch compact style={{ alignSelf: isRTL ? 'flex-start' : 'flex-end' }} />
+          <View
+            style={[
+              styles.switches,
+              {
+                flexDirection: isRTL ? 'row-reverse' : 'row',
+                alignSelf: isRTL ? 'flex-start' : 'flex-end',
+              },
+            ]}
+          >
+            <ThemeModeToggle compact />
+            <LanguageSwitch compact />
+          </View>
         </View>
 
         <View style={styles.content}>
@@ -266,6 +278,10 @@ const styles = StyleSheet.create({
   },
   topBar: {
     paddingTop: spacing.lg,
+  },
+  switches: {
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   content: {
     flex: 1,

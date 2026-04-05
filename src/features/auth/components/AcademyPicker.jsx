@@ -18,7 +18,7 @@ export function AcademyPicker({
   error = '',
   onSelect,
 }) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { t, isRTL } = useI18n();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -49,8 +49,8 @@ export function AcademyPicker({
         style={[
           styles.trigger,
           {
-            borderColor: colors.border,
-            backgroundColor: colors.surface,
+            borderColor: colors.inputBorder || colors.border,
+            backgroundColor: colors.inputBackground || colors.surface,
             flexDirection: isRTL ? 'row-reverse' : 'row',
           },
         ]}
@@ -73,7 +73,7 @@ export function AcademyPicker({
       </Pressable>
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-        <View style={[styles.backdrop, { backgroundColor: withAlpha(colors.black, 0.45) }]}>
+        <View style={[styles.backdrop, { backgroundColor: colors.overlay || withAlpha(colors.black, 0.45) }]}>
           <View
             style={[
               styles.sheet,
@@ -96,8 +96,8 @@ export function AcademyPicker({
               style={[
                 styles.searchInputWrap,
                 {
-                  borderColor: colors.border,
-                  backgroundColor: colors.surface,
+                  borderColor: colors.inputBorder || colors.border,
+                  backgroundColor: colors.inputBackground || colors.surface,
                   flexDirection: isRTL ? 'row-reverse' : 'row',
                 },
               ]}
@@ -107,12 +107,13 @@ export function AcademyPicker({
                 value={search}
                 onChangeText={setSearch}
                 placeholder={t('auth.placeholders.searchAcademy')}
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={colors.inputPlaceholder || colors.textMuted}
                 autoCapitalize="none"
+                keyboardAppearance={isDark ? 'dark' : 'light'}
                 style={[
                   styles.searchInput,
                   {
-                    color: colors.textPrimary,
+                    color: colors.inputText || colors.textPrimary,
                     textAlign: isRTL ? 'right' : 'left',
                   },
                 ]}
@@ -128,8 +129,8 @@ export function AcademyPicker({
                     style={[
                       styles.recentChip,
                       {
-                        borderColor: colors.border,
-                        backgroundColor: colors.surface,
+                        borderColor: colors.inputBorder || colors.border,
+                        backgroundColor: colors.inputBackground || colors.surface,
                       },
                     ]}
                   >
@@ -172,8 +173,12 @@ export function AcademyPicker({
                       style={[
                         styles.row,
                         {
-                          borderColor: active ? colors.accentOrange : colors.border,
-                          backgroundColor: active ? withAlpha(colors.accentOrange, 0.12) : colors.surface,
+                          borderColor: active
+                            ? colors.inputBorderFocus || colors.accentOrange
+                            : colors.inputBorder || colors.border,
+                          backgroundColor: active
+                            ? withAlpha(colors.accentOrange, 0.12)
+                            : colors.inputBackground || colors.surface,
                           flexDirection: isRTL ? 'row-reverse' : 'row',
                         },
                       ]}

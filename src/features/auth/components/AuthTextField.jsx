@@ -26,16 +26,16 @@ export function AuthTextField({
   onFocus,
   maxLength,
 }) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { isRTL } = useI18n();
   const [focused, setFocused] = useState(false);
   const [hidden, setHidden] = useState(secureTextEntry);
 
   const borderColor = useMemo(() => {
-    if (error) return colors.error;
-    if (focused) return colors.accentOrange;
-    return colors.border;
-  }, [colors.accentOrange, colors.border, colors.error, error, focused]);
+    if (error) return colors.inputBorderError || colors.error;
+    if (focused) return colors.inputBorderFocus || colors.accentOrange;
+    return colors.inputBorder || colors.border;
+  }, [colors.accentOrange, colors.border, colors.error, colors.inputBorder, colors.inputBorderError, colors.inputBorderFocus, error, focused]);
 
   const handleFocus = (event) => {
     setFocused(true);
@@ -59,7 +59,9 @@ export function AuthTextField({
           styles.inputWrap,
           {
             borderColor,
-            backgroundColor: colors.surface,
+            backgroundColor: editable
+              ? colors.inputBackground || colors.surface
+              : colors.inputBackgroundDisabled || colors.surfaceSoft,
             flexDirection: isRTL ? 'row-reverse' : 'row',
             opacity: editable ? 1 : 0.7,
           },
@@ -77,8 +79,9 @@ export function AuthTextField({
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={colors.inputPlaceholder || colors.textMuted}
           keyboardType={keyboardType}
+          keyboardAppearance={isDark ? 'dark' : 'light'}
           autoCapitalize={autoCapitalize}
           secureTextEntry={hidden}
           editable={editable}
@@ -89,7 +92,7 @@ export function AuthTextField({
           style={[
             styles.input,
             {
-              color: colors.textPrimary,
+              color: colors.inputText || colors.textPrimary,
               textAlign: isRTL && keyboardType === 'default' ? 'right' : 'left',
               writingDirection: isRTL && keyboardType === 'default' ? 'rtl' : 'ltr',
             },

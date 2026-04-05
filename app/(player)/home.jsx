@@ -1,5 +1,5 @@
-import { PlayerHomePlaceholderScreen } from '../../src/features/player/screens/PlayerHomePlaceholderScreen';
+import { PlayerHomeScreen } from '../../src/features/playerPortal/screens';
 
 export default function PlayerHomeRoute() {
-  return <PlayerHomePlaceholderScreen />;
+  return <PlayerHomeScreen />;
 }

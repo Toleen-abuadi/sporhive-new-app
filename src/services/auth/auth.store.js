@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef } from 'react';
 import { getEntryMode as readEntryMode, getWelcomeSeen as readWelcomeSeen, setEntryMode as persistEntryMode, setWelcomeSeen as persistWelcomeSeen } from '../storage';
 import { authApi } from './auth.api';
-import { AUTH_LOGIN_MODES, AUTH_SESSION_STATUS } from './auth.constants';
+import { AUTH_LOGIN_MODES, AUTH_REFRESH_BUFFER_SECONDS, AUTH_SESSION_STATUS } from './auth.constants';
 import { createAuthError, normalizeAuthError } from './auth.errors';
 import { mergeSessionUpdates, normalizeLoginMode, normalizeSessionPayload, buildSessionFromLoginResponse } from './auth.session';
 import { clearSession as clearStoredSession, getLastSelectedAcademyId, restoreSession, saveSession, setLastSelectedAcademyId as persistLastSelectedAcademyId } from './auth.storage';
@@ -16,6 +16,7 @@ const INITIAL_STATE = {
   session: null,
   user: null,
   token: null,
+  refreshToken: null,
   portalTokens: {},
   roles: [],
   mode: null,
@@ -49,6 +50,7 @@ const stateFromSession = (session) => {
       session: null,
       user: null,
       token: null,
+      refreshToken: null,
       portalTokens: {},
       roles: [],
       mode: null,
@@ -64,6 +66,7 @@ const stateFromSession = (session) => {
     session: normalized,
     user: normalized.user || null,
     token: normalized.token || null,
+    refreshToken: normalized.refreshToken || null,
     portalTokens: normalized.portalTokens || {},
     roles: normalized.roles || [],
     mode: normalized.mode || null,
@@ -165,11 +168,16 @@ export function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(authReducer, INITIAL_STATE);
   const mountedRef = useRef(false);
   const bootstrapRef = useRef(null);
+  const stateRef = useRef(INITIAL_STATE);
 
   const safeDispatch = useCallback((action) => {
     if (!mountedRef.current) return;
     dispatch(action);
   }, []);
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -178,6 +186,41 @@ export function AuthProvider({ children }) {
       bootstrapRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    const unsubscribe = authApi.subscribeSessionEvents((event) => {
+      if (!mountedRef.current) return;
+
+      if (event?.type === 'session_updated' && event?.session) {
+        safeDispatch({
+          type: ACTIONS.UPDATE_SESSION,
+          payload: { session: event.session },
+        });
+        return;
+      }
+
+      if (event?.type === 'session_cleared') {
+        const snapshot = stateRef.current || INITIAL_STATE;
+        const preferredEntryMode =
+          normalizeLoginMode(snapshot.mode) ||
+          normalizeLoginMode(snapshot.entryMode) ||
+          AUTH_LOGIN_MODES.PUBLIC;
+
+        safeDispatch({
+          type: ACTIONS.CLEAR_SESSION,
+          payload: {
+            entryMode: preferredEntryMode,
+            welcomeSeen: snapshot.welcomeSeen,
+            lastSelectedAcademyId: snapshot.lastSelectedAcademyId,
+          },
+        });
+      }
+    });
+
+    return () => {
+      unsubscribe?.();
+    };
+  }, [safeDispatch]);
 
   const setEntryMode = useCallback(async (mode) => {
     const normalized = normalizeLoginMode(mode);
@@ -234,14 +277,36 @@ export function AuthProvider({ children }) {
           getLastSelectedAcademyId(),
         ]);
 
+        let bootstrapSession = normalizeSessionPayload(restored.session);
+        let bootstrapError = restored.error || null;
+
+        if (bootstrapSession) {
+          const ensured = await authApi.ensureSessionForRequest({
+            sessionHint: bootstrapSession,
+            refreshBufferSeconds: AUTH_REFRESH_BUFFER_SECONDS,
+            notify: false,
+          });
+
+          if (ensured.success && ensured.session) {
+            const persisted = await saveSession(ensured.session);
+            bootstrapSession = persisted;
+          } else if (ensured.hardFailure) {
+            await clearStoredSession();
+            bootstrapSession = null;
+            bootstrapError = ensured.error || bootstrapError;
+          } else {
+            bootstrapError = ensured.error || bootstrapError;
+          }
+        }
+
         safeDispatch({
           type: ACTIONS.BOOTSTRAP_RESOLVED,
           payload: {
-            session: restored.session,
+            session: bootstrapSession,
             welcomeSeen,
             entryMode,
             lastSelectedAcademyId: restored.lastSelectedAcademyId || fallbackAcademyId || null,
-            error: restored.error || null,
+            error: bootstrapError,
           },
         });
       } catch (error) {
@@ -424,13 +489,12 @@ export function AuthProvider({ children }) {
       const preferredEntryMode =
         normalizeLoginMode(state.mode) || normalizeLoginMode(state.entryMode) || AUTH_LOGIN_MODES.PUBLIC;
 
-      try {
-        await authApi.logoutLocal();
-      } catch {
-        // Local logout must always succeed even if remote call fails.
-      }
+      const logoutResult = await authApi.logout({
+        session: state.session,
+        clearLocal: true,
+        notify: false,
+      });
 
-      await clearStoredSession();
       try {
         await persistEntryMode(preferredEntryMode);
       } catch (error) {
@@ -448,9 +512,9 @@ export function AuthProvider({ children }) {
         },
       });
 
-      return { success: true };
+      return { success: true, data: logoutResult?.data || null };
     },
-    [safeDispatch, state.entryMode, state.lastSelectedAcademyId, state.mode, state.welcomeSeen]
+    [safeDispatch, state.entryMode, state.lastSelectedAcademyId, state.mode, state.session, state.welcomeSeen]
   );
 
   const clearSession = useCallback(async () => {

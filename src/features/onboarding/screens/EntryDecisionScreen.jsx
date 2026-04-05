@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Image,
   Pressable,
   StyleSheet,
@@ -22,9 +21,11 @@ import { CalendarDays, CreditCard, MapPin, Users } from 'lucide-react-native';
 import { useTheme } from '../../../hooks/useTheme';
 import { useI18n } from '../../../hooks/useI18n';
 import { AppScreen } from '../../../components/ui/AppScreen';
+import { OverlayLoader } from '../../../components/ui/Loader';
 import { Text } from '../../../components/ui/Text';
 import { Chip } from '../../../components/ui/Chip';
 import { LanguageSwitch } from '../../../components/ui/LanguageSwitch';
+import { ThemeModeToggle } from '../../../components/ui/ThemeModeSwitch';
 import { useToast } from '../../../components/feedback/ToastHost';
 import { buildAuthLoginRoute } from '../../../constants/routes';
 import { ENTRY_MODE_VALUES } from '../../../constants/entryModes';
@@ -313,7 +314,18 @@ export function EntryDecisionScreen() {
         </View>
 
         <View style={styles.topBar}>
-          <LanguageSwitch compact style={{ alignSelf: isRTL ? 'flex-start' : 'flex-end' }} />
+          <View
+            style={[
+              styles.switches,
+              {
+                flexDirection: isRTL ? 'row-reverse' : 'row',
+                alignSelf: isRTL ? 'flex-start' : 'flex-end',
+              },
+            ]}
+          >
+            <ThemeModeToggle compact />
+            <LanguageSwitch compact />
+          </View>
         </View>
 
         <Animated.View style={[styles.hero, titleStyle]}>
@@ -365,15 +377,6 @@ export function EntryDecisionScreen() {
         </View>
 
         <Animated.View style={[styles.footer, footerStyle]}>
-          {submittingMode ? (
-            <View style={[styles.savingRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-              <ActivityIndicator size="small" color={colors.accentOrange} />
-              <Text variant="caption" color={colors.textSecondary}>
-                {t('common.loading')}
-              </Text>
-            </View>
-          ) : null}
-
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t('entry.notSure')}
@@ -401,6 +404,8 @@ export function EntryDecisionScreen() {
             {t('entry.footerHint')}
           </Text>
         </Animated.View>
+
+        <OverlayLoader visible={Boolean(submittingMode)} label={t('common.loading')} />
       </View>
     </AppScreen>
   );
@@ -444,6 +449,10 @@ const styles = StyleSheet.create({
   },
   topBar: {
     marginTop: spacing.md,
+  },
+  switches: {
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   hero: {
     alignItems: 'center',
@@ -523,11 +532,6 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xl,
     alignItems: 'center',
     gap: spacing.md,
-  },
-  savingRow: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
   },
   notSure: {
     minHeight: 46,

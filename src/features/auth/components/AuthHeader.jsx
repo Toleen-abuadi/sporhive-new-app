@@ -2,6 +2,7 @@ import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { LanguageSwitch } from '../../../components/ui/LanguageSwitch';
 import { Text } from '../../../components/ui/Text';
+import { ThemeModeToggle } from '../../../components/ui/ThemeModeSwitch';
 import { useI18n } from '../../../hooks/useI18n';
 import { useTheme } from '../../../hooks/useTheme';
 import { withAlpha } from '../../../theme/colors';
@@ -39,7 +40,10 @@ export function AuthHeader({ title, subtitle, onBack }) {
           <View style={styles.backPlaceholder} />
         )}
 
-        <LanguageSwitch compact />
+        <View style={[styles.switches, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+          <ThemeModeToggle compact />
+          <LanguageSwitch compact />
+        </View>
       </View>
 
       <View style={styles.logoBlock}>
@@ -88,6 +92,10 @@ const styles = StyleSheet.create({
   backPlaceholder: {
     width: 40,
     height: 40,
+  },
+  switches: {
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   logoBlock: {
     alignItems: 'center',

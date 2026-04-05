@@ -6,7 +6,7 @@ import { AppProviders } from '../src/providers/AppProviders';
 import { useTheme } from '../src/theme/ThemeProvider';
 
 function RootNavigator() {
-  const { isDark } = useTheme();
+  const { colors, isDark } = useTheme();
 
   return (
     <>
@@ -15,7 +15,7 @@ function RootNavigator() {
         screenOptions={{
           headerShown: false,
           animation: 'fade',
-          contentStyle: { backgroundColor: 'transparent' },
+          contentStyle: { backgroundColor: colors.background },
         }}
       >
         <Stack.Screen name="index" />

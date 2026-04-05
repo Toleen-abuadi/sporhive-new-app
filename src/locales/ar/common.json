@@ -8,6 +8,18 @@
       "nextLabel": "English",
       "switchTo": "التحويل إلى {{language}}"
     },
+    "theme": {
+      "title": "\u0627\u0644\u0645\u0638\u0647\u0631",
+      "subtitle": "\u0627\u062e\u062a\u0631 \u0646\u0645\u0637 \u0623\u0644\u0648\u0627\u0646 \u0627\u0644\u062a\u0637\u0628\u064a\u0642",
+      "current": "\u0627\u0644\u0646\u0645\u0637 \u0627\u0644\u062d\u0627\u0644\u064a: {{mode}}",
+      "toggleTo": "\u062a\u0628\u062f\u064a\u0644 \u0627\u0644\u0645\u0638\u0647\u0631 \u0625\u0644\u0649 {{mode}}",
+      "setMode": "\u062a\u0639\u064a\u064a\u0646 \u0627\u0644\u0645\u0638\u0647\u0631 \u0625\u0644\u0649 {{mode}}",
+      "modes": {
+        "system": "\u062a\u0644\u0642\u0627\u0626\u064a",
+        "light": "\u0641\u0627\u062a\u062d",
+        "dark": "\u062f\u0627\u0643\u0646"
+      }
+    },
     "entryMode": {
       "label": "وضع الدخول",
       "player": "لاعب",
@@ -17,11 +29,85 @@
       "back": "رجوع",
       "continue": "متابعة",
       "goHome": "الانتقال للرئيسية",
-      "logout": "تسجيل الخروج"
+      "logout": "تسجيل الخروج",
+      "next": "التالي",
+      "cancel": "إلغاء",
+      "done": "تم",
+      "selectDate": "اختر التاريخ"
     },
     "accessibility": {
       "closeToast": "إغلاق الإشعار",
       "languageSwitch": "تبديل اللغة"
+    },
+    "formats": {
+      "isoDatePlaceholder": "YYYY-MM-DD"
+    },
+    "enums": {
+      "status": {
+        "active": "نشط",
+        "inactive": "غير نشط",
+        "pending": "قيد الانتظار",
+        "approved": "مقبول",
+        "rejected": "مرفوض",
+        "cancelled": "ملغي",
+        "ended": "منتهي",
+        "expired": "منتهي الصلاحية",
+        "valid": "صالح",
+        "processing": "قيد المعالجة",
+        "ready": "جاهز",
+        "collected": "تم الاستلام",
+        "failed": "فشل",
+        "refunded": "مسترجع",
+        "partial": "جزئي",
+        "unpaid": "غير مدفوع",
+        "overdue": "متأخر",
+        "paid": "مدفوع",
+        "completed": "مكتمل",
+        "due": "مستحق",
+        "printed": "تمت الطباعة",
+        "received": "تم الاستلام",
+        "received_and_player_notified": "تم الاستلام وإشعار اللاعب",
+        "pending_payment": "بانتظار الدفع",
+        "scheduled": "مجدول",
+        "under_review": "قيد المراجعة",
+        "upcoming": "قادم",
+        "activated": "مفعّل",
+        "other": "أخرى"
+      },
+      "paymentMethods": {
+        "cash": "نقداً",
+        "card": "بطاقة",
+        "bank_transfer": "حوالة بنكية",
+        "online": "دفع إلكتروني",
+        "wallet": "محفظة",
+        "pos": "جهاز نقاط البيع",
+        "credit_card": "بطاقة ائتمانية",
+        "debit_card": "بطاقة خصم",
+        "apple_pay": "Apple Pay",
+        "google_pay": "Google Pay",
+        "mada": "مدى",
+        "visa": "Visa",
+        "master_card": "Mastercard",
+        "cheque": "شيك"
+      },
+      "paymentTypes": {
+        "payment": "دفعة",
+        "subscription": "اشتراك",
+        "course": "دورة",
+        "renewal": "تجديد",
+        "freeze": "تجميد",
+        "uniform": "يونيفورم",
+        "invoice": "فاتورة",
+        "registration": "تسجيل",
+        "installment": "قسط",
+        "session": "جلسة"
+      },
+      "registrationTypes": {
+        "subscription": "اشتراك",
+        "course": "دورة",
+        "tryout": "تجريبي",
+        "trial": "تجريبي"
+      }
     }
   },
   "welcome": {
@@ -205,5 +291,674 @@
   },
   "errors": {
     "couldNotSaveChoice": "تعذر حفظ اختيارك. حاول مرة أخرى."
+  },
+  "playerPortal": {
+    "guards": {
+      "unauthenticated": "يلزم تسجيل الدخول كلاعب لفتح البوابة.",
+      "notPlayer": "هذا الحساب لا يملك صلاحية اللاعب.",
+      "missingToken": "رمز الجلسة مفقود. يرجى تسجيل الدخول مرة أخرى.",
+      "missingAcademy": "سياق الأكاديمية مفقود لهذا اللاعب.",
+      "missingPlayer": "بيانات تعريف اللاعب غير مكتملة لطلبات البوابة.",
+      "default": "سياق بوابة اللاعب غير جاهز بعد."
+    },
+    "errors": {
+      "refreshFailed": "تعذر تحديث بيانات البوابة.",
+      "overviewTitle": "تعذر تحميل النظرة العامة",
+      "overviewFallback": "حاول مرة أخرى بعد بضع ثوانٍ.",
+      "newsTitle": "تعذر تحميل الأخبار",
+      "newsFallback": "معاينة الأخبار غير متاحة مؤقتًا."
+    },
+    "actions": {
+      "payments": "الدفعات",
+      "performance": "الأداء",
+      "renewal": "التجديد",
+      "freeze": "التجميد",
+      "store": "المتجر",
+      "profile": "الملف الشخصي",
+      "news": "الأخبار",
+      "booking": "الحجز",
+      "retry": "إعادة المحاولة",
+      "viewAll": "عرض الكل",
+      "backHome": "العودة إلى الرئيسية",
+      "openInvoice": "فتح الفاتورة",
+      "shareInvoice": "مشاركة الفاتورة",
+      "downloadInvoice": "تنزيل الفاتورة"
+    },
+    "navigation": {
+      "tabs": {
+        "home": "الرئيسية",
+        "payments": "الدفعات",
+        "store": "المتجر",
+        "more": "المزيد"
+      },
+      "more": {
+        "title": "المزيد",
+        "subtitle": "استكشف أدوات وأقسام اللاعب الإضافية",
+        "sections": {
+          "portalTitle": "بوابة اللاعب",
+          "portalSubtitle": "أقسام التدريب والحساب",
+          "storeTitle": "المتجر",
+          "storeSubtitle": "سجل الطلبات وأدوات التسوق",
+          "accessTitle": "الوصول",
+          "accessSubtitle": "وجهات داخل التطبيق",
+          "insightsTitle": "المتابعة",
+          "insightsSubtitle": "الأداء وتحديثات الأكاديمية",
+          "servicesTitle": "الخدمات",
+          "servicesSubtitle": "الطلبات والوصول داخل التطبيق"
+        },
+        "descriptions": {
+          "performance": "عرض ملخصات التقييم واتجاهات الفترات.",
+          "news": "متابعة إعلانات الأكاديمية وآخر التحديثات.",
+          "freeze": "إنشاء طلبات التجميد ومراجعة السجل.",
+          "renewal": "إرسال طلبات التجديد عبر خطوات واضحة.",
+          "profile": "عرض وتعديل الملف الشخصي للاعب.",
+          "storeCatalog": "تصفح منتجات الزي وإدارة سلة المشتريات.",
+          "orders": "متابعة حالات طلبات الزي وتفاصيلها.",
+          "booking": "فتح مركز الحجز للمواعيد والجلسات."
+        }
+      }
+    },
+    "home": {
+      "title": "لوحة التحكم",
+      "subtitle": "نظرة عامة واختصارات البوابة",
+      "unavailableTitle": "البوابة غير متاحة",
+      "loadingTitle": "جاري مزامنة نظرة اللاعب العامة",
+      "loadingDescription": "نجلب أحدث بيانات لوحة التحكم الخاصة بك.",
+      "header": {
+        "welcome": "جاهز لأسبوع التدريب القادم",
+        "academy": "الأكاديمية: {{name}}",
+        "playerId": "معرف اللاعب: {{id}}",
+        "status": "الاشتراك: {{status}}",
+        "updatedAt": "آخر تحديث: {{time}}"
+      },
+      "kpis": {
+        "remainingSessions": "الجلسات المتبقية",
+        "totalSessions": "الإجمالي: {{count}}",
+        "creditBalance": "رصيد الائتمان",
+        "nextExpiry": "أقرب انتهاء: {{date}}",
+        "noExpiry": "لا يوجد انتهاء للرصيد",
+        "paymentStatus": "حالة الدفع",
+        "latestPayment": "آخر دفعة"
+      },
+      "sections": {
+        "subscriptionTitle": "الاشتراك والتدريب",
+        "subscriptionSubtitle": "تفاصيل الخطة الحالية",
+        "creditsTitle": "الرصيد والتجميد",
+        "creditsSubtitle": "الرصيد المتاح وحالة التجميد",
+        "paymentTitle": "آخر دفعة",
+        "paymentSubtitle": "ملخص الفاتورة من البوابة",
+        "performanceTitle": "ملخص الأداء",
+        "performanceSubtitle": "لمحة عن التقدم",
+        "quickActionsTitle": "إجراءات سريعة",
+        "quickActionsSubtitle": "انتقل سريعًا إلى أقسام البوابة",
+        "newsTitle": "آخر الأخبار",
+        "newsSubtitle": "آخر تحديثات الأكاديمية",
+        "calendarTitle": "اختصار الحجز",
+        "calendarSubtitle": "افتح الحجوزات من لوحة التحكم"
+      },
+      "subscription": {
+        "course": "الدورة: {{name}}",
+        "group": "المجموعة: {{name}}",
+        "period": "الفترة: {{start}} - {{end}}"
+      },
+      "credits": {
+        "total": "إجمالي الرصيد: {{value}}",
+        "nextExpiry": "أقرب انتهاء: {{date}}",
+        "none": "لا يوجد انتهاء",
+        "currentFreeze": "التجميد الحالي: {{status}}",
+        "noFreeze": "لا يوجد تجميد نشط"
+      },
+      "payment": {
+        "invoice": "الفاتورة: {{id}}",
+        "amount": "المبلغ: {{amount}}",
+        "dueDate": "الاستحقاق: {{date}}",
+        "emptyTitle": "لا توجد دفعة حديثة",
+        "emptyDescription": "ستظهر تفاصيل الدفعة بعد إصدار فاتورتك القادمة."
+      },
+      "performance": {
+        "noSummary": "ملخص الأداء غير متاح حاليًا.",
+        "progress": "التقدم: {{value}}",
+        "remaining": "الجلسات المتبقية: {{count}}"
+      },
+      "news": {
+        "untitled": "تحديث بدون عنوان",
+        "noBody": "لا توجد معاينة متاحة.",
+        "emptyTitle": "لا توجد أخبار متاحة",
+        "emptyDescription": "ستظهر الإعلانات الجديدة هنا."
+      },
+      "calendar": {
+        "cta": "الانتقال إلى مركز الحجز",
+        "hint": "نظّم مواعيدك وجلساتك."
+      }
+    },
+    "routes": {
+      "subtitle": "هيكل القسم جاهز للتنفيذ في المرحلة التالية.",
+      "payments": {
+        "title": "الدفعات",
+        "description": "سيتم تنفيذ قائمة الدفعات والفواتير وإجراءات الحالة في المرحلة القادمة."
+      },
+      "performance": {
+        "title": "الأداء",
+        "description": "سيتم تنفيذ مخطط التقييمات وخط الزمن للأداء في المرحلة القادمة."
+      },
+      "store": {
+        "title": "المتجر",
+        "description": "سيتم تنفيذ كتالوج الزي وإجراءات الطلب في المرحلة القادمة."
+      },
+      "news": {
+        "title": "الأخبار",
+        "description": "سيتم تنفيذ قائمة الأخبار وصفحة التفاصيل وعارض الصور في المرحلة القادمة."
+      },
+      "freeze": {
+        "title": "طلبات التجميد",
+        "description": "سيتم تنفيذ نموذج طلب التجميد وسجل الطلبات في المرحلة القادمة."
+      },
+      "renewal": {
+        "title": "التجديد",
+        "description": "سيتم تنفيذ أهلية التجديد وتدفق إنشاء الطلب في المرحلة القادمة."
+      },
+      "profile": {
+        "title": "الملف الشخصي",
+        "description": "سيتم تنفيذ تعديل بيانات اللاعب وتحديث الصورة في المرحلة القادمة."
+      }
+    },
+    "payments": {
+      "title": "الدفعات والإيصالات",
+      "subtitle": "الفواتير والحالات والمستحقات",
+      "filters": {
+        "all": "الكل",
+        "pending": "معلّق",
+        "paid": "مدفوع"
+      },
+      "summary": {
+        "totalCount": "السجلات",
+        "records": "جميع الفواتير",
+        "pending": "القيمة المعلّقة",
+        "pendingCount": "{{count}} معلّق",
+        "paid": "القيمة المدفوعة",
+        "paidCount": "{{count}} مدفوع"
+      },
+      "sections": {
+        "listTitle": "سجل الدفعات",
+        "listSubtitle": "اضغط على البطاقة لعرض التفاصيل الكاملة"
+      },
+      "labels": {
+        "payment": "الدفعة",
+        "method": "طريقة الدفع: {{value}}",
+        "methodShort": "طريقة الدفع",
+        "dueDate": "الاستحقاق: {{value}}",
+        "dueDateShort": "تاريخ الاستحقاق",
+        "paidDate": "تاريخ الدفع: {{value}}",
+        "paidDateShort": "تاريخ الدفع",
+        "invoiceRef": "مرجع الفاتورة: {{value}}",
+        "invoiceRefShort": "مرجع الفاتورة",
+        "notAvailable": "غير متاح",
+        "notPaid": "غير مدفوع",
+        "status": "الحالة",
+        "creditsUsed": "الرصيد المستخدم"
+      },
+      "detail": {
+        "title": "تفاصيل الدفعة",
+        "subtitle": "بيانات الفاتورة الكاملة",
+        "paymentId": "معرف الدفعة: {{id}}",
+        "notFoundTitle": "الدفعة غير موجودة",
+        "notFoundDescription": "هذه الدفعة غير متاحة أو لم تعد ظاهرة."
+      },
+      "invoice": {
+        "title": "الفاتورة",
+        "subtitle": "افتح أو شارك أو نزّل ملف PDF",
+        "detailHint": "استخدم عارض الفاتورة لفتح ملف PDF ومشاركته.",
+        "previewTitle": "مستند الفاتورة",
+        "previewSubtitle": "دفعة رقم {{id}}",
+        "previewHint": "الفاتورة جاهزة للفتح.",
+        "loading": "جاري تجهيز ملف الفاتورة PDF...",
+        "readyHint": "الملف الجاهز: {{name}}",
+        "shareMessage": "فاتورة بوابة اللاعب",
+        "errors": {
+          "loadTitle": "تعذر تحميل الفاتورة",
+          "loadFallback": "يرجى إعادة المحاولة بعد بضع ثوانٍ.",
+          "open": "تعذر فتح الفاتورة.",
+          "share": "تعذر مشاركة الفاتورة.",
+          "download": "تعذر تنزيل الفاتورة."
+        }
+      },
+      "empty": {
+        "title": "لا توجد دفعات",
+        "description": "ستظهر دفعات الأكاديمية هنا عند توفرها."
+      },
+      "errors": {
+        "loadTitle": "تعذر تحميل الدفعات",
+        "loadFallback": "حاول مرة أخرى بعد قليل.",
+        "partialLoad": "قد تتأخر بعض تفاصيل الدفعات. اسحب للتحديث."
+      },
+      "actions": {
+        "invoice": "فاتورة",
+        "openInvoice": "فتح الفاتورة",
+        "shareInvoice": "مشاركة الفاتورة",
+        "downloadInvoice": "تنزيل الفاتورة"
+      }
+    },
+    "news": {
+      "title": "الأخبار",
+      "subtitle": "تحديثات وإعلانات الأكاديمية",
+      "sections": {
+        "feedTitle": "موجز الأخبار",
+        "feedSubtitle": "آخر التحديثات من أكاديميتك"
+      },
+      "labels": {
+        "untitled": "تحديث بدون عنوان",
+        "noDescription": "لا يوجد وصف متاح."
+      },
+      "detail": {
+        "title": "تفاصيل الخبر",
+        "subtitle": "إعلان",
+        "imageIndex": "الصورة {{current}} من {{total}}"
+      },
+      "empty": {
+        "title": "لا توجد أخبار متاحة",
+        "description": "ستظهر الإعلانات الجديدة هنا."
+      },
+      "errors": {
+        "loadTitle": "تعذر تحميل الأخبار",
+        "loadFallback": "يرجى المحاولة مرة أخرى بعد قليل.",
+        "detailTitle": "تعذر تحميل هذا الخبر",
+        "detailFallback": "يرجى العودة إلى الموجز وإعادة المحاولة."
+      }
+    },
+    "performance": {
+      "title": "الأداء",
+      "subtitle": "متوسط التقييمات والاتجاهات والملاحظات",
+      "sections": {
+        "overallTitle": "المتوسط العام",
+        "overallSubtitle": "درجة الأداء الحالية",
+        "breakdownTitle": "تفصيل التقييم",
+        "breakdownSubtitle": "المتوسط حسب نوع التقييم",
+        "trendsTitle": "الاتجاهات حسب الفترة",
+        "trendsSubtitle": "التقدم عبر الزمن",
+        "recentTitle": "أحدث التقييمات",
+        "recentSubtitle": "آخر التقييمات المرسلة",
+        "notesTitle": "ملاحظات المدرب",
+        "notesSubtitle": "آخر التعليقات"
+      },
+      "periods": {
+        "daily": "يومي",
+        "weekly": "أسبوعي",
+        "monthly": "شهري"
+      },
+      "labels": {
+        "averageValue": "متوسط القيمة: {{value}}",
+        "totalFeedback": "إجمالي التقييمات: {{count}}",
+        "sessionScore": "الدرجة: {{value}}%",
+        "rating": "التقييم"
+      },
+      "empty": {
+        "breakdownTitle": "لا يوجد تفصيل تقييم بعد",
+        "breakdownDescription": "سيظهر التفصيل بعد إرسال التقييمات.",
+        "trendsTitle": "لا توجد بيانات اتجاهات بعد",
+        "trendsDescription": "ستظهر نقاط الاتجاه بعد جلسات إضافية.",
+        "recentTitle": "لا توجد تقييمات حديثة",
+        "recentDescription": "ستظهر التقييمات الحديثة هنا.",
+        "notesTitle": "لا توجد ملاحظات",
+        "notesDescription": "ستظهر ملاحظات المدرب عند توفرها."
+      },
+      "errors": {
+        "loadTitle": "تعذر تحميل الأداء",
+        "loadFallback": "يرجى إعادة المحاولة بعد لحظات.",
+        "partialLoad": "تأخر تحميل بعض أقسام الأداء. اسحب للتحديث."
+      }
+    },
+    "store": {
+      "title": "متجر الزي",
+      "subtitle": "الكتالوج والسلة وإتمام الطلب وتتبع الطلبات",
+      "searchPlaceholder": "ابحث عن المنتجات بالاسم",
+      "sections": {
+        "catalogTitle": "كتالوج المتجر",
+        "catalogSubtitle": "اختر المقاس وأضف إلى السلة"
+      },
+      "labels": {
+        "unknownProduct": "منتج غير معروف",
+        "inStock": "متوفر",
+        "outOfStock": "نفد المخزون",
+        "startingAt": "يبدأ من {{amount}}",
+        "stockCount": "المخزون: {{count}}",
+        "cartItems": "العناصر: {{count}}",
+        "pricePerItem": "سعر القطعة: {{amount}}",
+        "maxCount": "الحد الأقصى {{count}}",
+        "playerNumber": "رقم اللاعب",
+        "playerNumberPlaceholder": "رقم القميص (اختياري)",
+        "nickname": "اللقب",
+        "nicknamePlaceholder": "لقب اختياري",
+        "oneSize": "مقاس واحد",
+        "noImage": "لا توجد صورة للمنتج",
+        "notAvailable": "غير متاح"
+      },
+      "actions": {
+        "myOrders": "طلباتي",
+        "goToCart": "الانتقال إلى السلة",
+        "backToStore": "العودة إلى المتجر",
+        "checkout": "متابعة إلى إتمام الطلب",
+        "clearCart": "تفريغ السلة",
+        "addToCart": "إضافة إلى السلة",
+        "placeOrder": "تأكيد الطلب",
+        "backToCart": "العودة إلى السلة",
+        "backToOrders": "العودة إلى الطلبات",
+        "continueShopping": "متابعة التسوق"
+      },
+      "empty": {
+        "catalogTitle": "لا توجد منتجات متاحة",
+        "catalogDescription": "ستظهر منتجات الزي هنا عند نشرها من الأكاديمية.",
+        "searchDescription": "لا توجد منتجات تطابق البحث.",
+        "cartTitle": "السلة فارغة",
+        "cartDescription": "أضف منتجات من المتجر للمتابعة."
+      },
+      "errors": {
+        "catalogTitle": "تعذر تحميل كتالوج المتجر",
+        "catalogFallback": "يرجى المحاولة مرة أخرى بعد قليل."
+      },
+      "messages": {
+        "addedToCart": "تمت إضافة المنتج إلى السلة.",
+        "orderCreated": "تم إنشاء الطلب بنجاح."
+      },
+      "product": {
+        "title": "تفاصيل المنتج",
+        "subtitle": "اختر المقاس والكمية",
+        "detailsTitle": "ملخص المنتج",
+        "priceLabel": "السعر: {{amount}}",
+        "sizeTitle": "اختيار المقاس",
+        "sizeSubtitle": "اختر مقاسًا متاحًا",
+        "quantityTitle": "الكمية",
+        "quantitySubtitle": "عدّل الكمية قبل الإضافة",
+        "printingTitle": "بيانات الطباعة",
+        "printingSubtitle": "تظهر فقط للمنتجات التي تدعم الطباعة",
+        "notFoundTitle": "المنتج غير موجود",
+        "notFoundDescription": "هذا المنتج غير متاح أو تمت إزالته."
+      },
+      "cart": {
+        "title": "السلة",
+        "subtitle": "راجع العناصر المحددة وعدّلها",
+        "itemsTitle": "عناصر السلة",
+        "itemsSubtitle": "حدّث المقاس أو الكمية أو احذف العناصر",
+        "printingTitle": "إعدادات الطباعة",
+        "printingSubtitle": "تنطبق على عناصر الزي المطبوعة",
+        "summaryTitle": "ملخص السلة",
+        "summarySubtitle": "الإجمالي قبل إتمام الطلب"
+      },
+      "checkout": {
+        "title": "إتمام الطلب",
+        "subtitle": "راجع الطلب قبل الإرسال",
+        "sections": {
+          "reviewTitle": "مراجعة الطلب",
+          "reviewSubtitle": "تحقق من المنتجات والمقاسات والكميات",
+          "printingTitle": "بيانات الطباعة",
+          "printingSubtitle": "رقم اللاعب واللقب على مستوى الطلب",
+          "summaryTitle": "ملخص الطلب",
+          "summarySubtitle": "الإجمالي النهائي"
+        },
+        "labels": {
+          "size": "المقاس: {{value}}",
+          "quantity": "الكمية: {{value}}"
+        },
+        "errors": {
+          "validationTitle": "يرجى معالجة مشاكل إتمام الطلب",
+          "validationSubtitle": "بعض عناصر السلة لم تعد صالحة",
+          "validationFallback": "فشل التحقق من الطلب. راجع السلة.",
+          "submitFallback": "تعذر إرسال الطلب. يرجى المحاولة مرة أخرى.",
+          "cartEmpty": "السلة فارغة.",
+          "productMissing": "بعض المنتجات لم تعد متاحة.",
+          "variantMissing": "بعض المقاسات المحددة لم تعد متاحة.",
+          "variantOutOfStock": "بعض المقاسات المحددة نفد مخزونها.",
+          "quantityExceedsStock": "بعض الكميات تتجاوز المخزون الحالي."
+        }
+      },
+      "orders": {
+        "title": "طلبات الزي الخاصة بي",
+        "subtitle": "تتبع حالة الطلب والتجهيز",
+        "sections": {
+          "listTitle": "الطلبات",
+          "listSubtitle": "اضغط على الطلب لعرض التفاصيل وتسلسل الحالة"
+        },
+        "labels": {
+          "orderRef": "مرجع الطلب: {{ref}}",
+          "updatedAt": "آخر تحديث: {{value}}",
+          "itemCount": "العناصر: {{count}}",
+          "totalPieces": "القطع: {{count}}",
+          "moreItems": "+{{count}} المزيد",
+          "statusSummary": "تسلسل الحالة: {{status}}",
+          "playerNumber": "رقم اللاعب: {{value}}",
+          "nickname": "اللقب: {{value}}",
+          "itemPreview": "{{name}} - {{size}} x {{quantity}}"
+        },
+        "empty": {
+          "title": "لا توجد طلبات بعد",
+          "description": "عند إنشاء أول طلب سيظهر هنا مع تحديثات الحالة المباشرة."
+        },
+        "errors": {
+          "loadTitle": "تعذر تحميل طلبات الزي",
+          "loadFallback": "يرجى إعادة المحاولة بعد قليل."
+        }
+      },
+      "orderDetails": {
+        "title": "تفاصيل الطلب",
+        "subtitle": "الحالة وتفصيل العناصر",
+        "sections": {
+          "summaryTitle": "ملخص الطلب",
+          "summarySubtitle": "المرجع وحالة التقدم",
+          "timelineTitle": "تسلسل الحالة",
+          "timelineSubtitle": "من الدفع حتى التسليم",
+          "itemsTitle": "عناصر الطلب",
+          "itemsSubtitle": "المقاسات والكميات المرسلة"
+        },
+        "notFoundTitle": "الطلب غير موجود",
+        "notFoundDescription": "هذا الطلب غير متاح أو ما زال قيد المزامنة."
+      },
+      "orderStatuses": {
+        "pending_payment": "بانتظار الدفع",
+        "paid": "مدفوع",
+        "printed": "تمت الطباعة",
+        "received": "تم الاستلام",
+        "received_and_player_notified": "تم الاستلام وإشعار اللاعب",
+        "collected": "تم التسليم"
+      }
+    },
+    "freeze": {
+      "title": "طلب التجميد",
+      "subtitle": "قدّم طلب تجميد وتتبع الفترات الحالية والقادمة والمنتهية",
+      "sections": {
+        "policyTitle": "سياسة التجميد",
+        "policySubtitle": "حدود السياسة وتأثيرها على التسجيل",
+        "requestTitle": "طلب تجميد",
+        "requestSubtitle": "اختر التواريخ وأضف سببًا ثم راجع قبل الإرسال",
+        "historyTitle": "سجل التجميد",
+        "historySubtitle": "طلبات التجميد الحالية والقادمة والمعلقة والمنتهية",
+        "currentAndUpcoming": "حالي / قادم / معلّق",
+        "ended": "منتهي"
+      },
+      "labels": {
+        "policy": "الحد الأقصى {{maxDays}} يومًا لكل طلب، وحتى {{maxCount}} مرات تجميد سنويًا.",
+        "usedThisYear": "المستخدم هذا العام: {{count}}",
+        "courseModeHint": "قد تختلف آلية احتساب جلسات الدورات خلال فترات التجميد.",
+        "subscriptionModeHint": "تجميد الاشتراك عادةً يمدد تاريخ النهاية وفق السياسة.",
+        "startDateInput": "تاريخ البدء (YYYY-MM-DD)",
+        "endDateInput": "تاريخ الانتهاء (YYYY-MM-DD)",
+        "reason": "السبب (اختياري)",
+        "reasonPlaceholder": "سفر، امتحانات، إصابة، أو ملاحظة أخرى",
+        "startDate": "البدء: {{date}}",
+        "endDate": "الانتهاء: {{date}}",
+        "durationDays": "{{count}} يوم",
+        "noReason": "لا يوجد سبب."
+      },
+      "actions": {
+        "reviewRequest": "مراجعة الطلب",
+        "editRequest": "تعديل الطلب",
+        "submitRequest": "إرسال طلب التجميد",
+        "cancelScheduled": "إلغاء التجميد المجدول"
+      },
+      "errors": {
+        "pickDates": "يرجى إدخال تاريخ بدء ونهاية صالحين.",
+        "badRange": "لا يمكن أن يكون تاريخ النهاية قبل تاريخ البدء.",
+        "pastStart": "يجب أن يكون تاريخ البدء بعد اليوم.",
+        "tooLong": "مدة التجميد تتجاوز الحد المسموح {{days}} يومًا.",
+        "yearLimit": "وصلت إلى الحد السنوي للتجميد ({{count}}).",
+        "overlap": "التواريخ المحددة تتداخل مع تجميد قائم.",
+        "unknown": "طلب التجميد غير صالح.",
+        "submitTitle": "تعذر إرسال طلب التجميد",
+        "submitFallback": "يرجى مراجعة تفاصيل الطلب ثم إعادة المحاولة.",
+        "loadTitle": "تعذر تحميل سجل التجميد",
+        "loadFallback": "اسحب للتحديث ثم حاول مرة أخرى.",
+        "partialLoad": "قد تتأخر بعض سجلات التجميد. اضغط للتحديث."
+      },
+      "messages": {
+        "submitted": "تم إرسال طلب التجميد بنجاح.",
+        "submitFailed": "فشل إرسال طلب التجميد.",
+        "cancelled": "تم إلغاء التجميد المجدول بنجاح.",
+        "cancelFailed": "تعذر إلغاء هذا التجميد."
+      },
+      "empty": {
+        "title": "لا توجد سجلات تجميد بعد",
+        "description": "سيظهر سجل التجميد هنا بعد إنشاء الطلبات."
+      }
+    },
+    "renewal": {
+      "title": "طلب التجديد",
+      "subtitle": "تدفق تجديد متعدد الخطوات متوافق مع قواعد الاشتراك والدورات",
+      "steps": {
+        "typeTitle": "اختر نوع التجديد",
+        "optionsTitle": "المستوى والدورة والمجموعة",
+        "datesTitle": "التواريخ والجلسات",
+        "reviewTitle": "المراجعة والإرسال"
+      },
+      "sections": {
+        "currentTitle": "التسجيل الحالي",
+        "currentSubtitle": "تفاصيل الاشتراك الحالي قبل التجديد",
+        "stepTitle": "الخطوة {{step}} من {{total}}"
+      },
+      "actions": {
+        "subscriptionType": "تجديد اشتراك",
+        "courseType": "تجديد دورة",
+        "submit": "إرسال طلب التجديد"
+      },
+      "labels": {
+        "currentType": "نوع التسجيل: {{value}}",
+        "currentCourse": "الدورة الحالية: {{value}}",
+        "currentGroup": "المجموعة الحالية: {{value}}",
+        "currentStart": "تاريخ البدء الحالي: {{value}}",
+        "currentEnd": "تاريخ الانتهاء الحالي: {{value}}",
+        "currentSessions": "الجلسات الحالية: {{value}}",
+        "currentLevel": "المستوى الحالي: {{value}}",
+        "subscriptionDesc": "جدّد ضمن مجموعة متوافقة مع الاشتراك.",
+        "courseDesc": "جدّد ضمن دورة محددة ومجموعاتها المرتبطة.",
+        "level": "المستوى",
+        "course": "الدورة",
+        "group": "المجموعة",
+        "startDate": "تاريخ البدء",
+        "endDate": "تاريخ الانتهاء",
+        "sessions": "الجلسات",
+        "startBounds": "نطاق البدء المسموح: {{min}} إلى {{max}}",
+        "endBounds": "نطاق الانتهاء المسموح: {{min}} إلى {{max}}",
+        "sessionsCap": "الحد الأقصى للجلسات: {{count}}",
+        "playerNote": "ملاحظة اللاعب (اختياري)",
+        "playerNotePlaceholder": "أضف أي ملاحظة لمراجعة الأكاديمية",
+        "reviewType": "نوع التجديد: {{value}}",
+        "reviewCourse": "الدورة: {{value}}",
+        "reviewGroup": "المجموعة: {{value}}",
+        "reviewStart": "تاريخ البدء: {{value}}",
+        "reviewEnd": "تاريخ الانتهاء: {{value}}",
+        "reviewSessions": "الجلسات: {{value}}",
+        "reviewLevel": "المستوى: {{value}}"
+      },
+      "errors": {
+        "loadTitle": "تعذر تحميل بيانات التجديد",
+        "loadFallback": "أعد المحاولة لتحميل الأهلية والخيارات.",
+        "pendingRequest": "يوجد طلب تجديد قيد الانتظار. لا يمكنك إرسال طلب آخر الآن.",
+        "submitTitle": "تعذر إرسال طلب التجديد",
+        "submitFallback": "يرجى مراجعة الاختيارات ثم إعادة المحاولة."
+      },
+      "messages": {
+        "submitted": "تم إرسال طلب التجديد بنجاح.",
+        "submitFailed": "فشل إرسال طلب التجديد."
+      },
+      "empty": {
+        "courses": "لا توجد دورات مؤهلة حول تاريخ مرجع التجديد.",
+        "courseGroups": "لا توجد مجموعات مرتبطة بالدورة المحددة.",
+        "subscriptionGroups": "لا توجد مجموعات اشتراك فقط متاحة حاليًا."
+      }
+    },
+    "profile": {
+      "title": "المعلومات الشخصية",
+      "subtitle": "عرض تفاصيل الملف الشخصي وتحديث المعلومات الشخصية",
+      "editTitle": "تعديل الملف الشخصي",
+      "editSubtitle": "حدّث بيانات الملف ثم احفظ التغييرات",
+      "sections": {
+        "summaryTitle": "ملخص الملف الشخصي",
+        "summarySubtitle": "بيانات الهوية والحساب الأساسية",
+        "namesTitle": "تفاصيل الاسم",
+        "namesSubtitle": "حقول الاسم بالإنجليزية والعربية",
+        "contactTitle": "بيانات التواصل",
+        "contactSubtitle": "الهاتف والعنوان وروابط الموقع",
+        "healthTitle": "المعلومات البدنية",
+        "healthSubtitle": "بيانات الطول والوزن",
+        "imageTitle": "الصورة الشخصية",
+        "imageSubtitle": "اختيار ورفع صورة اللاعب"
+      },
+      "actions": {
+        "editProfile": "تعديل الملف الشخصي",
+        "refreshProfile": "تحديث الملف",
+        "changeImage": "اختيار صورة",
+        "clearImage": "إزالة الصورة المحددة",
+        "reset": "إعادة ضبط التغييرات",
+        "save": "حفظ الملف",
+        "replaceImage": "استبدال الصورة"
+      },
+      "labels": {
+        "noImage": "لا توجد صورة محددة.",
+        "unnamed": "لاعب بدون اسم",
+        "firstEnglish": "الاسم الأول (EN): {{value}}",
+        "middleEnglish": "الاسم الأوسط (EN): {{value}}",
+        "lastEnglish": "اسم العائلة (EN): {{value}}",
+        "firstArabic": "الاسم الأول (AR): {{value}}",
+        "middleArabic": "الاسم الأوسط (AR): {{value}}",
+        "lastArabic": "اسم العائلة (AR): {{value}}",
+        "phone1": "الهاتف الأساسي: {{value}}",
+        "phone2": "الهاتف الثانوي: {{value}}",
+        "address": "العنوان: {{value}}",
+        "location": "الموقع على الخريطة: {{value}}",
+        "weight": "الوزن: {{value}}",
+        "height": "الطول: {{value}}",
+        "firstEnglishLabel": "الاسم الأول (إنجليزي)",
+        "middleEnglishLabel": "الاسم الأوسط (إنجليزي)",
+        "lastEnglishLabel": "اسم العائلة (إنجليزي)",
+        "firstArabicLabel": "الاسم الأول (عربي)",
+        "middleArabicLabel": "الاسم الأوسط (عربي)",
+        "lastArabicLabel": "اسم العائلة (عربي)",
+        "phone1Label": "الهاتف الأساسي",
+        "phone2Label": "الهاتف الثانوي",
+        "dateOfBirthLabel": "تاريخ الميلاد (YYYY-MM-DD)",
+        "addressLabel": "العنوان",
+        "locationLabel": "رابط Google Maps",
+        "locationPlaceholder": "https://maps.google.com/...",
+        "phonePlaceholder": "+962...",
+        "weightLabel": "الوزن (كجم)",
+        "heightLabel": "الطول (سم)",
+        "imageSourceLabel": "رابط الصورة / مصدر Base64",
+        "imageSourcePlaceholder": "https://... أو data:image/..."
+      },
+      "messages": {
+        "updated": "تم تحديث الملف الشخصي بنجاح."
+      },
+      "errors": {
+        "loadTitle": "تعذر تحميل الملف الشخصي",
+        "loadFallback": "يرجى إعادة محاولة تحميل الملف.",
+        "submitTitle": "تعذر تحديث الملف الشخصي",
+        "submitFallback": "راجع القيم ثم أعد المحاولة.",
+        "imagePermission": "صلاحية الوسائط مطلوبة لاختيار صورة.",
+        "imageSelect": "تعذر اختيار ملف الصورة."
+      },
+      "validation": {
+        "phone1": "رقم الهاتف الأساسي مطلوب ويجب أن يكون صالحًا.",
+        "dateOfBirth": "يجب أن يكون تاريخ الميلاد بصيغة YYYY-MM-DD.",
+        "weight": "يجب أن يكون الوزن رقمًا صالحًا ضمن النطاق المسموح.",
+        "height": "يجب أن يكون الطول رقمًا صالحًا ضمن النطاق المسموح."
+      }
+    }
   }
 }

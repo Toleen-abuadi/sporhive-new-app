@@ -1,4 +1,4 @@
-import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -9,6 +9,7 @@ import { useI18n } from '../../hooks/useI18n';
 import { useTheme } from '../../hooks/useTheme';
 import { getRowDirection } from '../../utils/rtl';
 import { borderRadius, spacing } from '../../theme/tokens';
+import { LoaderSpinner } from './Loader';
 import { Text } from './Text';
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
@@ -59,19 +60,19 @@ export function Button({
 
   const variantStyles = {
     primary: {
-      backgroundColor: colors.accentOrange,
-      borderColor: colors.accentOrange,
-      textColor: colors.white,
+      backgroundColor: colors.buttonPrimaryBackground || colors.accentOrange,
+      borderColor: colors.buttonPrimaryBorder || colors.accentOrange,
+      textColor: colors.buttonPrimaryText || colors.white,
     },
     secondary: {
-      backgroundColor: colors.surface,
-      borderColor: colors.border,
-      textColor: colors.textPrimary,
+      backgroundColor: colors.buttonSecondaryBackground || colors.surface,
+      borderColor: colors.buttonSecondaryBorder || colors.border,
+      textColor: colors.buttonSecondaryText || colors.textPrimary,
     },
     soft: {
-      backgroundColor: colors.accentOrangeSoft,
-      borderColor: colors.accentOrangeSoft,
-      textColor: colors.accentOrange,
+      backgroundColor: colors.buttonSoftBackground || colors.accentOrangeSoft,
+      borderColor: colors.buttonSoftBorder || colors.accentOrangeSoft,
+      textColor: colors.buttonSoftText || colors.accentOrange,
     },
     ghost: {
       backgroundColor: 'transparent',
@@ -124,7 +125,7 @@ export function Button({
       {...props}
     >
       {loading ? (
-        <ActivityIndicator size="small" color={currentVariant.textColor} />
+        <LoaderSpinner size="small" color={currentVariant.textColor} />
       ) : (
         <View style={[styles.inner, { flexDirection: getRowDirection(isRTL) }]}>
           {leadingIcon ? <View style={styles.iconWrap}>{leadingIcon}</View> : null}

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useColorScheme } from 'react-native';
 import { getThemeColors } from './colors';
 import { borderRadius, layout, motion, shadow, spacing, typography } from './tokens';
@@ -53,7 +53,7 @@ export function ThemeProvider({ children }) {
     };
   }, []);
 
-  const setThemeMode = async (nextMode) => {
+  const setThemeMode = useCallback(async (nextMode) => {
     const normalized = normalizeThemeMode(nextMode);
     setThemeModeState(normalized);
     try {
@@ -63,10 +63,14 @@ export function ThemeProvider({ children }) {
         console.warn('[theme] failed to save theme preference', error);
       }
     }
-  };
+  }, []);
 
   const resolvedMode = resolveTheme(themeMode, systemColorScheme);
   const colors = useMemo(() => getThemeColors(resolvedMode), [resolvedMode]);
+
+  const toggleTheme = useCallback(() => {
+    setThemeMode(resolvedMode === 'dark' ? 'light' : 'dark');
+  }, [resolvedMode, setThemeMode]);
 
   const value = useMemo(
     () => ({
@@ -76,7 +80,7 @@ export function ThemeProvider({ children }) {
       resolvedMode,
       themeMode,
       setThemeMode,
-      toggleTheme: () => setThemeMode(resolvedMode === 'dark' ? 'light' : 'dark'),
+      toggleTheme,
       spacing,
       borderRadius,
       shadow,
@@ -84,7 +88,7 @@ export function ThemeProvider({ children }) {
       motion,
       layout,
     }),
-    [colors, isReady, resolvedMode, themeMode]
+    [colors, isReady, resolvedMode, setThemeMode, themeMode, toggleTheme]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

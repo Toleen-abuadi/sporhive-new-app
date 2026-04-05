@@ -8,6 +8,18 @@
       "nextLabel": "العربية",
       "switchTo": "Switch language to {{language}}"
     },
+    "theme": {
+      "title": "Appearance",
+      "subtitle": "Choose your app color mode",
+      "current": "Current mode: {{mode}}",
+      "toggleTo": "Switch appearance to {{mode}}",
+      "setMode": "Set appearance to {{mode}}",
+      "modes": {
+        "system": "System",
+        "light": "Light",
+        "dark": "Dark"
+      }
+    },
     "entryMode": {
       "label": "Entry mode",
       "player": "Player",
@@ -17,11 +29,85 @@
       "back": "Back",
       "continue": "Continue",
       "goHome": "Go to home",
-      "logout": "Log out"
+      "logout": "Log out",
+      "next": "Next",
+      "cancel": "Cancel",
+      "done": "Done",
+      "selectDate": "Select date"
     },
     "accessibility": {
       "closeToast": "Dismiss notification",
       "languageSwitch": "Language switch"
+    },
+    "formats": {
+      "isoDatePlaceholder": "YYYY-MM-DD"
+    },
+    "enums": {
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive",
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "cancelled": "Cancelled",
+        "ended": "Ended",
+        "expired": "Expired",
+        "valid": "Valid",
+        "processing": "Processing",
+        "ready": "Ready",
+        "collected": "Collected",
+        "failed": "Failed",
+        "refunded": "Refunded",
+        "partial": "Partial",
+        "unpaid": "Unpaid",
+        "overdue": "Overdue",
+        "paid": "Paid",
+        "completed": "Completed",
+        "due": "Due",
+        "printed": "Printed",
+        "received": "Received",
+        "received_and_player_notified": "Received & Player Notified",
+        "pending_payment": "Pending Payment",
+        "scheduled": "Scheduled",
+        "under_review": "Under Review",
+        "upcoming": "Upcoming",
+        "activated": "Activated",
+        "other": "Other"
+      },
+      "paymentMethods": {
+        "cash": "Cash",
+        "card": "Card",
+        "bank_transfer": "Bank Transfer",
+        "online": "Online",
+        "wallet": "Wallet",
+        "pos": "POS",
+        "credit_card": "Credit Card",
+        "debit_card": "Debit Card",
+        "apple_pay": "Apple Pay",
+        "google_pay": "Google Pay",
+        "mada": "Mada",
+        "visa": "Visa",
+        "master_card": "Mastercard",
+        "cheque": "Cheque"
+      },
+      "paymentTypes": {
+        "payment": "Payment",
+        "subscription": "Subscription",
+        "course": "Course",
+        "renewal": "Renewal",
+        "freeze": "Freeze",
+        "uniform": "Uniform",
+        "invoice": "Invoice",
+        "registration": "Registration",
+        "installment": "Installment",
+        "session": "Session"
+      },
+      "registrationTypes": {
+        "subscription": "Subscription",
+        "course": "Course",
+        "tryout": "Tryout",
+        "trial": "Trial"
+      }
     }
   },
   "welcome": {
@@ -197,6 +283,675 @@
     "externalPlayerContext": "External player ID: {{id}}",
     "portalReady": "Portal proxy token is available.",
     "goToBooking": "Go to Booking"
+  },
+  "playerPortal": {
+    "guards": {
+      "unauthenticated": "You need to sign in as a player to open the portal.",
+      "notPlayer": "This account does not have player access.",
+      "missingToken": "Session token is missing. Please sign in again.",
+      "missingAcademy": "Academy context is missing for this player.",
+      "missingPlayer": "Player identity is incomplete for portal requests.",
+      "default": "Player portal context is not ready yet."
+    },
+    "errors": {
+      "refreshFailed": "Could not refresh portal data.",
+      "overviewTitle": "Unable to load overview",
+      "overviewFallback": "Try again in a few seconds.",
+      "newsTitle": "Unable to load news",
+      "newsFallback": "News preview is temporarily unavailable."
+    },
+    "actions": {
+      "payments": "Payments",
+      "performance": "Performance",
+      "renewal": "Renewal",
+      "freeze": "Freeze",
+      "store": "Store",
+      "profile": "Profile",
+      "news": "News",
+      "booking": "Booking",
+      "retry": "Retry",
+      "viewAll": "View all",
+      "backHome": "Back to Player Home",
+      "openInvoice": "Open invoice",
+      "shareInvoice": "Share invoice",
+      "downloadInvoice": "Download invoice"
+    },
+    "navigation": {
+      "tabs": {
+        "home": "Home",
+        "payments": "Payments",
+        "store": "Store",
+        "more": "More"
+      },
+      "more": {
+        "title": "More",
+        "subtitle": "Explore additional player tools and sections",
+        "sections": {
+          "portalTitle": "Player Portal",
+          "portalSubtitle": "Training and account sections",
+          "storeTitle": "Store",
+          "storeSubtitle": "Order history and shopping tools",
+          "accessTitle": "Access",
+          "accessSubtitle": "Cross-app destinations",
+          "insightsTitle": "Insights",
+          "insightsSubtitle": "Performance and academy updates",
+          "servicesTitle": "Services",
+          "servicesSubtitle": "Orders and cross-app access"
+        },
+        "descriptions": {
+          "performance": "View feedback summaries and period trends.",
+          "news": "Read academy announcements and updates.",
+          "freeze": "Create freeze requests and review history.",
+          "renewal": "Submit renewal requests with step-by-step review.",
+          "profile": "View and edit your player profile.",
+          "storeCatalog": "Browse uniform products and manage your cart.",
+          "orders": "Track uniform order statuses and details.",
+          "booking": "Open the booking hub for slots and sessions."
+        }
+      }
+    },
+    "home": {
+      "title": "Dashboard",
+      "subtitle": "Overview and portal shortcuts",
+      "unavailableTitle": "Portal is not available",
+      "loadingTitle": "Syncing player overview",
+      "loadingDescription": "Fetching your latest dashboard data.",
+      "header": {
+        "welcome": "Ready for your next training week",
+        "academy": "Academy: {{name}}",
+        "playerId": "Player ID: {{id}}",
+        "status": "Subscription: {{status}}",
+        "updatedAt": "Updated: {{time}}"
+      },
+      "kpis": {
+        "remainingSessions": "Remaining sessions",
+        "totalSessions": "Total: {{count}}",
+        "creditBalance": "Credit balance",
+        "nextExpiry": "Next expiry: {{date}}",
+        "noExpiry": "No credit expiry",
+        "paymentStatus": "Payment status",
+        "latestPayment": "Latest payment"
+      },
+      "sections": {
+        "subscriptionTitle": "Subscription & Training",
+        "subscriptionSubtitle": "Current plan details",
+        "creditsTitle": "Credits & Freeze",
+        "creditsSubtitle": "Available credits and freeze status",
+        "paymentTitle": "Latest Payment",
+        "paymentSubtitle": "Invoice summary from portal",
+        "performanceTitle": "Performance Summary",
+        "performanceSubtitle": "Progress snapshot",
+        "quickActionsTitle": "Quick Actions",
+        "quickActionsSubtitle": "Jump to key portal sections",
+        "newsTitle": "Latest News",
+        "newsSubtitle": "Recent academy updates",
+        "calendarTitle": "Booking Shortcut",
+        "calendarSubtitle": "Open bookings from your dashboard"
+      },
+      "subscription": {
+        "course": "Course: {{name}}",
+        "group": "Group: {{name}}",
+        "period": "Period: {{start}} - {{end}}"
+      },
+      "credits": {
+        "total": "Total credits: {{value}}",
+        "nextExpiry": "Next expiry: {{date}}",
+        "none": "No expiry",
+        "currentFreeze": "Current freeze: {{status}}",
+        "noFreeze": "No active freeze"
+      },
+      "payment": {
+        "invoice": "Invoice: {{id}}",
+        "amount": "Amount: {{amount}}",
+        "dueDate": "Due: {{date}}",
+        "emptyTitle": "No recent payment found",
+        "emptyDescription": "Payment details will appear after your next invoice."
+      },
+      "performance": {
+        "noSummary": "Performance summary is currently unavailable.",
+        "progress": "Progress: {{value}}",
+        "remaining": "Remaining sessions: {{count}}"
+      },
+      "news": {
+        "untitled": "Untitled update",
+        "noBody": "No preview available.",
+        "emptyTitle": "No news available",
+        "emptyDescription": "New announcements will appear here."
+      },
+      "calendar": {
+        "cta": "Go to Booking Hub",
+        "hint": "Manage your slots and sessions."
+      }
+    },
+    "routes": {
+      "subtitle": "Section shell ready for next implementation pass.",
+      "payments": {
+        "title": "Payments",
+        "description": "Payment list, invoices, and status actions will be implemented in the next pass."
+      },
+      "performance": {
+        "title": "Performance",
+        "description": "Feedback timeline and performance charts will be implemented in the next pass."
+      },
+      "store": {
+        "title": "Store",
+        "description": "Uniform catalog and order actions will be implemented in the next pass."
+      },
+      "news": {
+        "title": "News",
+        "description": "News list, detail view, and image viewer will be implemented in the next pass."
+      },
+      "freeze": {
+        "title": "Freeze Requests",
+        "description": "Freeze request form and history will be implemented in the next pass."
+      },
+      "renewal": {
+        "title": "Renewal",
+        "description": "Renewal eligibility and request flow will be implemented in the next pass."
+      },
+      "profile": {
+        "title": "Profile",
+        "description": "Editable player profile and image update flow will be implemented in the next pass."
+      }
+    },
+    "payments": {
+      "title": "Payments & Receipts",
+      "subtitle": "Invoices, status, and due items",
+      "filters": {
+        "all": "All",
+        "pending": "Pending",
+        "paid": "Paid"
+      },
+      "summary": {
+        "totalCount": "Records",
+        "records": "All invoices",
+        "pending": "Pending value",
+        "pendingCount": "{{count}} pending",
+        "paid": "Paid value",
+        "paidCount": "{{count}} paid"
+      },
+      "sections": {
+        "listTitle": "Payment History",
+        "listSubtitle": "Tap a card for full details"
+      },
+      "labels": {
+        "payment": "Payment",
+        "method": "Method: {{value}}",
+        "methodShort": "Payment method",
+        "dueDate": "Due: {{value}}",
+        "dueDateShort": "Due date",
+        "paidDate": "Paid: {{value}}",
+        "paidDateShort": "Paid date",
+        "invoiceRef": "Invoice: {{value}}",
+        "invoiceRefShort": "Invoice reference",
+        "notAvailable": "N/A",
+        "notPaid": "Not paid",
+        "status": "Status",
+        "creditsUsed": "Credits used"
+      },
+      "detail": {
+        "title": "Payment Details",
+        "subtitle": "Full invoice metadata",
+        "paymentId": "Payment ID: {{id}}",
+        "notFoundTitle": "Payment not found",
+        "notFoundDescription": "This payment is unavailable or no longer visible."
+      },
+      "invoice": {
+        "title": "Invoice",
+        "subtitle": "Open, share, or download PDF",
+        "detailHint": "Use the invoice viewer to open and share this payment PDF.",
+        "previewTitle": "Invoice Document",
+        "previewSubtitle": "Payment #{{id}}",
+        "previewHint": "Invoice is ready to open.",
+        "loading": "Preparing invoice PDF...",
+        "readyHint": "Ready file: {{name}}",
+        "shareMessage": "Player portal invoice",
+        "errors": {
+          "loadTitle": "Unable to load invoice",
+          "loadFallback": "Please retry in a few seconds.",
+          "open": "Unable to open invoice.",
+          "share": "Unable to share invoice.",
+          "download": "Unable to download invoice."
+        }
+      },
+      "empty": {
+        "title": "No payments found",
+        "description": "Your academy payments will appear here once available."
+      },
+      "errors": {
+        "loadTitle": "Unable to load payments",
+        "loadFallback": "Try again shortly.",
+        "partialLoad": "Some payment details may be delayed. Pull to refresh."
+      },
+      "actions": {
+        "invoice": "Invoice",
+        "openInvoice": "Open Invoice",
+        "shareInvoice": "Share Invoice",
+        "downloadInvoice": "Download Invoice"
+      }
+    },
+    "news": {
+      "title": "News",
+      "subtitle": "Academy updates and announcements",
+      "sections": {
+        "feedTitle": "News Feed",
+        "feedSubtitle": "Latest updates from your academy"
+      },
+      "labels": {
+        "untitled": "Untitled update",
+        "noDescription": "No description available."
+      },
+      "detail": {
+        "title": "News Details",
+        "subtitle": "Announcement",
+        "imageIndex": "Image {{current}} of {{total}}"
+      },
+      "empty": {
+        "title": "No news available",
+        "description": "New announcements will appear here."
+      },
+      "errors": {
+        "loadTitle": "Unable to load news",
+        "loadFallback": "Please try again shortly.",
+        "detailTitle": "Unable to load this news item",
+        "detailFallback": "Please return to the feed and retry."
+      }
+    },
+    "performance": {
+      "title": "Performance",
+      "subtitle": "Feedback average, trends, and notes",
+      "sections": {
+        "overallTitle": "Overall Average",
+        "overallSubtitle": "Current performance score",
+        "breakdownTitle": "Rating Breakdown",
+        "breakdownSubtitle": "Average by rating type",
+        "trendsTitle": "Trends by Period",
+        "trendsSubtitle": "Progress over time",
+        "recentTitle": "Recent Feedback",
+        "recentSubtitle": "Latest submitted ratings",
+        "notesTitle": "Coach Notes",
+        "notesSubtitle": "Latest comments"
+      },
+      "periods": {
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "monthly": "Monthly"
+      },
+      "labels": {
+        "averageValue": "Average value: {{value}}",
+        "totalFeedback": "Total feedback: {{count}}",
+        "sessionScore": "Score: {{value}}%",
+        "rating": "Rating"
+      },
+      "empty": {
+        "breakdownTitle": "No rating breakdown yet",
+        "breakdownDescription": "Ratings will appear after feedback is submitted.",
+        "trendsTitle": "No trend data yet",
+        "trendsDescription": "Trend points will appear after more sessions.",
+        "recentTitle": "No recent feedback",
+        "recentDescription": "Recent feedback entries will appear here.",
+        "notesTitle": "No notes available",
+        "notesDescription": "Coach comments will appear when provided."
+      },
+      "errors": {
+        "loadTitle": "Unable to load performance",
+        "loadFallback": "Please retry in a moment.",
+        "partialLoad": "Some performance blocks are delayed. Pull to refresh."
+      }
+    },
+    "store": {
+      "title": "Uniform Store",
+      "subtitle": "Catalog, cart, checkout, and order tracking",
+      "searchPlaceholder": "Search products by name",
+      "sections": {
+        "catalogTitle": "Store Catalog",
+        "catalogSubtitle": "Pick your size and add to cart"
+      },
+      "labels": {
+        "unknownProduct": "Unknown product",
+        "inStock": "In stock",
+        "outOfStock": "Out of stock",
+        "startingAt": "Starting at {{amount}}",
+        "stockCount": "Stock: {{count}}",
+        "cartItems": "Items: {{count}}",
+        "pricePerItem": "Price/item: {{amount}}",
+        "maxCount": "Max {{count}}",
+        "playerNumber": "Player number",
+        "playerNumberPlaceholder": "Optional jersey number",
+        "nickname": "Nickname",
+        "nicknamePlaceholder": "Optional nickname",
+        "oneSize": "One size",
+        "noImage": "No product image available",
+        "notAvailable": "Not available"
+      },
+      "actions": {
+        "myOrders": "My Orders",
+        "goToCart": "Go to Cart",
+        "backToStore": "Back to Store",
+        "checkout": "Continue to Checkout",
+        "clearCart": "Clear Cart",
+        "addToCart": "Add to Cart",
+        "placeOrder": "Place Order",
+        "backToCart": "Back to Cart",
+        "backToOrders": "Back to Orders",
+        "continueShopping": "Continue Shopping"
+      },
+      "empty": {
+        "catalogTitle": "No products available",
+        "catalogDescription": "Uniform products will appear here when your academy publishes them.",
+        "searchDescription": "No products matched your search.",
+        "cartTitle": "Cart is empty",
+        "cartDescription": "Add products from the store to continue."
+      },
+      "errors": {
+        "catalogTitle": "Unable to load store catalog",
+        "catalogFallback": "Please try again in a few moments."
+      },
+      "messages": {
+        "addedToCart": "Item added to cart.",
+        "orderCreated": "Order created successfully."
+      },
+      "product": {
+        "title": "Product Details",
+        "subtitle": "Select size and quantity",
+        "detailsTitle": "Product Summary",
+        "priceLabel": "Price: {{amount}}",
+        "sizeTitle": "Size Selection",
+        "sizeSubtitle": "Choose an available size",
+        "quantityTitle": "Quantity",
+        "quantitySubtitle": "Adjust item count before adding",
+        "printingTitle": "Printing Details",
+        "printingSubtitle": "Shown only for products that support printing",
+        "notFoundTitle": "Product not found",
+        "notFoundDescription": "This product is unavailable or has been removed."
+      },
+      "cart": {
+        "title": "Cart",
+        "subtitle": "Review and edit selected items",
+        "itemsTitle": "Cart Items",
+        "itemsSubtitle": "Update size, quantity, or remove items",
+        "printingTitle": "Printing Settings",
+        "printingSubtitle": "Applies to printed uniform items",
+        "summaryTitle": "Cart Summary",
+        "summarySubtitle": "Subtotal before checkout"
+      },
+      "checkout": {
+        "title": "Checkout",
+        "subtitle": "Review order before submission",
+        "sections": {
+          "reviewTitle": "Order Review",
+          "reviewSubtitle": "Verify products, sizes, and quantities",
+          "printingTitle": "Printing Inputs",
+          "printingSubtitle": "Order-level player number and nickname",
+          "summaryTitle": "Order Summary",
+          "summarySubtitle": "Final subtotal"
+        },
+        "labels": {
+          "size": "Size: {{value}}",
+          "quantity": "Quantity: {{value}}"
+        },
+        "errors": {
+          "validationTitle": "Please fix checkout issues",
+          "validationSubtitle": "Some cart items are no longer valid",
+          "validationFallback": "Checkout validation failed. Please review your cart.",
+          "submitFallback": "Unable to submit order. Please try again.",
+          "cartEmpty": "Your cart is empty.",
+          "productMissing": "Some products are no longer available.",
+          "variantMissing": "Some selected sizes are no longer available.",
+          "variantOutOfStock": "Some selected sizes are out of stock.",
+          "quantityExceedsStock": "Some quantities exceed current stock."
+        }
+      },
+      "orders": {
+        "title": "My Uniform Orders",
+        "subtitle": "Track order and fulfillment status",
+        "sections": {
+          "listTitle": "Orders",
+          "listSubtitle": "Tap an order to view details and status timeline"
+        },
+        "labels": {
+          "orderRef": "Order Ref: {{ref}}",
+          "updatedAt": "Updated: {{value}}",
+          "itemCount": "Items: {{count}}",
+          "totalPieces": "Pieces: {{count}}",
+          "moreItems": "+{{count}} more",
+          "statusSummary": "Status flow: {{status}}",
+          "playerNumber": "Player No: {{value}}",
+          "nickname": "Nickname: {{value}}",
+          "itemPreview": "{{name}} - {{size}} x {{quantity}}"
+        },
+        "empty": {
+          "title": "No orders yet",
+          "description": "Once you place an order, it will appear here with live status updates."
+        },
+        "errors": {
+          "loadTitle": "Unable to load uniform orders",
+          "loadFallback": "Please retry in a few moments."
+        }
+      },
+      "orderDetails": {
+        "title": "Order Details",
+        "subtitle": "Status and item breakdown",
+        "sections": {
+          "summaryTitle": "Order Summary",
+          "summarySubtitle": "Reference and progress state",
+          "timelineTitle": "Status Timeline",
+          "timelineSubtitle": "Progress from payment to collection",
+          "itemsTitle": "Order Items",
+          "itemsSubtitle": "Sizes and quantities submitted"
+        },
+        "notFoundTitle": "Order not found",
+        "notFoundDescription": "This order is unavailable or still syncing."
+      },
+      "orderStatuses": {
+        "pending_payment": "Pending Payment",
+        "paid": "Paid",
+        "printed": "Printed",
+        "received": "Received",
+        "received_and_player_notified": "Received & Player Notified",
+        "collected": "Collected"
+      }
+    },
+    "freeze": {
+      "title": "Request Freezing",
+      "subtitle": "Request a freeze and track current, upcoming, and ended periods",
+      "sections": {
+        "policyTitle": "Freeze Policy",
+        "policySubtitle": "Policy limits and registration impact",
+        "requestTitle": "Request Freeze",
+        "requestSubtitle": "Select dates, add reason, and review before submit",
+        "historyTitle": "Freeze History",
+        "historySubtitle": "Current, upcoming, pending, and ended freeze requests",
+        "currentAndUpcoming": "Current / Upcoming / Pending",
+        "ended": "Ended"
+      },
+      "labels": {
+        "policy": "Max {{maxDays}} days per request, up to {{maxCount}} freezes per year.",
+        "usedThisYear": "Used this year: {{count}}",
+        "courseModeHint": "Course registrations may consume sessions differently during freeze windows.",
+        "subscriptionModeHint": "Subscription freezes typically extend the end date based on policy.",
+        "startDateInput": "Start Date (YYYY-MM-DD)",
+        "endDateInput": "End Date (YYYY-MM-DD)",
+        "reason": "Reason (Optional)",
+        "reasonPlaceholder": "Travel, exams, injury, or other note",
+        "startDate": "Start: {{date}}",
+        "endDate": "End: {{date}}",
+        "durationDays": "{{count}} day(s)",
+        "noReason": "No reason provided."
+      },
+      "actions": {
+        "reviewRequest": "Review Request",
+        "editRequest": "Edit Request",
+        "submitRequest": "Submit Freeze Request",
+        "cancelScheduled": "Cancel Scheduled Freeze"
+      },
+      "errors": {
+        "pickDates": "Please enter a valid start and end date.",
+        "badRange": "End date cannot be before start date.",
+        "pastStart": "Start date must be after today.",
+        "tooLong": "Freeze duration exceeds the allowed {{days}} days.",
+        "yearLimit": "You reached the yearly freeze limit ({{count}}).",
+        "overlap": "Selected dates overlap with an existing freeze.",
+        "unknown": "Freeze request is invalid.",
+        "submitTitle": "Unable to submit freeze request",
+        "submitFallback": "Please review request details and retry.",
+        "loadTitle": "Unable to load freeze history",
+        "loadFallback": "Pull to refresh and try again.",
+        "partialLoad": "Some freeze records may be delayed. Tap to refresh."
+      },
+      "messages": {
+        "submitted": "Freeze request submitted successfully.",
+        "submitFailed": "Failed to submit freeze request.",
+        "cancelled": "Scheduled freeze cancelled successfully.",
+        "cancelFailed": "Unable to cancel this freeze."
+      },
+      "empty": {
+        "title": "No freeze records yet",
+        "description": "Freeze history will appear here once requests are created."
+      }
+    },
+    "renewal": {
+      "title": "Request Renewal",
+      "subtitle": "Multi-step renewal flow aligned with subscription and course rules",
+      "steps": {
+        "typeTitle": "Choose Renewal Type",
+        "optionsTitle": "Level, Course, and Group",
+        "datesTitle": "Dates and Sessions",
+        "reviewTitle": "Review and Submit"
+      },
+      "sections": {
+        "currentTitle": "Current Registration",
+        "currentSubtitle": "Your current subscription details before renewal",
+        "stepTitle": "Step {{step}} of {{total}}"
+      },
+      "actions": {
+        "subscriptionType": "Subscription Renewal",
+        "courseType": "Course Renewal",
+        "submit": "Submit Renewal Request"
+      },
+      "labels": {
+        "currentType": "Registration Type: {{value}}",
+        "currentCourse": "Current Course: {{value}}",
+        "currentGroup": "Current Group: {{value}}",
+        "currentStart": "Current Start: {{value}}",
+        "currentEnd": "Current End: {{value}}",
+        "currentSessions": "Current Sessions: {{value}}",
+        "currentLevel": "Current Level: {{value}}",
+        "subscriptionDesc": "Renew under a subscription-compatible group.",
+        "courseDesc": "Renew under a selected course and related groups.",
+        "level": "Level",
+        "course": "Course",
+        "group": "Group",
+        "startDate": "Start Date",
+        "endDate": "End Date",
+        "sessions": "Sessions",
+        "startBounds": "Allowed start range: {{min}} to {{max}}",
+        "endBounds": "Allowed end range: {{min}} to {{max}}",
+        "sessionsCap": "Maximum sessions allowed: {{count}}",
+        "playerNote": "Player Note (Optional)",
+        "playerNotePlaceholder": "Add any note for academy review",
+        "reviewType": "Renewal Type: {{value}}",
+        "reviewCourse": "Course: {{value}}",
+        "reviewGroup": "Group: {{value}}",
+        "reviewStart": "Start Date: {{value}}",
+        "reviewEnd": "End Date: {{value}}",
+        "reviewSessions": "Sessions: {{value}}",
+        "reviewLevel": "Level: {{value}}"
+      },
+      "errors": {
+        "loadTitle": "Unable to load renewal data",
+        "loadFallback": "Retry to load eligibility and options.",
+        "pendingRequest": "A pending renewal request exists. You cannot submit another yet.",
+        "submitTitle": "Unable to submit renewal request",
+        "submitFallback": "Please review selections and retry."
+      },
+      "messages": {
+        "submitted": "Renewal request submitted successfully.",
+        "submitFailed": "Failed to submit renewal request."
+      },
+      "empty": {
+        "courses": "No eligible courses found around your renewal anchor date.",
+        "courseGroups": "No groups are linked to the selected course.",
+        "subscriptionGroups": "No subscription-only groups are currently available."
+      }
+    },
+    "profile": {
+      "title": "Personal Information",
+      "subtitle": "View profile details and update personal information",
+      "editTitle": "Edit Profile",
+      "editSubtitle": "Update profile fields and save changes",
+      "sections": {
+        "summaryTitle": "Profile Summary",
+        "summarySubtitle": "Basic identity and account details",
+        "namesTitle": "Name Details",
+        "namesSubtitle": "English and Arabic name fields",
+        "contactTitle": "Contact Details",
+        "contactSubtitle": "Phone, address, and location links",
+        "healthTitle": "Physical Information",
+        "healthSubtitle": "Height and weight values",
+        "imageTitle": "Profile Image",
+        "imageSubtitle": "Select and upload a player profile image"
+      },
+      "actions": {
+        "editProfile": "Edit Profile",
+        "refreshProfile": "Refresh Profile",
+        "changeImage": "Choose Image",
+        "clearImage": "Remove Selected Image",
+        "reset": "Reset Changes",
+        "save": "Save Profile",
+        "replaceImage": "Replace Image"
+      },
+      "labels": {
+        "noImage": "No image selected.",
+        "unnamed": "Unnamed Player",
+        "firstEnglish": "First Name (EN): {{value}}",
+        "middleEnglish": "Middle Name (EN): {{value}}",
+        "lastEnglish": "Last Name (EN): {{value}}",
+        "firstArabic": "First Name (AR): {{value}}",
+        "middleArabic": "Middle Name (AR): {{value}}",
+        "lastArabic": "Last Name (AR): {{value}}",
+        "phone1": "Primary Phone: {{value}}",
+        "phone2": "Secondary Phone: {{value}}",
+        "address": "Address: {{value}}",
+        "location": "Map Location: {{value}}",
+        "weight": "Weight: {{value}}",
+        "height": "Height: {{value}}",
+        "firstEnglishLabel": "First Name (English)",
+        "middleEnglishLabel": "Middle Name (English)",
+        "lastEnglishLabel": "Last Name (English)",
+        "firstArabicLabel": "First Name (Arabic)",
+        "middleArabicLabel": "Middle Name (Arabic)",
+        "lastArabicLabel": "Last Name (Arabic)",
+        "phone1Label": "Primary Phone",
+        "phone2Label": "Secondary Phone",
+        "dateOfBirthLabel": "Date of Birth (YYYY-MM-DD)",
+        "addressLabel": "Address",
+        "locationLabel": "Google Maps Link",
+        "locationPlaceholder": "https://maps.google.com/...",
+        "phonePlaceholder": "+962...",
+        "weightLabel": "Weight (kg)",
+        "heightLabel": "Height (cm)",
+        "imageSourceLabel": "Image URL / Base64 Source",
+        "imageSourcePlaceholder": "https://... or data:image/..."
+      },
+      "messages": {
+        "updated": "Profile updated successfully."
+      },
+      "errors": {
+        "loadTitle": "Unable to load profile",
+        "loadFallback": "Please retry profile loading.",
+        "submitTitle": "Unable to update profile",
+        "submitFallback": "Review form values and retry.",
+        "imagePermission": "Media permission is required to choose an image.",
+        "imageSelect": "Unable to select image file."
+      },
+      "validation": {
+        "phone1": "Primary phone number is required and must be valid.",
+        "dateOfBirth": "Date of birth must use YYYY-MM-DD format.",
+        "weight": "Weight must be a valid number within allowed range.",
+        "height": "Height must be a valid number within allowed range."
+      }
+    }
   },
   "booking": {
     "title": "Booking Hub",
