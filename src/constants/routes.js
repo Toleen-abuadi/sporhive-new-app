@@ -16,7 +16,6 @@ export const ROUTES = Object.freeze({
   PLAYGROUNDS_RATING: '/(public)/playgrounds/rating/[bookingId]',
   PLAYGROUNDS_RATING_TOKEN: '/(public)/playgrounds/rating-token/[token]',
   PLAYER_HOME: '/(player)/home',
-  PLAYER_MORE: '/(player)/more',
   PLAYER_PAYMENTS: '/(player)/payments',
   PLAYER_PAYMENT_DETAILS: '/(player)/payments/[paymentId]',
   PLAYER_PAYMENT_INVOICE: '/(player)/payments/[paymentId]/invoice',
@@ -33,7 +32,8 @@ export const ROUTES = Object.freeze({
   PLAYER_RENEWAL: '/(player)/renewal',
   PLAYER_PROFILE: '/(player)/profile',
   PLAYER_PROFILE_EDIT: '/(player)/profile/edit',
-  BOOKING_HOME: '/(booking)/home',
+  BOOKING_HOME: '/(public)/playgrounds',
+  SETTINGS_HOME: '/(settings)/',
 });
 
 export function buildAuthLoginRoute(mode = 'player', lockMode = false, redirectTo = '') {

@@ -1,5 +1,6 @@
-import { BookingHomePlaceholderScreen } from '../../src/features/booking/screens/BookingHomePlaceholderScreen';
+import { Redirect } from 'expo-router';
+import { ROUTES } from '../../src/constants/routes';
 
 export default function BookingHomeRoute() {
-  return <BookingHomePlaceholderScreen />;
+  return <Redirect href={ROUTES.PLAYGROUNDS_HOME} />;
 }

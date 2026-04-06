@@ -9,6 +9,7 @@ export const AUTH_ROUTE_GROUPS = Object.freeze({
   PUBLIC: 'public',
   PLAYER: 'player',
   BOOKING: 'booking',
+  SETTINGS: 'settings',
 });
 
 export const shouldWaitForBootstrap = (authState) =>
@@ -53,7 +54,11 @@ export const resolveGuardRedirect = (group, authState) => {
     return null;
   }
 
-  if (group === AUTH_ROUTE_GROUPS.PUBLIC || group === AUTH_ROUTE_GROUPS.BOOKING) {
+  if (
+    group === AUTH_ROUTE_GROUPS.PUBLIC ||
+    group === AUTH_ROUTE_GROUPS.BOOKING ||
+    group === AUTH_ROUTE_GROUPS.SETTINGS
+  ) {
     if (!selectCanAccessPublicRoutes(authState)) {
       return resolveUnauthenticatedRoute(authState);
     }

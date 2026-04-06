@@ -1,5 +1,6 @@
-import { PlayerMoreScreen } from '../../src/features/playerPortal/screens';
+import { Redirect } from 'expo-router';
+import { ROUTES } from '../../src/constants/routes';
 
 export default function PlayerMoreRoute() {
-  return <PlayerMoreScreen />;
+  return <Redirect href={ROUTES.PLAYER_HOME} />;
 }

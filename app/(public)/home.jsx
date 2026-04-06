@@ -1,5 +1,5 @@
-import { PublicHomePlaceholderScreen } from '../../src/features/public/screens/PublicHomePlaceholderScreen';
+import { PublicHomeScreen } from '../../src/features/public/screens/PublicHomePlaceholderScreen';
 
 export default function PublicHomeRoute() {
-  return <PublicHomePlaceholderScreen />;
+  return <PublicHomeScreen />;
 }

@@ -1,6 +1,5 @@
 export { PlayerHomeScreen } from './PlayerHomeScreen';
 export { PlayerSectionPlaceholderScreen } from './PlayerSectionPlaceholderScreen';
-export { PlayerMoreScreen } from './PlayerMoreScreen';
 export { PlayerPaymentsScreen } from './PlayerPaymentsScreen';
 export { PlayerPaymentDetailsScreen } from './PlayerPaymentDetailsScreen';
 export { PlayerPaymentInvoiceScreen } from './PlayerPaymentInvoiceScreen';

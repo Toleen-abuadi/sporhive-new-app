@@ -1,4 +1,4 @@
-const SAFE_PREFIXES = ['/(public)/', '/(player)/', '/(booking)/'];
+const SAFE_PREFIXES = ['/(public)/', '/(player)/', '/(booking)/', '/(settings)', '/(settings)/'];
 const BLOCKED_PREFIXES = ['/(auth)/', '/(onboarding)/'];
 
 const decodeBestEffort = (value) => {
