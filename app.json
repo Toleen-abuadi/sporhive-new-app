@@ -32,7 +32,6 @@
       "expo-font",
       "expo-web-browser",
       "expo-secure-store",
-      "react-native-reanimated/plugin",
       [
         "expo-splash-screen",
         {

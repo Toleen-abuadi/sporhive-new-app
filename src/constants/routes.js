@@ -6,6 +6,9 @@ export const ROUTES = Object.freeze({
   AUTH_SIGNUP: '/(auth)/signup',
   AUTH_RESET_PASSWORD: '/(auth)/reset-password',
   PUBLIC_HOME: '/(public)/home',
+  ACADEMIES_HOME: '/(public)/academies',
+  ACADEMY_TEMPLATE: '/(public)/academies/[slug]',
+  ACADEMY_JOIN: '/(public)/academies/[slug]/join',
   PLAYGROUNDS_HOME: '/(public)/playgrounds',
   PLAYGROUND_VENUE: '/(public)/playgrounds/venue/[venueId]',
   PLAYGROUND_BOOKING: '/(public)/playgrounds/booking/[venueId]',
@@ -103,6 +106,24 @@ export function buildPlaygroundVenueRoute(venueId) {
     pathname: ROUTES.PLAYGROUND_VENUE,
     params: {
       venueId: normalizeRouteParam(venueId),
+    },
+  };
+}
+
+export function buildAcademyTemplateRoute(slug) {
+  return {
+    pathname: ROUTES.ACADEMY_TEMPLATE,
+    params: {
+      slug: normalizeRouteParam(slug),
+    },
+  };
+}
+
+export function buildAcademyJoinRoute(slug) {
+  return {
+    pathname: ROUTES.ACADEMY_JOIN,
+    params: {
+      slug: normalizeRouteParam(slug),
     },
   };
 }

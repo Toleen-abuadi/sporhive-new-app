@@ -14,13 +14,15 @@ import { useI18n } from '../../../hooks/useI18n';
 import { useTheme } from '../../../hooks/useTheme';
 import { AUTH_LOGIN_MODES, useAuth } from '../../../services/auth';
 import { spacing } from '../../../theme/tokens';
+import { getAcademyDiscoveryCopy } from '../../academyDiscovery/utils/academyDiscovery.copy';
 
 export function PublicHomePlaceholderScreen() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { colors } = useTheme();
   const toast = useToast();
   const router = useRouter();
   const { user, logout, isLoading } = useAuth();
+  const academyCopy = getAcademyDiscoveryCopy(locale);
 
   const handleLogout = async () => {
     const result = await logout();
@@ -59,6 +61,15 @@ export function PublicHomePlaceholderScreen() {
 
       <Button fullWidth size="lg" onPress={() => router.push(ROUTES.PLAYGROUNDS_HOME)} style={{ marginTop: spacing.xl }}>
         {t('public.goToBooking')}
+      </Button>
+
+      <Button
+        fullWidth
+        variant="secondary"
+        onPress={() => router.push(ROUTES.ACADEMIES_HOME)}
+        style={{ marginTop: spacing.md }}
+      >
+        {academyCopy.actions.openAcademies}
       </Button>
 
       <Button
