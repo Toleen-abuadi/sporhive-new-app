@@ -108,6 +108,9 @@
         "tryout": "Tryout",
         "trial": "Trial"
       }
+    }, 
+    "labels": {
+      "all": "All"
     }
   },
   "welcome": {

@@ -6,6 +6,12 @@ export const ROUTES = Object.freeze({
   AUTH_SIGNUP: '/(auth)/signup',
   AUTH_RESET_PASSWORD: '/(auth)/reset-password',
   PUBLIC_HOME: '/(public)/home',
+  PLAYGROUNDS_HOME: '/(public)/playgrounds',
+  PLAYGROUND_VENUE: '/(public)/playgrounds/venue/[venueId]',
+  PLAYGROUND_BOOKING: '/(public)/playgrounds/booking/[venueId]',
+  PLAYGROUNDS_MY_BOOKINGS: '/(public)/playgrounds/my-bookings',
+  PLAYGROUNDS_RATING: '/(public)/playgrounds/rating/[bookingId]',
+  PLAYGROUNDS_RATING_TOKEN: '/(public)/playgrounds/rating-token/[token]',
   PLAYER_HOME: '/(player)/home',
   PLAYER_MORE: '/(player)/more',
   PLAYER_PAYMENTS: '/(player)/payments',
@@ -27,10 +33,13 @@ export const ROUTES = Object.freeze({
   BOOKING_HOME: '/(booking)/home',
 });
 
-export function buildAuthLoginRoute(mode = 'player', lockMode = false) {
+export function buildAuthLoginRoute(mode = 'player', lockMode = false, redirectTo = '') {
   const params = { mode };
   if (lockMode) {
     params.lockMode = '1';
+  }
+  if (redirectTo) {
+    params.redirectTo = normalizeRouteParam(redirectTo);
   }
 
   return {
@@ -85,6 +94,44 @@ export function buildPlayerStoreOrderDetailsRoute(orderRef) {
     pathname: ROUTES.PLAYER_STORE_ORDER_DETAILS,
     params: {
       orderRef: normalizeRouteParam(orderRef),
+    },
+  };
+}
+
+export function buildPlaygroundVenueRoute(venueId) {
+  return {
+    pathname: ROUTES.PLAYGROUND_VENUE,
+    params: {
+      venueId: normalizeRouteParam(venueId),
+    },
+  };
+}
+
+export function buildPlaygroundBookingRoute(venueId, params = {}) {
+  return {
+    pathname: ROUTES.PLAYGROUND_BOOKING,
+    params: {
+      venueId: normalizeRouteParam(venueId),
+      ...params,
+    },
+  };
+}
+
+export function buildPlaygroundsRatingRoute(bookingId, params = {}) {
+  return {
+    pathname: ROUTES.PLAYGROUNDS_RATING,
+    params: {
+      bookingId: normalizeRouteParam(bookingId),
+      ...params,
+    },
+  };
+}
+
+export function buildPlaygroundsRatingTokenRoute(token) {
+  return {
+    pathname: ROUTES.PLAYGROUNDS_RATING_TOKEN,
+    params: {
+      token: normalizeRouteParam(token),
     },
   };
 }

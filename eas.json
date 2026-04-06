@@ -1,18 +1,35 @@
 {
   "cli": {
-    "version": ">= 18.5.0",
+    "version": ">= 16.28.0",
     "appVersionSource": "remote"
   },
   "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_ENV_NAME": "development",
+        "EXPO_PUBLIC_API_BASE_URL": "http://0.0.0.0:7000/api/v1"
+      }
+    },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_ENV_NAME": "preview",
+        "EXPO_PUBLIC_API_BASE_URL": "https://backend.sporhive.com/api/v1"
       }
     },
     "production": {
+      "autoIncrement": true,
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_ENV_NAME": "production",
+        "EXPO_PUBLIC_API_BASE_URL": "https://backend.sporhive.com/api/v1"
       }
     }
   },

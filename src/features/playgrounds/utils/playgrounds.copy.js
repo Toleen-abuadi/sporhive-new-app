@@ -1,0 +1,462 @@
+const EN = {
+  title: 'Playgrounds',
+  subtitle: 'Discover venues, choose your slot, and book in a few taps',
+  searchHint: 'Browse by activity, date, players, and location',
+  tabs: {
+    all: 'All',
+    offers: 'Offers',
+    featured: 'Featured',
+    premium: 'Premium',
+    pro: 'Pro',
+  },
+  sort: {
+    recommended: 'Recommended',
+    distanceAsc: 'Nearest',
+    priceAsc: 'Lowest price',
+    ratingDesc: 'Top rated',
+  },
+  labels: {
+    activities: 'Activities',
+    date: 'Date',
+    players: 'Players',
+    perSession: 'per session',
+    mapReady: 'Map-ready venues',
+    mapHint: '{{count}} venues include map coordinates',
+    filters: 'Quick filters',
+    filtersHint: 'Start browsing, then refine your results',
+    activeFilters: 'Active filters',
+    location: 'Location',
+    locationPlaceholder: 'Area / city',
+    clearLocation: 'Clear location',
+    noLocationOptions: 'No location filters available yet.',
+    noPlayersOptions: 'No player-count filters available yet.',
+    anyDate: 'Any date',
+    mapView: 'Map endpoint synced',
+    mapHidden: 'Map view is not enabled on this screen yet.',
+    emptySlots: 'No slots found for this date and duration.',
+    noDurations: 'No duration options found for this venue.',
+    academy: 'Academy',
+    rating: 'Rating',
+    playersRange: 'Players',
+    specialOffer: 'Special offer',
+    chooseSlot: 'Choose slot',
+    chooseDuration: 'Choose duration',
+    payment: 'Payment',
+    paymentDetails: 'Payment details',
+    paymentCashAvailable: 'Cash payment available',
+    paymentCashUnavailable: 'Cash payment unavailable',
+    paymentCliqAvailable: 'CliQ transfer available',
+    paymentCliqUnavailable: 'CliQ transfer unavailable',
+    paymentCashOnDate: 'Pay cash on booking date',
+    paymentCliqScreenshot: 'CliQ transfer screenshot',
+    summary: 'Booking summary',
+    canRate: 'Can rate',
+    cannotRate: 'Cannot rate yet',
+    distance: 'Distance',
+    priceOnRequest: 'Price on request',
+    noImage: 'No image',
+    loadingActivities: 'Loading activities...',
+    loadingSlots: 'Loading slots...',
+    selectFieldToContinue: 'Complete this step to continue',
+    minPlayers: 'Minimum players',
+    maxPlayers: 'Maximum players',
+    slotUnavailable: 'Please choose an available slot.',
+    stepLabel: 'Step {{current}} of {{total}}',
+    bookingCode: 'Booking code',
+    paymentType: 'Payment type',
+    paymentAmount: 'Payment amount',
+    bookingActions: 'Booking actions',
+    venue: 'Venue',
+    defaultDuration: 'Default',
+    price: 'Price',
+    status: 'Status',
+    cannotModify: 'This booking cannot be modified now.',
+    statusFilter: 'Status filter',
+    standardTier: 'Standard',
+    contactNumber: 'Contact number',
+    bookingDateTime: 'Booking date & time',
+    notAvailable: 'N/A',
+  },
+  actions: {
+    viewVenue: 'View venue',
+    bookNow: 'Book now',
+    openBooking: 'Open booking flow',
+    myBookings: 'My bookings',
+    retry: 'Retry',
+    clearFilters: 'Reset',
+    next: 'Continue',
+    previous: 'Back',
+    confirmBooking: 'Confirm booking',
+    cancelBooking: 'Cancel booking',
+    reschedule: 'Reschedule',
+    submitRating: 'Submit rating',
+    openRating: 'Rate booking',
+    refresh: 'Refresh',
+    viewPlaygrounds: 'View playgrounds',
+    openMapDirections: 'Open map directions',
+    loginToContinue: 'Login to continue',
+    dismiss: 'Dismiss',
+    confirmCancel: 'Confirm cancellation',
+    showFilters: 'Show filters',
+    hideFilters: 'Hide filters',
+    clear: 'Clear',
+    pickImage: 'Pick image',
+    replaceImage: 'Replace image',
+    removeImage: 'Remove image',
+    call: 'Call',
+    whatsapp: 'WhatsApp',
+    close: 'Close',
+  },
+  sections: {
+    discovery: 'Venue discovery',
+    venueDetails: 'Venue details',
+    bookingStepper: 'Booking steps',
+    schedule: 'Schedule',
+    slot: 'Slot',
+    players: 'Players',
+    payment: 'Payment',
+    review: 'Review',
+    myBookings: 'My bookings',
+    myBookingsSubtitle: 'Track your venue bookings and manage updates',
+    rateBooking: 'Rate booking',
+  },
+  booking: {
+    step1Title: 'Choose date and duration',
+    step2Title: 'Choose an available slot',
+    step3Title: 'Select number of players',
+    step4Title: 'Choose payment method',
+    step5Title: 'Review and confirm',
+    success: 'Booking created successfully.',
+    updateSuccess: 'Booking updated successfully.',
+    cancelSuccess: 'Booking cancelled successfully.',
+    updateModeTitle: 'Update booking',
+    updateModeHint: 'Choose a new date and slot, then confirm your update.',
+    cancelConfirmPrompt: 'Are you sure you want to cancel this booking?',
+    cancelContactTitle: 'Need to cancel your booking?',
+    cancelContactDescription:
+      'For safety and to avoid double-booking, cancellations are handled directly by the academy or playground manager.',
+    cancelContactStep1: 'Contact the academy team or playground manager.',
+    cancelContactStep2: 'Share your booking code and booking date/time.',
+    cancelContactStep3: 'Wait for cancellation confirmation from the academy.',
+    cancelContactMissingPhone: 'Academy phone number is not available for this booking.',
+    cancelContactHint: 'Use the buttons below to call or WhatsApp the academy.',
+    selectDurationFirst: 'Please select a duration first.',
+    pickCliqImage: 'CliQ payment requires a transfer screenshot.',
+    incomplete: 'Please complete all required fields.',
+  },
+  errors: {
+    loadActivities: 'Could not load activities.',
+    loadVenues: 'Could not load venues.',
+    loadVenue: 'Could not load venue details.',
+    loadSlots: 'Could not load available slots.',
+    loadBookings: 'Could not load your bookings.',
+    actionFailed: 'Request failed. Please try again.',
+    userContextMissing: 'Public user context is missing for this action.',
+    ratingResolveFailed: 'Invalid or expired rating link.',
+    scheduleRequired: 'Please choose date, duration, and slot first.',
+    playersOutOfRange: 'Players count is outside the allowed range.',
+    paymentRequired: 'Please complete payment details before continuing.',
+    cancelBlocked: 'This booking can no longer be cancelled.',
+    updateBlocked: 'This booking can no longer be updated.',
+    ownerOnly: 'Only the booking owner can modify this booking.',
+    before24h: 'You can modify bookings only more than 24 hours before start time.',
+    network: 'Network issue. Please check your connection.',
+    server: 'Server issue. Please try again in a moment.',
+    config: 'Playgrounds service is not configured yet.',
+    notFound: 'Requested item was not found.',
+  },
+  empty: {
+    venuesTitle: 'No venues found',
+    venuesDescription: 'Try changing filters or date.',
+    bookingsTitle: 'No bookings yet',
+    bookingsDescription: 'Your active bookings will appear here.',
+  },
+  guards: {
+    sessionLoading: 'Session is still loading.',
+    tokenMissing: 'Session token is missing. Please sign in again.',
+    browseUnavailable: 'Please sign in to continue.',
+    bookingsUnavailable: 'Public user session is required to view bookings.',
+    bookingUnavailable: 'Public user session is required to submit bookings.',
+    ratingUnavailable: 'Public user session is required to submit ratings.',
+  },
+  rating: {
+    title: 'Rate booking',
+    subtitle: 'Share your experience after your session',
+    overall: 'Overall rating',
+    comment: 'Comment',
+    commentPlaceholder: 'Optional feedback',
+    submitted: 'Thanks for your rating.',
+    requiresLogin: 'Sign in with the booking account to continue rating.',
+    wrongAccount: 'This rating link belongs to another account. Sign in with the booking account.',
+    alreadyRated: 'This booking has already been rated.',
+    ownerOnly: 'Only the booking owner can submit a rating.',
+    approvedOnly: 'Only approved bookings can be rated.',
+    afterEndOnly: 'Rating is available only after the booking end time.',
+    unavailableTemporary: 'Rating is temporarily unavailable for this booking.',
+  },
+};
+
+const AR = {
+  title: 'الملاعب',
+  subtitle: 'اكتشف الملاعب واختر الموعد المناسب واحجز بسهولة',
+  searchHint: 'تصفح حسب النشاط والتاريخ وعدد اللاعبين والموقع',
+  tabs: {
+    all: 'الكل',
+    offers: 'العروض',
+    featured: 'مميزة',
+    premium: 'بريميوم',
+    pro: 'برو',
+  },
+  sort: {
+    recommended: 'مقترح',
+    distanceAsc: 'الأقرب',
+    priceAsc: 'الأقل سعراً',
+    ratingDesc: 'الأعلى تقييماً',
+  },
+  labels: {
+    activities: 'الأنشطة',
+    date: 'التاريخ',
+    players: 'اللاعبون',
+    perSession: 'لكل حجز',
+    mapReady: 'ملاعب جاهزة للخريطة',
+    mapHint: 'يوجد {{count}} ملعب مع إحداثيات',
+    filters: 'فلاتر سريعة',
+    filtersHint: 'ابدأ بالتصفح أولاً ثم حدّد النتائج',
+    activeFilters: 'الفلاتر النشطة',
+    location: 'الموقع',
+    locationPlaceholder: 'المنطقة / المدينة',
+    clearLocation: 'مسح الموقع',
+    noLocationOptions: 'لا توجد فلاتر موقع متاحة حالياً.',
+    noPlayersOptions: 'لا توجد فلاتر عدد لاعبين متاحة حالياً.',
+    anyDate: 'أي تاريخ',
+    mapView: 'تمت مزامنة مسار الخريطة',
+    mapHidden: 'عرض الخريطة غير مفعّل في هذه الشاشة حالياً.',
+    emptySlots: 'لا توجد مواعيد متاحة لهذا التاريخ والمدة.',
+    noDurations: 'لا توجد مدد متاحة لهذا الملعب.',
+    academy: 'الأكاديمية',
+    rating: 'التقييم',
+    playersRange: 'عدد اللاعبين',
+    specialOffer: 'عرض خاص',
+    chooseSlot: 'اختر الموعد',
+    chooseDuration: 'اختر المدة',
+    payment: 'الدفع',
+    paymentDetails: 'تفاصيل الدفع',
+    paymentCashAvailable: 'الدفع النقدي متاح',
+    paymentCashUnavailable: 'الدفع النقدي غير متاح',
+    paymentCliqAvailable: 'الدفع عبر كليك متاح',
+    paymentCliqUnavailable: 'الدفع عبر كليك غير متاح',
+    paymentCashOnDate: 'الدفع نقداً يوم الحجز',
+    paymentCliqScreenshot: 'صورة تحويل كليك',
+    summary: 'ملخص الحجز',
+    canRate: 'يمكن التقييم',
+    cannotRate: 'لا يمكن التقييم حالياً',
+    distance: 'المسافة',
+    priceOnRequest: 'السعر عند الطلب',
+    noImage: 'لا توجد صورة',
+    loadingActivities: 'جارٍ تحميل الأنشطة...',
+    loadingSlots: 'جارٍ تحميل المواعيد...',
+    selectFieldToContinue: 'أكمل هذه الخطوة للمتابعة',
+    minPlayers: 'الحد الأدنى للاعبين',
+    maxPlayers: 'الحد الأقصى للاعبين',
+    slotUnavailable: 'يرجى اختيار موعد متاح.',
+    stepLabel: 'الخطوة {{current}} من {{total}}',
+    bookingCode: 'رمز الحجز',
+    paymentType: 'طريقة الدفع',
+    paymentAmount: 'قيمة الدفع',
+    bookingActions: 'إجراءات الحجز',
+    venue: 'الملعب',
+    defaultDuration: 'افتراضي',
+    price: 'السعر',
+    status: 'الحالة',
+    cannotModify: 'لا يمكن تعديل هذا الحجز الآن.',
+    statusFilter: 'فلتر الحالة',
+    standardTier: 'قياسي',
+    contactNumber: 'رقم التواصل',
+    bookingDateTime: 'تاريخ ووقت الحجز',
+    notAvailable: 'غير متاح',
+  },
+  actions: {
+    viewVenue: 'عرض الملعب',
+    bookNow: 'احجز الآن',
+    openBooking: 'بدء الحجز',
+    myBookings: 'حجوزاتي',
+    retry: 'إعادة المحاولة',
+    clearFilters: 'إعادة ضبط',
+    next: 'متابعة',
+    previous: 'رجوع',
+    confirmBooking: 'تأكيد الحجز',
+    cancelBooking: 'إلغاء الحجز',
+    reschedule: 'إعادة الجدولة',
+    submitRating: 'إرسال التقييم',
+    openRating: 'تقييم الحجز',
+    refresh: 'تحديث',
+    viewPlaygrounds: 'عرض الملاعب',
+    openMapDirections: 'فتح الاتجاهات',
+    loginToContinue: 'تسجيل الدخول للمتابعة',
+    dismiss: 'إغلاق',
+    confirmCancel: 'تأكيد الإلغاء',
+    showFilters: 'عرض الفلاتر',
+    hideFilters: 'إخفاء الفلاتر',
+    clear: 'مسح',
+    pickImage: 'اختيار صورة',
+    replaceImage: 'استبدال الصورة',
+    removeImage: 'إزالة الصورة',
+    call: 'اتصال',
+    whatsapp: 'واتساب',
+    close: 'إغلاق',
+  },
+  sections: {
+    discovery: 'استكشاف الملاعب',
+    venueDetails: 'تفاصيل الملعب',
+    bookingStepper: 'خطوات الحجز',
+    schedule: 'الجدولة',
+    slot: 'الموعد',
+    players: 'اللاعبون',
+    payment: 'الدفع',
+    review: 'المراجعة',
+    myBookings: 'حجوزاتي',
+    myBookingsSubtitle: 'تابع حجوزات الملاعب وقم بإدارة التعديلات',
+    rateBooking: 'تقييم الحجز',
+  },
+  booking: {
+    step1Title: 'اختر التاريخ والمدة',
+    step2Title: 'اختر موعداً متاحاً',
+    step3Title: 'اختر عدد اللاعبين',
+    step4Title: 'اختر طريقة الدفع',
+    step5Title: 'راجع وأكد الحجز',
+    success: 'تم إنشاء الحجز بنجاح.',
+    updateSuccess: 'تم تحديث الحجز بنجاح.',
+    cancelSuccess: 'تم إلغاء الحجز بنجاح.',
+    updateModeTitle: 'تعديل الحجز',
+    updateModeHint: 'اختر تاريخاً وموعداً جديدين ثم أكد التعديل.',
+    cancelConfirmPrompt: 'هل أنت متأكد من إلغاء هذا الحجز؟',
+    cancelContactTitle: 'تحتاج إلى إلغاء حجزك؟',
+    cancelContactDescription:
+      'للسلامة وتجنباً للحجوزات المتضاربة، يتم الإلغاء مباشرةً عبر الأكاديمية أو مدير الملعب.',
+    cancelContactStep1: 'تواصل مع فريق الأكاديمية أو مدير الملعب.',
+    cancelContactStep2: 'زوّدهم برمز الحجز وتاريخ/وقت الحجز.',
+    cancelContactStep3: 'انتظر تأكيد إلغاء الحجز من الأكاديمية.',
+    cancelContactMissingPhone: 'رقم هاتف الأكاديمية غير متوفر لهذا الحجز.',
+    cancelContactHint: 'استخدم الأزرار بالأسفل للاتصال أو واتساب.',
+    selectDurationFirst: 'يرجى اختيار المدة أولاً.',
+    pickCliqImage: 'الدفع عبر كليك يتطلب صورة التحويل.',
+    incomplete: 'يرجى استكمال جميع الحقول المطلوبة.',
+  },
+  errors: {
+    loadActivities: 'تعذر تحميل الأنشطة.',
+    loadVenues: 'تعذر تحميل الملاعب.',
+    loadVenue: 'تعذر تحميل تفاصيل الملعب.',
+    loadSlots: 'تعذر تحميل المواعيد المتاحة.',
+    loadBookings: 'تعذر تحميل الحجوزات.',
+    actionFailed: 'فشل الطلب، يرجى المحاولة مرة أخرى.',
+    userContextMissing: 'سياق المستخدم العام غير متوفر لهذا الإجراء.',
+    ratingResolveFailed: 'رابط التقييم غير صالح أو منتهي.',
+    scheduleRequired: 'يرجى اختيار التاريخ والمدة والموعد أولاً.',
+    playersOutOfRange: 'عدد اللاعبين خارج النطاق المسموح.',
+    paymentRequired: 'يرجى استكمال تفاصيل الدفع قبل المتابعة.',
+    cancelBlocked: 'لا يمكن إلغاء هذا الحجز حالياً.',
+    updateBlocked: 'لا يمكن تعديل هذا الحجز حالياً.',
+    ownerOnly: 'فقط صاحب الحجز يمكنه التعديل.',
+    before24h: 'يمكن تعديل الحجز فقط قبل أكثر من 24 ساعة من وقت البداية.',
+    network: 'مشكلة في الشبكة. يرجى التحقق من اتصالك.',
+    server: 'مشكلة في الخادم. يرجى المحاولة بعد قليل.',
+    config: 'خدمة الملاعب غير مكتملة الإعداد.',
+    notFound: 'العنصر المطلوب غير موجود.',
+  },
+  empty: {
+    venuesTitle: 'لا توجد ملاعب',
+    venuesDescription: 'جرّب تغيير الفلاتر أو التاريخ.',
+    bookingsTitle: 'لا توجد حجوزات بعد',
+    bookingsDescription: 'ستظهر حجوزاتك النشطة هنا.',
+  },
+  guards: {
+    sessionLoading: 'ما زال تحميل الجلسة جارياً.',
+    tokenMissing: 'رمز الجلسة غير متوفر. يرجى تسجيل الدخول مرة أخرى.',
+    browseUnavailable: 'يرجى تسجيل الدخول للمتابعة.',
+    bookingsUnavailable: 'تحتاج إلى جلسة مستخدم عام لعرض الحجوزات.',
+    bookingUnavailable: 'تحتاج إلى جلسة مستخدم عام لإرسال الحجز.',
+    ratingUnavailable: 'تحتاج إلى جلسة مستخدم عام لإرسال التقييم.',
+  },
+  rating: {
+    title: 'تقييم الحجز',
+    subtitle: 'شارك تجربتك بعد انتهاء الجلسة',
+    overall: 'التقييم العام',
+    comment: 'تعليق',
+    commentPlaceholder: 'ملاحظات اختيارية',
+    submitted: 'شكراً على التقييم.',
+    requiresLogin: 'سجل الدخول بحساب الحجز لمتابعة التقييم.',
+    wrongAccount: 'هذا رابط تقييم يخص حساباً آخر. سجل الدخول بحساب الحجز.',
+    alreadyRated: 'تم تقييم هذا الحجز سابقاً.',
+    ownerOnly: 'فقط صاحب الحجز يمكنه إرسال التقييم.',
+    approvedOnly: 'يمكن تقييم الحجوزات المعتمدة فقط.',
+    afterEndOnly: 'يتاح التقييم بعد انتهاء وقت الحجز فقط.',
+    unavailableTemporary: 'التقييم غير متاح مؤقتاً لهذا الحجز.',
+  },
+};
+
+const dictionaries = {
+  en: EN,
+  ar: AR,
+};
+
+const getByPath = (source, path) => {
+  if (!source || !path) return undefined;
+
+  return path.split('.').reduce((result, part) => {
+    if (result && typeof result === 'object' && part in result) {
+      return result[part];
+    }
+    return undefined;
+  }, source);
+};
+
+const interpolate = (message, params = {}) =>
+  String(message || '').replace(/\{\{\s*(\w+)\s*\}\}/g, (_, token) => {
+    if (Object.prototype.hasOwnProperty.call(params, token)) {
+      return String(params[token]);
+    }
+    return `{{${token}}}`;
+  });
+
+const toCleanText = (value) => String(value || '').trim();
+
+export function getPlaygroundsCopy(locale = 'en') {
+  return locale === 'ar' ? dictionaries.ar : dictionaries.en;
+}
+
+export function tPlaygrounds(locale = 'en', key, params = {}) {
+  const dict = getPlaygroundsCopy(locale);
+  const fallback = getPlaygroundsCopy('en');
+  const value = getByPath(dict, key) ?? getByPath(fallback, key) ?? key;
+  if (typeof value !== 'string') return value;
+  return interpolate(value, params);
+}
+
+export function resolvePlaygroundsErrorMessage(error, locale = 'en', fallbackMessage = '') {
+  const copy = getPlaygroundsCopy(locale);
+  const code = toCleanText(error?.code).toUpperCase();
+
+  if (code === 'NETWORK_ERROR') return copy.errors.network;
+  if (code === 'SERVER_ERROR') return copy.errors.server;
+  if (code === 'CONFIG_ERROR') return copy.errors.config;
+  if (code === 'NOT_FOUND') return copy.errors.notFound;
+
+  if (
+    code === 'USER_ID_MISSING' ||
+    code === 'TOKEN_MISSING' ||
+    code === 'UNAUTHORIZED' ||
+    code === 'UNAUTHENTICATED' ||
+    code === 'PLAYGROUNDS_GUARD_FAILED'
+  ) {
+    return copy.errors.userContextMissing;
+  }
+
+  if (code === 'USER_ID_MISMATCH') return copy.rating.wrongAccount;
+
+  return (
+    toCleanText(error?.userMessage) ||
+    toCleanText(error?.message) ||
+    toCleanText(fallbackMessage) ||
+    copy.errors.actionFailed
+  );
+}

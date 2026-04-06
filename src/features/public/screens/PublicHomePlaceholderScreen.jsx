@@ -57,7 +57,7 @@ export function PublicHomePlaceholderScreen() {
         <ThemeModeSwitch />
       </Surface>
 
-      <Button fullWidth size="lg" onPress={() => router.push(ROUTES.BOOKING_HOME)} style={{ marginTop: spacing.xl }}>
+      <Button fullWidth size="lg" onPress={() => router.push(ROUTES.PLAYGROUNDS_HOME)} style={{ marginTop: spacing.xl }}>
         {t('public.goToBooking')}
       </Button>
 

@@ -1,10 +1,7 @@
 import { toNumber } from './playerPortal.normalizers';
 import { translateApiEnumValue } from '../../../utils/apiValueLocalization';
 
-const resolveLocale = (locale) => {
-  if (typeof locale !== 'string') return 'en-US';
-  return locale.toLowerCase().startsWith('ar') ? 'ar-JO' : 'en-US';
-};
+const resolveLocale = (locale) => (locale = 'en-US');
 
 export function formatDateLabel(value, { locale = 'en', fallback = '-' } = {}) {
   if (!value) return fallback;
@@ -14,7 +11,7 @@ export function formatDateLabel(value, { locale = 'en', fallback = '-' } = {}) {
   try {
     return new Intl.DateTimeFormat(resolveLocale(locale), {
       year: 'numeric',
-      month: 'short',
+      month: 'numeric',
       day: 'numeric',
     }).format(parsed);
   } catch {
