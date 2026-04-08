@@ -1,4 +1,5 @@
 import { toNumber } from './playerPortal.normalizers';
+import { normalizeApiEnumValue } from '../../../utils/apiValueLocalization';
 
 const cleanString = (value) => {
   if (value == null) return '';
@@ -14,10 +15,30 @@ export const UNIFORM_STATUS_FLOW = Object.freeze([
   'collected',
 ]);
 
+const ORDER_STATUS_TO_FLOW = Object.freeze({
+  pending: 'pending_payment',
+  pending_payment: 'pending_payment',
+  unpaid: 'pending_payment',
+  due: 'pending_payment',
+  overdue: 'pending_payment',
+  partial: 'pending_payment',
+  processing: 'pending_payment',
+  under_review: 'pending_payment',
+  paid: 'paid',
+  active: 'paid',
+  valid: 'paid',
+  printed: 'printed',
+  received: 'received',
+  ready: 'received_and_player_notified',
+  received_and_player_notified: 'received_and_player_notified',
+  completed: 'collected',
+  collected: 'collected',
+});
+
 export const normalizeUniformStatus = (status) => {
-  const value = cleanString(status).toLowerCase();
-  if (!value) return 'pending_payment';
-  return value;
+  const normalized = normalizeApiEnumValue(status);
+  if (!normalized) return 'pending_payment';
+  return ORDER_STATUS_TO_FLOW[normalized] || normalized;
 };
 
 export const getUniformStatusStepIndex = (status) => {

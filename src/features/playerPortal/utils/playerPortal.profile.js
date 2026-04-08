@@ -5,6 +5,57 @@ const cleanString = (value) => {
   return String(value).trim();
 };
 
+export const MIN_PLAYER_AGE_YEARS = 3;
+export const GOOGLE_MAPS_DEFAULT_URL = 'https://maps.google.com/';
+
+const ENGLISH_NAME_FIELDS = new Set(['first_eng_name', 'middle_eng_name', 'last_eng_name']);
+const ARABIC_NAME_FIELDS = new Set(['first_ar_name', 'middle_ar_name', 'last_ar_name']);
+const ENGLISH_NAME_PATTERN = /^[A-Za-z\s'-]+$/;
+const ARABIC_NAME_PATTERN = /^[\u0600-\u06FF\s'-]+$/;
+
+const formatISODate = (date) => {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+export const getTodayISODate = () => formatISODate(new Date());
+
+export const getMaxDateOfBirthISO = () => {
+  const maxDate = new Date();
+  maxDate.setHours(12, 0, 0, 0);
+  maxDate.setFullYear(maxDate.getFullYear() - MIN_PLAYER_AGE_YEARS);
+  return formatISODate(maxDate);
+};
+
+export const isValidGoogleMapsUrl = (value) => {
+  const input = cleanString(value);
+  if (!input) return true;
+
+  let parsed;
+  try {
+    parsed = new URL(input);
+  } catch {
+    return false;
+  }
+
+  const protocol = cleanString(parsed.protocol).toLowerCase();
+  if (protocol !== 'http:' && protocol !== 'https:') return false;
+
+  const host = cleanString(parsed.hostname).toLowerCase();
+  const path = cleanString(parsed.pathname).toLowerCase();
+  const query = cleanString(parsed.search).toLowerCase();
+
+  const isGoogleDomain = host === 'google.com' || host.endsWith('.google.com');
+  const isGoogleMapsShortDomain = host === 'maps.app.goo.gl' || host === 'goo.gl' || host.endsWith('.goo.gl');
+  if (isGoogleMapsShortDomain) return true;
+  if (!isGoogleDomain) return false;
+
+  return host.startsWith('maps.') || path.includes('/maps') || query.includes('maps') || query.includes('q=');
+};
+
 const encodeBase64 = (arrayBuffer) => {
   const bytes = new Uint8Array(arrayBuffer);
   let output = '';
@@ -190,36 +241,79 @@ export const buildProfileUpdatePayload = ({
   }, {});
 };
 
+export const validateProfileField = (field, value, draft = {}) => {
+  const input = cleanString(value);
+
+  if (ENGLISH_NAME_FIELDS.has(field)) {
+    if (!input) return '';
+    return ENGLISH_NAME_PATTERN.test(input) ? '' : 'invalid_language';
+  }
+
+  if (ARABIC_NAME_FIELDS.has(field)) {
+    if (!input) return '';
+    if (!ARABIC_NAME_PATTERN.test(input)) return 'invalid_language';
+    if (/[0-9]/.test(input) || /[\u0660-\u0669]/.test(input)) return 'invalid_language';
+    return '';
+  }
+
+  if (field === 'phone1') {
+    if (!input) return 'required';
+    return /^\+?[0-9]{7,16}$/.test(input) ? '' : 'invalid';
+  }
+
+  if (field === 'date_of_birth') {
+    if (!input) return '';
+    const dob = normalizeDateInput(input);
+    if (!dob) return 'invalid';
+
+    const todayISO = getTodayISODate();
+    if (dob > todayISO) return 'future';
+
+    const maxDateOfBirth = getMaxDateOfBirthISO();
+    if (dob > maxDateOfBirth) return 'too_young';
+    return '';
+  }
+
+  if (field === 'google_maps_location') {
+    if (!input) return '';
+    return isValidGoogleMapsUrl(input) ? '' : 'invalid_url';
+  }
+
+  if (field === 'weight' || field === 'height') {
+    if (!input) return '';
+    const numeric = Number(input);
+    const max = field === 'weight' ? 500 : 300;
+    if (!Number.isFinite(numeric) || numeric < 0 || numeric > max) {
+      return 'invalid';
+    }
+    return '';
+  }
+
+  return '';
+};
+
 export const validateProfileDraft = (draft) => {
   const errors = {};
+  const fields = [
+    'first_eng_name',
+    'middle_eng_name',
+    'last_eng_name',
+    'first_ar_name',
+    'middle_ar_name',
+    'last_ar_name',
+    'phone1',
+    'date_of_birth',
+    'google_maps_location',
+    'weight',
+    'height',
+  ];
 
-  const phone1 = cleanString(draft?.phone1);
-  if (!phone1) {
-    errors.phone1 = 'required';
-  } else if (!/^\+?[0-9]{7,16}$/.test(phone1)) {
-    errors.phone1 = 'invalid';
-  }
-
-  const dob = normalizeDateInput(draft?.date_of_birth);
-  if (cleanString(draft?.date_of_birth) && !dob) {
-    errors.date_of_birth = 'invalid';
-  }
-
-  const weight = cleanString(draft?.weight);
-  if (weight) {
-    const numeric = Number(weight);
-    if (!Number.isFinite(numeric) || numeric < 0 || numeric > 500) {
-      errors.weight = 'invalid';
+  fields.forEach((field) => {
+    const code = validateProfileField(field, draft?.[field], draft);
+    if (code) {
+      errors[field] = code;
     }
-  }
-
-  const height = cleanString(draft?.height);
-  if (height) {
-    const numeric = Number(height);
-    if (!Number.isFinite(numeric) || numeric < 0 || numeric > 300) {
-      errors.height = 'invalid';
-    }
-  }
+  });
 
   return {
     valid: Object.keys(errors).length === 0,

@@ -1,16 +1,23 @@
-import { Image, StyleSheet, View } from 'react-native';
-import { CalendarDays, Clock4, UserRound } from 'lucide-react-native';
-import { Surface } from '../../../components/ui/Surface';
-import { Text } from '../../../components/ui/Text';
-import { useI18n } from '../../../hooks/useI18n';
-import { useTheme } from '../../../hooks/useTheme';
-import { borderRadius, spacing } from '../../../theme/tokens';
-import { getRowDirection } from '../../../utils/rtl';
+import { Image, StyleSheet, View } from "react-native";
+import { CalendarDays, Clock4, UserRound } from "lucide-react-native";
+import { Surface } from "../../../components/ui/Surface";
+import { Text } from "../../../components/ui/Text";
+import { useI18n } from "../../../hooks/useI18n";
+import { useTheme } from "../../../hooks/useTheme";
+import { borderRadius, spacing } from "../../../theme/tokens";
+import { getRowDirection } from "../../../utils/rtl";
 import {
   formatAcademyAgeRange,
   formatCourseScheduleItem,
   getLocalizedText,
-} from '../utils/academyDiscovery.formatters';
+} from "../utils/academyDiscovery.formatters";
+
+const getCoachDisplayText = (coach) => {
+  if (!coach) return '';
+  if (typeof coach === 'string') return coach;
+
+  return coach.name || coach.Name || 'Coach';
+};
 
 export function AcademyCoursesList({ courses = [], copy }) {
   const { colors } = useTheme();
@@ -37,16 +44,37 @@ export function AcademyCoursesList({ courses = [], copy }) {
           valueEn: course.descriptionEn,
           valueAr: course.descriptionAr,
         });
-        const ageRange = formatAcademyAgeRange(course.ageFrom, course.ageTo, locale);
+        const ageRange = formatAcademyAgeRange(
+          course.ageFrom,
+          course.ageTo,
+          locale,
+        );
 
         return (
-          <Surface key={course.id || title} variant="soft" padding="md" style={styles.item}>
-            <View style={[styles.topRow, { flexDirection: getRowDirection(isRTL) }]}>
-              <View style={[styles.posterWrap, { backgroundColor: colors.surface }]}> 
+          <Surface
+            key={course.id || title}
+            variant="soft"
+            padding="md"
+            style={styles.item}
+          >
+            <View
+              style={[styles.topRow, { flexDirection: getRowDirection(isRTL) }]}
+            >
+              <View
+                style={[styles.posterWrap, { backgroundColor: colors.surface }]}
+              >
                 {course.posterUrl ? (
-                  <Image source={{ uri: course.posterUrl }} style={styles.poster} resizeMode="cover" />
+                  <Image
+                    source={{ uri: course.posterUrl }}
+                    style={styles.poster}
+                    resizeMode="cover"
+                  />
                 ) : (
-                  <CalendarDays size={18} color={colors.textMuted} strokeWidth={2.2} />
+                  <CalendarDays
+                    size={18}
+                    color={colors.textMuted}
+                    strokeWidth={2.2}
+                  />
                 )}
               </View>
 
@@ -56,14 +84,23 @@ export function AcademyCoursesList({ courses = [], copy }) {
                 </Text>
 
                 {description ? (
-                  <Text variant="bodySmall" color={colors.textSecondary} numberOfLines={3}>
+                  <Text
+                    variant="bodySmall"
+                    color={colors.textSecondary}
+                    numberOfLines={3}
+                  >
                     {description}
                   </Text>
                 ) : null}
               </View>
             </View>
 
-            <View style={[styles.metaRow, { flexDirection: getRowDirection(isRTL) }]}>
+            <View
+              style={[
+                styles.metaRow,
+                { flexDirection: getRowDirection(isRTL) },
+              ]}
+            >
               {course.level ? (
                 <View
                   style={[
@@ -116,9 +153,14 @@ export function AcademyCoursesList({ courses = [], copy }) {
             {course.coaches?.length ? (
               <View style={styles.block}>
                 <Text variant="caption" color={colors.textSecondary}>
-                  {copy?.labels?.coaches || 'Coaches'}
+                  {copy?.labels?.coaches || "Coaches"}
                 </Text>
-                <View style={[styles.metaRow, { flexDirection: getRowDirection(isRTL) }]}>
+                <View
+                  style={[
+                    styles.metaRow,
+                    { flexDirection: getRowDirection(isRTL) },
+                  ]}
+                >
                   {course.coaches.map((coach, index) => (
                     <View
                       key={`${course.id || title}-coach-${index}`}
@@ -130,10 +172,19 @@ export function AcademyCoursesList({ courses = [], copy }) {
                         },
                       ]}
                     >
-                      <View style={[styles.coachRow, { flexDirection: getRowDirection(isRTL) }]}>
-                        <UserRound size={12} color={colors.textMuted} strokeWidth={2.3} />
+                      <View
+                        style={[
+                          styles.coachRow,
+                          { flexDirection: getRowDirection(isRTL) },
+                        ]}
+                      >
+                        <UserRound
+                          size={12}
+                          color={colors.textMuted}
+                          strokeWidth={2.3}
+                        />
                         <Text variant="caption" color={colors.textSecondary}>
-                          {coach}
+                          {getCoachDisplayText(coach)}
                         </Text>
                       </View>
                     </View>
@@ -147,7 +198,12 @@ export function AcademyCoursesList({ courses = [], copy }) {
                 <Text variant="caption" color={colors.textSecondary}>
                   {copy?.labels?.schedules}
                 </Text>
-                <View style={[styles.scheduleWrap, { flexDirection: getRowDirection(isRTL) }]}>
+                <View
+                  style={[
+                    styles.scheduleWrap,
+                    { flexDirection: getRowDirection(isRTL) },
+                  ]}
+                >
                   {course.schedules.map((schedule, index) => (
                     <View
                       key={`${course.id || title}-schedule-${index}`}
@@ -159,7 +215,11 @@ export function AcademyCoursesList({ courses = [], copy }) {
                         },
                       ]}
                     >
-                      <Clock4 size={13} color={colors.accentOrange} strokeWidth={2.2} />
+                      <Clock4
+                        size={13}
+                        color={colors.accentOrange}
+                        strokeWidth={2.2}
+                      />
                       <Text variant="caption" color={colors.textSecondary}>
                         {formatCourseScheduleItem(schedule, locale)}
                       </Text>
@@ -183,27 +243,27 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   topRow: {
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
     gap: spacing.sm,
   },
   posterWrap: {
     width: 72,
     height: 72,
     borderRadius: borderRadius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
   },
   poster: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   titleWrap: {
     flex: 1,
     gap: 4,
   },
   metaRow: {
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
     gap: spacing.xs,
   },
   badge: {
@@ -213,19 +273,19 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   coachRow: {
-    alignItems: 'center',
+    alignItems: "center",
     gap: spacing.xs,
   },
   block: {
     gap: spacing.xs,
   },
   scheduleWrap: {
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
     gap: spacing.xs,
   },
   scheduleChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.xs,
     borderWidth: 1,
     borderRadius: borderRadius.pill,

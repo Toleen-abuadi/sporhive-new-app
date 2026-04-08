@@ -140,23 +140,33 @@ const normalizeLevelOption = (level, index) => {
   };
 };
 
-const filterCoursesAroundAnchor = (courses, anchorISO) => {
-  return courses.filter((course) => {
-    const start = String(course.start_date || '').slice(0, 10);
-    const end = String(course.end_date || '').slice(0, 10);
-    const hasStart = isISODate(start);
-    const hasEnd = isISODate(end);
+const getCourseStartISO = (course) => String(course?.start_date || course?.startDate || '').slice(0, 10);
 
-    const activeAtAnchor = (!hasStart || start <= anchorISO) && (!hasEnd || end >= anchorISO);
-    const upcomingFromAnchor = hasStart && start >= anchorISO;
-    return activeAtAnchor || upcomingFromAnchor;
-  });
+const startsAfterActiveSubscriptionEnd = (course, activeEndISO) => {
+  if (!isISODate(activeEndISO)) return true;
+  const startISO = getCourseStartISO(course);
+  if (!isISODate(startISO)) return false;
+  return startISO > activeEndISO;
+};
+
+const filterCoursesAfterActiveSubscription = (courses, activeEndISO) => {
+  if (!isISODate(activeEndISO)) return courses;
+  return courses.filter((course) => startsAfterActiveSubscriptionEnd(course, activeEndISO));
 };
 
 const clampSessions = (value, min, max) => {
   const numeric = Number(value);
   const safe = Number.isFinite(numeric) ? Math.trunc(numeric) : min;
   return Math.max(min, Math.min(max, safe));
+};
+
+const pickBooleanOrNull = (...values) => {
+  for (let index = 0; index < values.length; index += 1) {
+    const value = values[index];
+    if (value == null) continue;
+    if (typeof value === 'boolean') return value;
+  }
+  return null;
 };
 
 export function usePlayerRenewalFlow({ auto = true } = {}) {
@@ -171,7 +181,7 @@ export function usePlayerRenewalFlow({ auto = true } = {}) {
 
   const [step, setStep] = useState(STEPS.TYPE);
   const [renewType, setRenewType] = useState('subscription');
-  const [courseId, setCourseId] = useState('');
+  const [courseId, setCourseIdState] = useState('');
   const [groupId, setGroupId] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -201,6 +211,13 @@ export function usePlayerRenewalFlow({ auto = true } = {}) {
     return isISODate(endDateIso) ? endDateIso : todayISO;
   }, [currentRegistration.end_date, todayISO]);
 
+  const overlapAnchorISO = useMemo(() => {
+    const status = String(overviewQuery.overview?.subscription?.status || '').toLowerCase();
+    const activeLikeStatus = ['active', 'approved', 'upcoming', 'pending', 'valid'];
+    if (!activeLikeStatus.includes(status)) return '';
+    return anchorISO;
+  }, [anchorISO, overviewQuery.overview?.subscription?.status]);
+
   const rawCourseOptions = useMemo(() => {
     if ((optionsQuery.data?.courses || []).length > 0) {
       return optionsQuery.data.courses.map(normalizeCourseOption);
@@ -226,14 +243,21 @@ export function usePlayerRenewalFlow({ auto = true } = {}) {
   }, [optionsQuery.data?.levels, overviewQuery.overview?.levels]);
 
   const filteredCourseOptions = useMemo(
-    () => filterCoursesAroundAnchor(rawCourseOptions, anchorISO),
-    [anchorISO, rawCourseOptions]
+    () => filterCoursesAfterActiveSubscription(rawCourseOptions, overlapAnchorISO),
+    [overlapAnchorISO, rawCourseOptions]
   );
 
   const selectedCourse = useMemo(
     () => filteredCourseOptions.find((item) => sameId(item.value, courseId)) || null,
     [courseId, filteredCourseOptions]
   );
+
+  const hasCourseOverlapSelection = useMemo(() => {
+    if (renewType !== 'course' || !courseId) return false;
+    const selectedFromRaw = rawCourseOptions.find((item) => sameId(item.value, courseId));
+    if (!selectedFromRaw) return false;
+    return !startsAfterActiveSubscriptionEnd(selectedFromRaw, overlapAnchorISO);
+  }, [courseId, overlapAnchorISO, rawCourseOptions, renewType]);
 
   const filteredGroupOptions = useMemo(() => {
     if (renewType === 'course') {
@@ -381,7 +405,7 @@ export function usePlayerRenewalFlow({ auto = true } = {}) {
     initializedRef.current = true;
     setStep(STEPS.TYPE);
     setRenewType('subscription');
-    setCourseId('');
+    setCourseIdState('');
     setGroupId(toIdString(currentRegistration.group_id));
     setStartDate(anchorStartISO || todayISO);
     setEndDate('');
@@ -394,7 +418,7 @@ export function usePlayerRenewalFlow({ auto = true } = {}) {
   useEffect(() => {
     if (!courseId) return;
     const valid = filteredCourseOptions.some((item) => sameId(item.value, courseId));
-    if (!valid) setCourseId('');
+    if (!valid) setCourseIdState('');
   }, [courseId, filteredCourseOptions]);
 
   useEffect(() => {
@@ -616,15 +640,37 @@ export function usePlayerRenewalFlow({ auto = true } = {}) {
   ]);
 
   const canAdvanceFromType = true;
-  const canAdvanceFromOptions = renewType === 'course' ? Boolean(courseId && groupId && level) : Boolean(groupId && level);
+  const canAdvanceFromOptions =
+    renewType === 'course'
+      ? Boolean(courseId && groupId && level && !hasCourseOverlapSelection)
+      : Boolean(groupId && level);
   const hasBaseValues = Boolean(startDate && endDate && numSessions && level);
   const hasCourseValues = renewType === 'course' ? Boolean(courseId && groupId) : Boolean(groupId);
-  const isValid = hasBaseValues && hasCourseValues;
+  const isValid = hasBaseValues && hasCourseValues && !hasCourseOverlapSelection;
+
+  const pendingFromEligibility = eligibilityQuery.error ? null : eligibilityQuery.data?.hasPendingRequest;
+  const pendingFromOptions = optionsQuery.error ? null : optionsQuery.data?.hasPendingRequest;
+  const hasPendingRequest = Boolean(
+    pickBooleanOrNull(pendingFromEligibility, pendingFromOptions) || false
+  );
+
+  const blockedFromEligibility = eligibilityQuery.error ? null : eligibilityQuery.data?.isBlocked;
+  const blockedFromOptions = optionsQuery.error ? null : optionsQuery.data?.isBlocked;
+  const hasServerBlockingCondition = Boolean(
+    pickBooleanOrNull(blockedFromEligibility, blockedFromOptions) || false
+  );
+
+  const blockingReason =
+    String(eligibilityQuery.error ? '' : eligibilityQuery.data?.blockingReason || '').trim() ||
+    String(optionsQuery.error ? '' : optionsQuery.data?.blockingReason || '').trim();
+
   const mergedEligibility = {
     eligible: Boolean(eligibilityQuery.data?.eligible ?? optionsQuery.data?.eligible),
     daysLeft: eligibilityQuery.data?.daysLeft ?? optionsQuery.data?.daysLeft ?? null,
     endDate: eligibilityQuery.data?.endDate || optionsQuery.data?.currentEnd || '',
-    hasPendingRequest: Boolean(eligibilityQuery.data?.hasPendingRequest),
+    hasPendingRequest,
+    hasServerBlockingCondition,
+    blockingReason,
   };
 
   const submitRenewalRequest = useCallback(async () => {
@@ -646,6 +692,28 @@ export function usePlayerRenewalFlow({ auto = true } = {}) {
           code: 'RENEWAL_FORM_INVALID',
           status: 0,
           message: 'Renewal form is incomplete.',
+        },
+      };
+    }
+
+    if (hasServerBlockingCondition) {
+      return {
+        success: false,
+        error: {
+          code: 'RENEWAL_SERVER_BLOCKED',
+          status: 400,
+          message: blockingReason || 'Renewal request is currently blocked by the server.',
+        },
+      };
+    }
+
+    if (renewType === 'course' && hasCourseOverlapSelection) {
+      return {
+        success: false,
+        error: {
+          code: 'COURSE_OVERLAP_WITH_ACTIVE_SUBSCRIPTION',
+          status: 400,
+          message: 'Selected course overlaps with your active subscription period.',
         },
       };
     }
@@ -695,6 +763,9 @@ export function usePlayerRenewalFlow({ auto = true } = {}) {
     fetchRenewalBootstrap,
     groupId,
     isValid,
+    hasCourseOverlapSelection,
+    hasServerBlockingCondition,
+    blockingReason,
     level,
     numSessions,
     overviewQuery,
@@ -721,6 +792,7 @@ export function usePlayerRenewalFlow({ auto = true } = {}) {
     todayISO,
     anchorStartISO,
     anchorISO,
+    overlapAnchorISO,
     bounds,
     sessionsCap,
     selectedCourse,
@@ -741,8 +813,26 @@ export function usePlayerRenewalFlow({ auto = true } = {}) {
     submitState,
     canAdvanceFromType,
     canAdvanceFromOptions,
+    hasCourseOverlapSelection,
+    hasServerBlockingCondition,
+    blockingReason,
     setRenewType,
-    setCourseId,
+    setCourseId: (value) => {
+      const nextValue = toIdString(value);
+      if (!nextValue) {
+        setCourseIdState('');
+        return;
+      }
+
+      if (renewType === 'course') {
+        const selectedFromRaw = rawCourseOptions.find((item) => sameId(item.value, nextValue));
+        if (selectedFromRaw && !startsAfterActiveSubscriptionEnd(selectedFromRaw, overlapAnchorISO)) {
+          return;
+        }
+      }
+
+      setCourseIdState(nextValue);
+    },
     setGroupId,
     setStartDate: (value) => {
       setLastEdited(LAST_EDITED.START);
@@ -769,7 +859,7 @@ export function usePlayerRenewalFlow({ auto = true } = {}) {
       initializedRef.current = true;
       setStep(STEPS.TYPE);
       setRenewType('subscription');
-      setCourseId('');
+      setCourseIdState('');
       setGroupId(toIdString(currentRegistration.group_id));
       setStartDate(anchorStartISO || todayISO);
       setEndDate('');

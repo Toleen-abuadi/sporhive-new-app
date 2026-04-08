@@ -28,15 +28,17 @@ import { usePlayerUniformOrders } from '../hooks';
 import { usePlayerUniformCart } from '../state';
 import { formatDateLabel, formatNumberLabel, formatOrderStatusLabel } from '../utils/playerPortal.formatters';
 import { resolvePortalGuardMessage } from '../utils/playerPortal.messages';
+import { normalizeUniformStatus } from '../utils/playerPortal.uniform';
 
 function resolveOrderStatusLabel(status, t, locale) {
-  return formatOrderStatusLabel(status, { t, locale, fallback: '-' });
+  return formatOrderStatusLabel(normalizeUniformStatus(status), { t, locale, fallback: '-' });
 }
 
 function OrderGroupCard({ group, locale, t, colors, onPress, isRTL }) {
   const latestItems = (group.items || []).slice(0, 2);
   const hiddenCount = Math.max(0, (group.items || []).length - latestItems.length);
-  const statusLabel = resolveOrderStatusLabel(group.status, t, locale);
+  const normalizedStatus = normalizeUniformStatus(group.status);
+  const statusLabel = resolveOrderStatusLabel(normalizedStatus, t, locale);
 
   return (
     <Pressable
@@ -65,7 +67,7 @@ function OrderGroupCard({ group, locale, t, colors, onPress, isRTL }) {
             })}
           </Text>
         </View>
-        <PortalStatusBadge status={group.status} label={statusLabel} domain="orderStatus" />
+        <PortalStatusBadge status={normalizedStatus} label={statusLabel} domain="orderStatus" />
       </View>
 
       <View style={[styles.statsRow, { flexDirection: getRowDirection(isRTL) }]}>
@@ -98,7 +100,7 @@ function OrderGroupCard({ group, locale, t, colors, onPress, isRTL }) {
         </Text>
       ) : null}
 
-      <UniformStatusTimeline status={group.status} t={t} style={styles.timeline} />
+      <UniformStatusTimeline status={normalizedStatus} t={t} style={styles.timeline} />
     </Pressable>
   );
 }

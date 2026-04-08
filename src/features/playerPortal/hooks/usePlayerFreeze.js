@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { playerPortalApi } from '../api/playerPortal.api';
+import { mapFreezeRowsFromOverview } from '../utils/playerPortal.freeze';
+import { toNumber, toObject } from '../utils/playerPortal.normalizers';
 import { usePlayerOverview } from './usePlayerOverview';
 import { usePlayerPortalSession } from './usePlayerPortalSession';
 import { usePortalQueryState } from './usePortalQueryState';
-import { mapFreezeRowsFromOverview } from '../utils/playerPortal.freeze';
-import { toNumber, toObject } from '../utils/playerPortal.normalizers';
 
 const DEFAULT_FREEZE_DATA = Object.freeze({
   items: [],
@@ -16,23 +16,85 @@ const DEFAULT_FREEZE_DATA = Object.freeze({
   raw: null,
 });
 
-const DEFAULT_POLICY = Object.freeze({
-  maxDays: 90,
-  maxPerYear: 3,
-});
+const toPositiveInt = (value) => {
+  const numeric = toNumber(value);
+  if (numeric == null) return null;
+  const whole = Math.trunc(numeric);
+  if (!Number.isFinite(whole) || whole <= 0) return null;
+  return whole;
+};
+
+const pickFirstPositiveInt = (...values) => {
+  for (let index = 0; index < values.length; index += 1) {
+    const next = toPositiveInt(values[index]);
+    if (next != null) return next;
+  }
+  return null;
+};
 
 const getFreezePolicy = (overview) => {
   const source = toObject(overview?.raw);
-  const metrics = toObject(toObject(toObject(source.player_data).performance_feedback).metrics);
-  const policy = toObject(metrics.freeze_policy);
+  const payload = toObject(source.payload);
+  const data = toObject(source.data);
+
+  const sourcePlayerData = toObject(source.player_data);
+  const dataPlayerData = toObject(data.player_data);
+  const playerData = Object.keys(sourcePlayerData).length > 0 ? sourcePlayerData : dataPlayerData;
+
+  const metrics = toObject(toObject(playerData.performance_feedback).metrics);
+
+  const rootFreezePolicyRaw = source.freeze_policy ?? data.freeze_policy ?? payload.freeze_policy;
+
+  const rootFreezePolicy = Array.isArray(rootFreezePolicyRaw)
+    ? rootFreezePolicyRaw.reduce((acc, item) => ({ ...acc, ...toObject(item) }), {})
+    : toObject(rootFreezePolicyRaw);
+
+  const metricsFreezePolicyRaw = metrics.freeze_policy;
+  const metricsFreezePolicy = Array.isArray(metricsFreezePolicyRaw)
+    ? metricsFreezePolicyRaw.reduce((acc, item) => ({ ...acc, ...toObject(item) }), {})
+    : toObject(metricsFreezePolicyRaw);
+
+  const maxPerYear =
+    pickFirstPositiveInt(
+      rootFreezePolicy.freezes_per_year,
+      rootFreezePolicy.max_per_year,
+      payload.freezes_per_year,
+      data.freezes_per_year,
+      source.freezes_per_year,
+      metricsFreezePolicy.freezes_per_year,
+      metricsFreezePolicy.max_per_year,
+      metrics.freezes_per_year,
+      metrics.max_per_year
+    );
+
+  const maxDays =
+    pickFirstPositiveInt(
+      rootFreezePolicy.max_freez_duration,
+      rootFreezePolicy.max_freeze_duration,
+      rootFreezePolicy.max_days,
+      payload.max_freez_duration,
+      payload.max_freeze_duration,
+      data.max_freez_duration,
+      data.max_freeze_duration,
+      source.max_freez_duration,
+      source.max_freeze_duration,
+      metricsFreezePolicy.max_freez_duration,
+      metricsFreezePolicy.max_freeze_duration,
+      metricsFreezePolicy.max_days,
+      metrics.max_freez_duration,
+      metrics.max_freeze_duration,
+      metrics.max_days
+    );
 
   return {
-    maxDays: toNumber(policy.max_days) || DEFAULT_POLICY.maxDays,
-    maxPerYear: toNumber(policy.max_per_year) || DEFAULT_POLICY.maxPerYear,
+    maxDays,
+    maxPerYear,
   };
 };
 
-const countApprovedByYear = (rows, startDate) => {
+const YEAR_LIMIT_STATUSES = new Set(['pending', 'approved', 'active', 'upcoming', 'scheduled']);
+
+const countByYear = (rows, startDate) => {
   const targetDate = String(startDate || '').slice(0, 10);
   if (!targetDate) return 0;
 
@@ -41,7 +103,8 @@ const countApprovedByYear = (rows, startDate) => {
 
   return (Array.isArray(rows) ? rows : []).filter((row) => {
     const status = String(row?.status || '').toLowerCase();
-    if (status !== 'approved') return false;
+    if (!YEAR_LIMIT_STATUSES.has(status)) return false;
+
     const freezeStart = String(row?.startDate || row?.start_date || '').slice(0, 10);
     const [freezeYear] = freezeStart.split('-').map(Number);
     return Number.isFinite(freezeYear) && freezeYear === year;
@@ -55,14 +118,24 @@ export function usePlayerFreeze({ auto = true } = {}) {
   const runQuery = query.run;
   const setQueryData = query.setData;
 
-  const seedFromOverview = useCallback(() => {
-    if (!overviewQuery.overview?.raw) return;
-    const mapped = mapFreezeRowsFromOverview(overviewQuery.overview.raw);
-    setQueryData({
-      ...mapped,
-      raw: overviewQuery.overview.raw,
-    });
-  }, [overviewQuery.overview?.raw, setQueryData]);
+  const requestFreezeInFlightRef = useRef(null);
+  const seededOverviewRef = useRef(null);
+
+  const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
+  const [isCancellingRequest, setIsCancellingRequest] = useState(false);
+
+  const seedFromOverview = useCallback(
+    (raw) => {
+      if (!raw) return;
+
+      const mapped = mapFreezeRowsFromOverview(raw);
+      setQueryData({
+        ...mapped,
+        raw,
+      });
+    },
+    [setQueryData]
+  );
 
   const fetchFreezeHistory = useCallback(
     async ({ refresh = false, payload = {} } = {}) => {
@@ -95,6 +168,17 @@ export function usePlayerFreeze({ auto = true } = {}) {
 
   const requestFreeze = useCallback(
     async ({ startDate, endDate, reason = '' } = {}) => {
+      if (requestFreezeInFlightRef.current) {
+        return {
+          success: false,
+          error: {
+            code: 'FREEZE_REQUEST_IN_FLIGHT',
+            status: 0,
+            message: '',
+          },
+        };
+      }
+
       if (!session.canFetchOverview || !session.requestContext) {
         return {
           success: false,
@@ -106,26 +190,47 @@ export function usePlayerFreeze({ auto = true } = {}) {
         };
       }
 
-      const result = await playerPortalApi.createFreezeRequest(session.requestContext, {
-        start_date: startDate,
-        end_date: endDate,
-        reason: reason || undefined,
-      });
+      const submitPromise = (async () => {
+        setIsSubmittingRequest(true);
 
-      if (!result.success) return result;
+        const result = await playerPortalApi.createFreezeRequest(session.requestContext, {
+          start_date: startDate,
+          end_date: endDate,
+          reason: reason || undefined,
+        });
 
-      await Promise.all([
-        fetchFreezeHistory({ refresh: true }),
-        overviewQuery.refetch(),
-      ]);
+        if (!result.success) return result;
 
-      return result;
+        await Promise.all([fetchFreezeHistory({ refresh: true }), overviewQuery.refetch()]);
+
+        return result;
+      })();
+
+      requestFreezeInFlightRef.current = submitPromise;
+
+      try {
+        return await submitPromise;
+      } finally {
+        requestFreezeInFlightRef.current = null;
+        setIsSubmittingRequest(false);
+      }
     },
     [fetchFreezeHistory, overviewQuery, session.canFetchOverview, session.guardReason, session.requestContext]
   );
 
   const cancelFreeze = useCallback(
     async (freezeId) => {
+      if (isCancellingRequest) {
+        return {
+          success: false,
+          error: {
+            code: 'FREEZE_CANCEL_IN_FLIGHT',
+            status: 0,
+            message: '',
+          },
+        };
+      }
+
       if (!session.canFetchOverview || !session.requestContext) {
         return {
           success: false,
@@ -137,39 +242,49 @@ export function usePlayerFreeze({ auto = true } = {}) {
         };
       }
 
-      const result = await playerPortalApi.cancelFreezeRequest(session.requestContext, {
-        freeze_id: toNumber(freezeId),
-      });
+      setIsCancellingRequest(true);
 
-      if (!result.success) return result;
+      try {
+        const result = await playerPortalApi.cancelFreezeRequest(session.requestContext, {
+          freeze_id: toNumber(freezeId),
+        });
 
-      await Promise.all([
-        fetchFreezeHistory({ refresh: true }),
-        overviewQuery.refetch(),
-      ]);
+        if (!result.success) return result;
 
-      return result;
+        await Promise.all([fetchFreezeHistory({ refresh: true }), overviewQuery.refetch()]);
+
+        return result;
+      } finally {
+        setIsCancellingRequest(false);
+      }
     },
-    [fetchFreezeHistory, overviewQuery, session.canFetchOverview, session.guardReason, session.requestContext]
+    [fetchFreezeHistory, isCancellingRequest, overviewQuery, session.canFetchOverview, session.guardReason, session.requestContext]
   );
 
   useEffect(() => {
-    if (!overviewQuery.overview?.raw) return;
-    if ((query.data?.items || []).length > 0) return;
-    seedFromOverview();
-  }, [overviewQuery.overview?.raw, query.data?.items, seedFromOverview]);
+    const raw = overviewQuery.overview?.raw;
+    if (!raw) return;
+
+    if (seededOverviewRef.current === raw) return;
+
+    seedFromOverview(raw);
+    seededOverviewRef.current = raw;
+  }, [overviewQuery.overview?.raw, seedFromOverview]);
 
   useEffect(() => {
     if (!auto) return;
     if (!session.canFetchOverview || !session.requestContext) return;
     if (query.error) return;
     if (query.isLoading || query.isRefreshing) return;
-    if ((query.data?.items || []).length > 0 && query.lastUpdatedAt) return;
+
+    // Empty history is still a valid loaded state.
+    // Once we have fetched at least once, stop auto-refetching.
+    if (query.lastUpdatedAt) return;
+
     fetchFreezeHistory();
   }, [
     auto,
     fetchFreezeHistory,
-    query.data?.items,
     query.error,
     query.isLoading,
     query.isRefreshing,
@@ -192,10 +307,12 @@ export function usePlayerFreeze({ auto = true } = {}) {
     policy,
     canFetch: session.canFetchOverview,
     guardReason: session.guardReason,
+    isSubmittingRequest,
+    isCancellingRequest,
     fetchFreezeHistory,
     requestFreeze,
     cancelFreeze,
     refreshAll: () => Promise.all([fetchFreezeHistory({ refresh: true }), overviewQuery.refetch()]),
-    getUsedCountForYear: (startDate) => countApprovedByYear(query.data?.items || [], startDate),
+    getUsedCountForYear: (startDate) => countByYear(query.data?.items || [], startDate),
   };
 }

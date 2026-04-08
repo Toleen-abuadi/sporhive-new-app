@@ -1,49 +1,57 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { RefreshControl, StyleSheet, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Download, ExternalLink, Share2 } from 'lucide-react-native';
-import { useToast } from '../../../components/feedback/ToastHost';
-import { AppScreen } from '../../../components/ui/AppScreen';
-import { Button } from '../../../components/ui/Button';
-import { LanguageSwitch } from '../../../components/ui/LanguageSwitch';
-import { SectionLoader } from '../../../components/ui/Loader';
-import { ScreenHeader } from '../../../components/ui/ScreenHeader';
-import { Text } from '../../../components/ui/Text';
-import { ROUTES } from '../../../constants/routes';
-import { useI18n } from '../../../hooks/useI18n';
-import { useTheme } from '../../../hooks/useTheme';
-import { spacing } from '../../../theme/tokens';
-import { playerPortalApi } from '../api/playerPortal.api';
-import { PortalErrorState, PortalSectionCard } from '../components';
-import { usePlayerPayments, usePlayerPortalSession } from '../hooks';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { RefreshControl, StyleSheet, View } from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useToast } from "../../../components/feedback/ToastHost";
+import { AppScreen } from "../../../components/ui/AppScreen";
+import { Button } from "../../../components/ui/Button";
+import { Chip } from "../../../components/ui/Chip";
+import { LanguageSwitch } from "../../../components/ui/LanguageSwitch";
+import { SectionLoader } from "../../../components/ui/Loader";
+import { ScreenHeader } from "../../../components/ui/ScreenHeader";
+import { Text } from "../../../components/ui/Text";
+import { ROUTES } from "../../../constants/routes";
+import { useI18n } from "../../../hooks/useI18n";
+import { useTheme } from "../../../hooks/useTheme";
+import { spacing } from "../../../theme/tokens";
+import { getRowDirection } from "../../../utils/rtl";
+import { playerPortalApi } from "../api/playerPortal.api";
+import { PortalErrorState, PortalSectionCard } from "../components";
+import { usePlayerPayments, usePlayerPortalSession } from "../hooks";
 import {
   createInvoiceDocument,
   downloadInvoiceDocument,
-  openInvoiceDocument,
   revokeInvoiceDocument,
-  shareInvoiceDocument,
-} from '../utils/playerPortal.invoice';
+} from "../utils/playerPortal.invoice";
 
 const resolveParam = (value) => (Array.isArray(value) ? value[0] : value);
+const normalizeInvoiceLanguage = (value) =>
+  String(value || "").toLowerCase() === "ar" ? "ar" : "en";
 
 export function PlayerPaymentInvoiceScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const toast = useToast();
-  const { t, locale } = useI18n();
+  const { t, locale, isRTL } = useI18n();
   const { colors } = useTheme();
   const paymentId = resolveParam(params.paymentId);
 
   const session = usePlayerPortalSession();
   const { overview, getPaymentById } = usePlayerPayments();
 
-  const payment = useMemo(() => getPaymentById(paymentId), [getPaymentById, paymentId]);
+  const payment = useMemo(
+    () => getPaymentById(paymentId),
+    [getPaymentById, paymentId],
+  );
+
+  const [invoiceLanguage, setInvoiceLanguage] = useState(() =>
+    normalizeInvoiceLanguage(locale),
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [documentRef, setDocumentRef] = useState(null);
-  const autoLoadKeyRef = useRef('');
   const isLoadingRef = useRef(false);
-  const showLoadingState = isLoading || (!documentRef && !error);
+
+  const showLoadingState = isLoading;
 
   const releaseDocument = useCallback((doc) => {
     if (!doc) return;
@@ -51,23 +59,53 @@ export function PlayerPaymentInvoiceScreen() {
   }, []);
 
   const loadInvoice = useCallback(
-    async ({ refresh = false } = {}) => {
-      if (!session.requestContext || !payment) return;
-      if (isLoadingRef.current && !refresh) return;
+    async ({
+      refresh = false,
+      silent = false,
+      downloadAfterLoad = false,
+    } = {}) => {
+      if (!session.requestContext || !payment) {
+        return {
+          success: false,
+          error: new Error("Invoice context is incomplete."),
+        };
+      }
+
+      if (isLoadingRef.current && !refresh) {
+        return {
+          success: false,
+          error: new Error("Invoice request is already in progress."),
+        };
+      }
 
       isLoadingRef.current = true;
-      setIsLoading(true);
+      if (!silent) {
+        setIsLoading(true);
+      }
       setError(null);
 
       try {
-        const result = await playerPortalApi.printInvoice(session.requestContext, {
-          id: payment.id,
-          language: locale === 'ar' ? 'ar' : 'en',
-          player_name: overview?.player?.displayName || 'Player',
-        });
+        const result = await playerPortalApi.printInvoice(
+          session.requestContext,
+          {
+            id: payment.id,
+            invoice_id: payment.invoiceId || undefined,
+            external_invoice_number:
+              payment.externalInvoiceNumber || undefined,
+            language: invoiceLanguage,
+            player_name:
+              invoiceLanguage === "ar"
+                ? overview?.player?.arabicName ||
+                  overview?.player?.displayName ||
+                  "Player"
+                : overview?.player?.englishName ||
+                  overview?.player?.displayName ||
+                  "Player",
+          },
+        );
 
-        if (!result.success) {
-          throw result.error;
+        if (!result?.success) {
+          throw result?.error || new Error("Failed to generate invoice.");
         }
 
         const nextDocument = await createInvoiceDocument({
@@ -80,62 +118,59 @@ export function PlayerPaymentInvoiceScreen() {
           releaseDocument(prev);
           return nextDocument;
         });
+
+        if (downloadAfterLoad) {
+          await downloadInvoiceDocument(nextDocument);
+          toast.success(
+            t("playerPortal.payments.invoice.readyHint", {
+              name: nextDocument.fileName || `invoice-${payment.id}.pdf`,
+            }),
+          );
+        }
+
         return { success: true, data: nextDocument };
       } catch (reason) {
         setError(reason);
         return { success: false, error: reason };
       } finally {
         isLoadingRef.current = false;
-        setIsLoading(false);
+        if (!silent) {
+          setIsLoading(false);
+        }
       }
     },
     [
-      locale,
+      invoiceLanguage,
+      overview?.player?.arabicName,
       overview?.player?.displayName,
+      overview?.player?.englishName,
       payment,
       releaseDocument,
       session.requestContext,
-    ]
+      t,
+      toast,
+    ],
   );
-
-  useEffect(() => {
-    if (!payment || !session.requestContext) return;
-    const autoLoadKey = `${session.sessionKey || 'session'}:${payment.id}:${locale}`;
-    if (autoLoadKeyRef.current === autoLoadKey) return;
-    autoLoadKeyRef.current = autoLoadKey;
-    loadInvoice();
-  }, [loadInvoice, locale, payment, session.requestContext, session.sessionKey]);
 
   useEffect(
     () => () => {
       releaseDocument(documentRef);
     },
-    [documentRef, releaseDocument]
+    [documentRef, releaseDocument],
   );
 
-  const handleOpen = async () => {
-    try {
-      await openInvoiceDocument(documentRef);
-    } catch (reason) {
-      toast.error(reason?.message || t('playerPortal.payments.invoice.errors.open'));
-    }
-  };
-
-  const handleShare = async () => {
-    try {
-      await shareInvoiceDocument(documentRef, {
-        message: t('playerPortal.payments.invoice.shareMessage'),
-      });
-    } catch (reason) {
-      toast.error(reason?.message || t('playerPortal.payments.invoice.errors.share'));
-    }
-  };
-
   const handleDownload = async () => {
-    try {
-      await downloadInvoiceDocument(documentRef);
-    } catch (reason) {
-      toast.error(reason?.message || t('playerPortal.payments.invoice.errors.download'));
+    const result = await loadInvoice({
+      refresh: true,
+      silent: false,
+      downloadAfterLoad: true,
+    });
+
+    if (!result?.success) {
+      toast.error(
+        result?.error?.message ||
+          t("playerPortal.payments.invoice.errors.download"),
+      );
     }
   };
 
@@ -146,15 +181,15 @@ export function PlayerPaymentInvoiceScreen() {
       refreshControl={
         <RefreshControl
           refreshing={isLoading}
-          onRefresh={() => loadInvoice({ refresh: true })}
+          onRefresh={handleDownload}
           tintColor={colors.accentOrange}
           colors={[colors.accentOrange]}
         />
       }
     >
       <ScreenHeader
-        title={t('playerPortal.payments.invoice.title')}
-        subtitle={t('playerPortal.payments.invoice.subtitle')}
+        title={t("playerPortal.payments.invoice.title")}
+        subtitle={t("playerPortal.payments.invoice.subtitle")}
         onBack={() => router.replace(ROUTES.PLAYER_PAYMENTS)}
         right={<LanguageSwitch compact />}
       />
@@ -162,9 +197,11 @@ export function PlayerPaymentInvoiceScreen() {
       {!payment ? (
         <PortalSectionCard>
           <PortalErrorState
-            title={t('playerPortal.payments.detail.notFoundTitle')}
-            fallbackMessage={t('playerPortal.payments.detail.notFoundDescription')}
-            retryLabel={t('playerPortal.actions.backHome')}
+            title={t("playerPortal.payments.detail.notFoundTitle")}
+            fallbackMessage={t(
+              "playerPortal.payments.detail.notFoundDescription",
+            )}
+            retryLabel={t("playerPortal.actions.backHome")}
             onRetry={() => router.replace(ROUTES.PLAYER_PAYMENTS)}
           />
         </PortalSectionCard>
@@ -172,14 +209,42 @@ export function PlayerPaymentInvoiceScreen() {
 
       {payment ? (
         <PortalSectionCard
-          title={t('playerPortal.payments.invoice.previewTitle')}
-          subtitle={t('playerPortal.payments.invoice.previewSubtitle', { id: payment.id })}
+          title={t("playerPortal.payments.invoice.previewTitle")}
+          subtitle={t("playerPortal.payments.invoice.previewSubtitle", {
+            id: payment.id,
+          })}
         >
+          <View style={styles.languageWrap}>
+            <Text variant="caption" color={colors.textSecondary}>
+              {t("playerPortal.payments.invoice.language.label")}
+            </Text>
+
+            <View
+              style={[
+                styles.languageChips,
+                { flexDirection: getRowDirection(isRTL) },
+              ]}
+            >
+              <Chip
+                label={t("playerPortal.payments.invoice.language.ar")}
+                selected={invoiceLanguage === "ar"}
+                onPress={() => setInvoiceLanguage("ar")}
+                disabled={isLoading}
+              />
+              <Chip
+                label={t("playerPortal.payments.invoice.language.en")}
+                selected={invoiceLanguage === "en"}
+                onPress={() => setInvoiceLanguage("en")}
+                disabled={isLoading}
+              />
+            </View>
+          </View>
+
           {showLoadingState ? (
             <View style={styles.loadingWrap}>
               <SectionLoader
                 minHeight={120}
-                label={t('playerPortal.payments.invoice.loading')}
+                label={t("playerPortal.payments.invoice.loading")}
                 style={styles.invoiceLoader}
               />
             </View>
@@ -187,43 +252,31 @@ export function PlayerPaymentInvoiceScreen() {
 
           {!showLoadingState && error ? (
             <PortalErrorState
-              title={t('playerPortal.payments.invoice.errors.loadTitle')}
+              title={t("playerPortal.payments.invoice.errors.loadTitle")}
               error={error}
-              fallbackMessage={t('playerPortal.payments.invoice.errors.loadFallback')}
-              retryLabel={t('playerPortal.actions.retry')}
-              onRetry={() => loadInvoice({ refresh: true })}
+              fallbackMessage={t(
+                "playerPortal.payments.invoice.errors.loadFallback",
+              )}
+              retryLabel={t("playerPortal.actions.retry")}
+              onRetry={handleDownload}
             />
           ) : null}
 
-          {!showLoadingState && !error && documentRef ? (
+          {!showLoadingState && !error ? (
             <View style={styles.readyWrap}>
               <Text variant="bodySmall" color={colors.textSecondary}>
-                {t('playerPortal.payments.invoice.readyHint', {
-                  name: documentRef.fileName || `invoice-${payment.id}.pdf`,
-                })}
+                {documentRef
+                  ? t("playerPortal.payments.invoice.readyHint", {
+                      name:
+                        documentRef.fileName || `invoice-${payment.id}.pdf`,
+                    })
+                  : t("playerPortal.payments.invoice.previewSubtitle", {
+                      id: payment.id,
+                    })}
               </Text>
-              <Button
-                fullWidth
-                onPress={handleOpen}
-                leadingIcon={<ExternalLink size={16} color={colors.white} strokeWidth={2.3} />}
-              >
-                {t('playerPortal.payments.actions.openInvoice')}
-              </Button>
-              <Button
-                fullWidth
-                variant="secondary"
-                onPress={handleShare}
-                leadingIcon={<Share2 size={16} color={colors.textPrimary} strokeWidth={2.3} />}
-              >
-                {t('playerPortal.payments.actions.shareInvoice')}
-              </Button>
-              <Button
-                fullWidth
-                variant="secondary"
-                onPress={handleDownload}
-                leadingIcon={<Download size={16} color={colors.textPrimary} strokeWidth={2.3} />}
-              >
-                {t('playerPortal.payments.actions.downloadInvoice')}
+
+              <Button fullWidth onPress={handleDownload} disabled={isLoading}>
+                {t("playerPortal.payments.actions.downloadInvoice")}
               </Button>
             </View>
           ) : null}
@@ -237,12 +290,19 @@ const styles = StyleSheet.create({
   container: {
     gap: spacing.md,
   },
+  languageWrap: {
+    gap: spacing.xs,
+  },
+  languageChips: {
+    gap: spacing.xs,
+    flexWrap: "wrap",
+  },
   loadingWrap: {
     minHeight: 120,
   },
   invoiceLoader: {
     borderWidth: 0,
-    width: '100%',
+    width: "100%",
   },
   readyWrap: {
     gap: spacing.sm,

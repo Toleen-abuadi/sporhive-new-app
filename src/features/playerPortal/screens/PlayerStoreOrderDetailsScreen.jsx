@@ -24,11 +24,12 @@ import { usePlayerUniformOrders } from '../hooks';
 import { usePlayerUniformCart } from '../state';
 import { formatDateLabel, formatNumberLabel, formatOrderStatusLabel } from '../utils/playerPortal.formatters';
 import { resolvePortalGuardMessage } from '../utils/playerPortal.messages';
+import { normalizeUniformStatus } from '../utils/playerPortal.uniform';
 
 const resolveParam = (value) => (Array.isArray(value) ? value[0] : value);
 
 function resolveOrderStatusLabel(status, t, locale) {
-  return formatOrderStatusLabel(status, { t, locale, fallback: '-' });
+  return formatOrderStatusLabel(normalizeUniformStatus(status), { t, locale, fallback: '-' });
 }
 
 function OrderItemCard({ item, locale, t, colors, isRTL }) {
@@ -93,7 +94,8 @@ export function PlayerStoreOrderDetailsScreen() {
     [groups, orderRef]
   );
   const showLoading = canFetch && (isLoading || (!lastUpdatedAt && !error)) && !orderGroup;
-  const statusLabel = resolveOrderStatusLabel(orderGroup?.status, t, locale);
+  const normalizedOrderStatus = normalizeUniformStatus(orderGroup?.status);
+  const statusLabel = resolveOrderStatusLabel(normalizedOrderStatus, t, locale);
 
   return (
     <AppScreen
@@ -172,7 +174,7 @@ export function PlayerStoreOrderDetailsScreen() {
               <Text variant="caption" color={colors.textSecondary}>
                 {t('playerPortal.store.orders.labels.orderRef', { ref: orderGroup.ref })}
               </Text>
-              <PortalStatusBadge status={orderGroup.status} label={statusLabel} domain="orderStatus" />
+              <PortalStatusBadge status={normalizedOrderStatus} label={statusLabel} domain="orderStatus" />
             </View>
 
             <View style={[styles.summaryRow, { flexDirection: getRowDirection(isRTL) }]}>
@@ -202,7 +204,7 @@ export function PlayerStoreOrderDetailsScreen() {
             title={t('playerPortal.store.orderDetails.sections.timelineTitle')}
             subtitle={t('playerPortal.store.orderDetails.sections.timelineSubtitle')}
           >
-            <UniformStatusTimeline status={orderGroup.status} t={t} />
+            <UniformStatusTimeline status={normalizedOrderStatus} t={t} />
           </PortalSectionCard>
 
           <PortalSectionCard

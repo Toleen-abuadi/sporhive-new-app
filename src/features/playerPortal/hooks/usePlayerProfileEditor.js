@@ -9,6 +9,7 @@ import {
   normalizePhoneInput,
   readImageUriAsPayload,
   resolveProfileImageUri,
+  validateProfileField,
   validateProfileDraft,
 } from '../utils/playerPortal.profile';
 
@@ -81,16 +82,31 @@ export function usePlayerProfileEditor() {
   }, [draft, imageDraft?.uri]);
 
   const setFieldValue = useCallback((field, value) => {
-    setDraft((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setDraft((prev) => {
+      const nextDraft = {
+        ...prev,
+        [field]: value,
+      };
 
-    setFieldErrors((prev) => {
-      if (!prev[field]) return prev;
-      const next = { ...prev };
-      delete next[field];
-      return next;
+      const nextErrorCode = validateProfileField(field, value, nextDraft);
+      setFieldErrors((prevErrors) => {
+        const currentCode = prevErrors[field];
+
+        if (!nextErrorCode) {
+          if (!currentCode) return prevErrors;
+          const cleared = { ...prevErrors };
+          delete cleared[field];
+          return cleared;
+        }
+
+        if (currentCode === nextErrorCode) return prevErrors;
+        return {
+          ...prevErrors,
+          [field]: nextErrorCode,
+        };
+      });
+
+      return nextDraft;
     });
   }, []);
 

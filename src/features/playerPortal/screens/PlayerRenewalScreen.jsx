@@ -88,14 +88,26 @@ export function PlayerRenewalScreen() {
   const { colors } = useTheme();
 
   const flow = usePlayerRenewalFlow({ auto: true });
+  const hasPendingRenewalRequest = Boolean(flow.eligibility?.hasPendingRequest);
 
   const currentRegistration = flow.currentRegistration;
   const stepTitle = normalizeStepTitle(flow.step, t);
+  const courseOverlapMessage = useMemo(() => {
+    if (!flow.hasCourseOverlapSelection) return '';
+    return t('playerPortal.renewal.errors.overlapCourse', {
+      date: formatDateLabel(flow.anchorISO, { locale, fallback: '-' }),
+    });
+  }, [flow.anchorISO, flow.hasCourseOverlapSelection, locale, t]);
+  const serverBlockedMessage = useMemo(() => {
+    if (!flow.hasServerBlockingCondition) return '';
+    return flow.blockingReason || t('playerPortal.renewal.errors.serverBlocked');
+  }, [flow.blockingReason, flow.hasServerBlockingCondition, t]);
 
   const canSubmit =
     flow.isValid &&
     !flow.submitState.isSubmitting &&
-    !flow.eligibility?.hasPendingRequest;
+    !hasPendingRenewalRequest &&
+    !flow.hasServerBlockingCondition;
 
   const nextDisabled = useMemo(() => {
     if (flow.step === flow.steps.TYPE) return !flow.canAdvanceFromType;
@@ -116,6 +128,14 @@ export function PlayerRenewalScreen() {
   const onSubmit = async () => {
     const result = await flow.submitRenewalRequest();
     if (!result.success) {
+      if (result.error?.code === 'RENEWAL_SERVER_BLOCKED') {
+        toast.error(result.error?.message || serverBlockedMessage || t('playerPortal.renewal.errors.serverBlocked'));
+        return;
+      }
+      if (result.error?.code === 'COURSE_OVERLAP_WITH_ACTIVE_SUBSCRIPTION') {
+        toast.error(courseOverlapMessage || t('playerPortal.renewal.errors.overlapCourse', { date: '-' }));
+        return;
+      }
       toast.error(result.error?.message || t('playerPortal.renewal.messages.submitFailed'));
       return;
     }
@@ -221,20 +241,37 @@ export function PlayerRenewalScreen() {
               </Text>
             </View>
 
-            {flow.eligibility?.hasPendingRequest ? (
+            {hasPendingRenewalRequest ? (
               <Text variant="caption" color={colors.warning}>
                 {t('playerPortal.renewal.errors.pendingRequest')}
+              </Text>
+            ) : null}
+            {flow.hasServerBlockingCondition ? (
+              <Text variant="caption" color={colors.warning}>
+                {serverBlockedMessage}
               </Text>
             ) : null}
           </PortalSectionCard>
 
           <PortalSectionCard
-            title={t('playerPortal.renewal.sections.stepTitle', {
-              step: flow.step + 1,
-              total: 4,
-            })}
-            subtitle={stepTitle}
+            title={
+              hasPendingRenewalRequest
+                ? t('playerPortal.renewal.steps.reviewTitle')
+                : t('playerPortal.renewal.sections.stepTitle', {
+                    step: flow.step + 1,
+                    total: 4,
+                  })
+            }
+            subtitle={hasPendingRenewalRequest ? t('common.enums.status.under_review') : stepTitle}
           >
+            {hasPendingRenewalRequest ? (
+              <PortalEmptyState
+                icon={CheckCircle2}
+                title={t('playerPortal.renewal.errors.pendingRequest')}
+                description={t('common.enums.status.under_review')}
+              />
+            ) : (
+              <>
             <View style={[styles.stepperRow, { flexDirection: getRowDirection(isRTL) }]}> 
               {STEP_ITEMS.map((stepItem) => {
                 const Icon = stepItem.icon;
@@ -329,6 +366,11 @@ export function PlayerRenewalScreen() {
                     {flow.filteredCourseOptions.length === 0 ? (
                       <Text variant="caption" color={colors.textMuted}>
                         {t('playerPortal.renewal.empty.courses')}
+                      </Text>
+                    ) : null}
+                    {flow.hasCourseOverlapSelection ? (
+                      <Text variant="caption" color={colors.warning}>
+                        {courseOverlapMessage}
                       </Text>
                     ) : null}
                   </>
@@ -563,6 +605,8 @@ export function PlayerRenewalScreen() {
                 </Button>
               )}
             </View>
+              </>
+            )}
           </PortalSectionCard>
         </>
       ) : null}

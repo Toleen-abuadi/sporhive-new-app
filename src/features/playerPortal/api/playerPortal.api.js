@@ -116,17 +116,63 @@ const withTimeout = async (url, options = {}) => {
   }
 };
 
+const decodeBufferText = (arrayBuffer) => {
+  if (!(arrayBuffer instanceof ArrayBuffer)) return '';
+
+  try {
+    return new TextDecoder('utf-8').decode(arrayBuffer).trim();
+  } catch {
+    try {
+      return String.fromCharCode(...new Uint8Array(arrayBuffer)).trim();
+    } catch {
+      return '';
+    }
+  }
+};
+
 const safeReadPayload = async (response, { expectBinary = false } = {}) => {
+  const contentTypeHeader = cleanString(response.headers.get('content-type'));
+  const contentType = contentTypeHeader.toLowerCase();
+
   if (expectBinary) {
     const arrayBuffer = await response.arrayBuffer();
+    const contentDisposition = cleanString(response.headers.get('content-disposition'));
+    const looksLikeStructuredText =
+      contentType.includes('application/json') ||
+      contentType.startsWith('text/');
+
+    if (response.ok && !looksLikeStructuredText) {
+      return {
+        arrayBuffer,
+        contentType: contentTypeHeader || 'application/octet-stream',
+        contentDisposition,
+      };
+    }
+
+    const decodedText = decodeBufferText(arrayBuffer);
+    if (decodedText) {
+      if (contentType.includes('application/json')) {
+        try {
+          return JSON.parse(decodedText);
+        } catch {
+          // ignore json parse failures and fall back to plain message payload
+        }
+      }
+
+      return {
+        message: decodedText,
+        contentType: contentTypeHeader || 'application/octet-stream',
+        contentDisposition,
+      };
+    }
+
     return {
       arrayBuffer,
-      contentType: cleanString(response.headers.get('content-type')) || 'application/octet-stream',
-      contentDisposition: cleanString(response.headers.get('content-disposition')),
+      contentType: contentTypeHeader || 'application/octet-stream',
+      contentDisposition,
     };
   }
 
-  const contentType = cleanString(response.headers.get('content-type')).toLowerCase();
   if (contentType.includes('application/json')) {
     try {
       return await response.json();
@@ -265,7 +311,7 @@ async function proxyRequest(endpoint, {
   });
   const hasBody = upperMethod !== 'GET' && upperMethod !== 'HEAD';
 
-  if (!expectBinary) {
+  if (hasBody) {
     requestHeaders['Content-Type'] = 'application/json';
   }
 
@@ -366,6 +412,22 @@ const shouldFallbackToOverview = (error) => {
 
   const message = cleanString(error?.message).toLowerCase();
   return message.includes('not found') || message.includes('unknown action');
+};
+
+const shouldTreatFreezeHistoryAsEmpty = (error) => {
+  const status = Number(error?.status) || 0;
+  if ([204, 404].includes(status)) return true;
+
+  const code = cleanString(error?.code).toLowerCase();
+  if (code.includes('empty') || code.includes('not_found')) return true;
+
+  const message = cleanString(error?.message).toLowerCase();
+  return (
+    message.includes('no freeze history') ||
+    message.includes('cannot reload the history') ||
+    message.includes('history is empty') ||
+    message.includes('no records')
+  );
 };
 
 export const playerPortalApi = {
@@ -538,7 +600,7 @@ export const playerPortalApi = {
       return ensureProxyResultShape(listResult, mapFreezeListResponse);
     }
 
-    if (!shouldFallbackToOverview(listResult.error)) {
+    if (!shouldFallbackToOverview(listResult.error) && !shouldTreatFreezeHistoryAsEmpty(listResult.error)) {
       return listResult;
     }
 
@@ -690,25 +752,57 @@ export const playerPortalApi = {
   },
 
   async printInvoice(context, payload = {}) {
+    const safePayload = toObject(payload);
+    const language = cleanString(safePayload.language).toLowerCase() === 'ar' ? 'ar' : 'en';
     const result = await proxyRequest(PLAYER_PORTAL_ENDPOINTS.PRINT_INVOICE, {
       context,
-      payload,
+      payload: {
+        ...safePayload,
+        language,
+      },
       includePlayerId: true,
       requirePlayerId: true,
       expectBinary: true,
+      extraHeaders: {
+        'Accept-Language': language,
+      },
     });
 
     if (!result.success) return result;
     const responseData = toObject(result.data);
+    const arrayBuffer = responseData.arrayBuffer;
+    if (!(arrayBuffer instanceof ArrayBuffer) || arrayBuffer.byteLength === 0) {
+      return {
+        success: false,
+        error: createPortalError({
+          code: 'INVOICE_RESPONSE_INVALID',
+          status: Number(result.meta?.status) || 502,
+          message: inferMessageFromPayload(responseData, 'Invoice PDF is unavailable right now.'),
+          details: responseData,
+        }),
+      };
+    }
+
     const contentDisposition = cleanString(responseData.contentDisposition);
-    const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/i);
+    const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+    const basicMatch = contentDisposition.match(/filename="?([^"]+)"?/i);
+    const encodedName = cleanString(utf8Match?.[1] || basicMatch?.[1]);
+    const decodedName = (() => {
+      if (!encodedName) return '';
+      try {
+        return decodeURIComponent(encodedName);
+      } catch {
+        return encodedName;
+      }
+    })();
+    const normalizedFileName = cleanString(decodedName) || `invoice-${language}.pdf`;
 
     return {
       success: true,
       data: {
-        arrayBuffer: responseData.arrayBuffer || null,
+        arrayBuffer,
         contentType: cleanString(responseData.contentType) || 'application/pdf',
-        fileName: cleanString(fileNameMatch?.[1]) || 'invoice.pdf',
+        fileName: normalizedFileName,
       },
       meta: result.meta,
     };

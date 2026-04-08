@@ -24,6 +24,7 @@ import { formatAmountLabel, formatNumberLabel } from '../utils/playerPortal.form
 import { resolvePortalGuardMessage } from '../utils/playerPortal.messages';
 import {
   buildUniformOrderPayload,
+  normalizeUniformStatus,
   getUniformProductName,
   getUniformSizeLabel,
   validateUniformCheckout,
@@ -41,6 +42,23 @@ function resolveCheckoutErrors(errors, t) {
   const unique = Array.from(new Set(errors || []));
   return unique.map((code) => t(CHECKOUT_ERROR_KEYS[code] || 'playerPortal.store.checkout.errors.validationFallback'));
 }
+
+const resolveOrderRefCandidates = (resultData) => {
+  const safeData = resultData || {};
+  const candidates = [
+    safeData.paymentId,
+    safeData.raw?.payment_id,
+    safeData.raw?.data?.payment_id,
+    safeData.raw?.data?.additional_payment_ref,
+    ...(Array.isArray(safeData.items)
+      ? safeData.items.map((item) => item?.paymentRef || item?.raw?.payment_ref || item?.id)
+      : []),
+  ];
+
+  return candidates
+    .map((value) => String(value == null ? '' : value).trim())
+    .filter(Boolean);
+};
 
 function CheckoutItemRow({ item, product, locale, t, colors, isRTL }) {
   const variant =
@@ -139,22 +157,27 @@ export function PlayerStoreCheckoutScreen() {
       }
 
       cartActions.clearCart();
-      await Promise.allSettled([
+      const [, ordersResult] = await Promise.all([
         fetchStore({ refresh: true }),
         fetchOrders({ refresh: true }),
       ]);
 
-      const firstItem = result.data?.items?.[0];
-      const orderRef =
-        String(firstItem?.paymentRef || '').trim() ||
-        String(result.data?.paymentId || '').trim();
+      const orderRefCandidates = resolveOrderRefCandidates(result.data);
+      const normalizedGroups = Array.isArray(ordersResult?.data?.groups)
+        ? ordersResult.data.groups.map((group) => ({
+            ...group,
+            status: normalizeUniformStatus(group.status),
+            ref: String(group.ref || '').trim(),
+          }))
+        : [];
+      const matchedOrder = normalizedGroups.find((group) => orderRefCandidates.includes(group.ref));
 
-      toast.success(t('playerPortal.store.messages.orderCreated'));
-      if (orderRef) {
-        router.replace(buildPlayerStoreOrderDetailsRoute(orderRef));
-      } else {
-        router.replace(ROUTES.PLAYER_STORE_ORDERS);
+      toast.success(t('playerPortal.store.messages.orderPlaced'));
+      if (matchedOrder?.ref) {
+        router.replace(buildPlayerStoreOrderDetailsRoute(matchedOrder.ref));
+        return;
       }
+      router.replace(ROUTES.PLAYER_STORE_ORDERS);
     } catch (error) {
       toast.error(
         error?.message || t('playerPortal.store.checkout.errors.submitFallback')

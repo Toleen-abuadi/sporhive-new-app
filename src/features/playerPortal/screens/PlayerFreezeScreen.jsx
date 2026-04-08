@@ -45,6 +45,40 @@ const getPhaseStatus = (item) => {
   return status || phase || 'inactive';
 };
 
+const resolveFreezeSubmitErrorMessage = (error, t) => {
+  const code = String(error?.code || '').toLowerCase();
+  const message = String(error?.message || '').toLowerCase();
+
+  const overlapMatch =
+    code.includes('overlap') ||
+    message.includes('overlap') ||
+    message.includes('intersect') ||
+    message.includes('تداخل');
+
+  if (overlapMatch) {
+    return t('playerPortal.freeze.errors.overlap');
+  }
+
+  return '';
+};
+
+const isFreezeHistoryEmptyLikeError = (error) => {
+  const status = Number(error?.status) || 0;
+  if ([204, 404].includes(status)) return true;
+
+  const code = String(error?.code || '').toLowerCase();
+  if (code.includes('empty') || code.includes('not_found')) return true;
+
+  const message = String(error?.message || '').toLowerCase();
+  return (
+    message.includes('no freeze history') ||
+    message.includes('cannot reload the history') ||
+    message.includes('history is empty') ||
+    message.includes('no records') ||
+    message.includes('لا يوجد سجل')
+  );
+};
+
 function FreezeHistoryCard({ item, locale, t, colors, onCancel, isRTL }) {
   const duration = inclusiveDays(item.startDate, item.endDate);
   const canCancel = canCancelScheduledFreeze(item);
@@ -111,6 +145,8 @@ export function PlayerFreezeScreen() {
     cancelFreeze,
     refreshAll,
     getUsedCountForYear,
+    isSubmittingRequest,
+    isCancellingRequest,
   } = usePlayerFreeze({ auto: true });
 
   const [startDate, setStartDate] = useState('');
@@ -131,6 +167,10 @@ export function PlayerFreezeScreen() {
     [getUsedCountForYear, startDate]
   );
   const startMinDate = useMemo(() => addDaysISODate(toISODate(new Date()), 1), []);
+  const endMinDate = useMemo(() => {
+    if (!startDate) return startMinDate;
+    return addDaysISODate(startDate, 1);
+  }, [startDate, startMinDate]);
   const endMaxDate = useMemo(() => {
     if (!startDate || !policy.maxDays) return '';
     return addDaysISODate(startDate, Math.max(policy.maxDays - 1, 0));
@@ -187,8 +227,17 @@ export function PlayerFreezeScreen() {
     });
 
     if (!result.success) {
-      setSubmitError(result.error);
-      toast.error(result.error?.message || t('playerPortal.freeze.messages.submitFailed'));
+      if (result.error?.code === 'FREEZE_REQUEST_IN_FLIGHT') return;
+      const localizedSubmitError = resolveFreezeSubmitErrorMessage(result.error, t);
+      const nextError = localizedSubmitError
+        ? {
+            ...(result.error || {}),
+            message: localizedSubmitError,
+          }
+        : result.error;
+
+      setSubmitError(nextError);
+      toast.error(localizedSubmitError || result.error?.message || t('playerPortal.freeze.messages.submitFailed'));
       return;
     }
 
@@ -201,8 +250,10 @@ export function PlayerFreezeScreen() {
   };
 
   const handleCancelFreeze = async (freezeRow) => {
+    if (isCancellingRequest) return;
     const result = await cancelFreeze(freezeRow.id);
     if (!result.success) {
+      if (result.error?.code === 'FREEZE_CANCEL_IN_FLIGHT') return;
       toast.error(result.error?.message || t('playerPortal.freeze.messages.cancelFailed'));
       return;
     }
@@ -211,6 +262,7 @@ export function PlayerFreezeScreen() {
   };
 
   const showInitialLoading = isLoading && !error && items.length === 0;
+  const isEmptyLikeError = isFreezeHistoryEmptyLikeError(error);
 
   return (
     <AppScreen
@@ -285,8 +337,9 @@ export function PlayerFreezeScreen() {
                   value={startDate}
                   onChange={(value) => {
                     setStartDate(value);
-                    if (endDate && endDate < value) {
-                      setEndDate(value);
+                    const minEnd = addDaysISODate(value, 1);
+                    if (endDate && endDate <= value) {
+                      setEndDate(minEnd);
                     }
                     if (endMaxDate && endDate && endDate > endMaxDate) {
                       setEndDate(endMaxDate);
@@ -307,7 +360,7 @@ export function PlayerFreezeScreen() {
                     setRequestStep(REQUEST_STEPS.FORM);
                   }}
                   placeholder={t('common.formats.isoDatePlaceholder')}
-                  minDate={startDate || startMinDate}
+                  minDate={endMinDate}
                   maxDate={endMaxDate || ''}
                 />
               </View>
@@ -353,6 +406,7 @@ export function PlayerFreezeScreen() {
               <Button
                 fullWidth
                 onPress={() => {
+                  if (isSubmittingRequest) return;
                   if (!validation.valid) {
                     setSubmitError({ message: validationMessage });
                     return;
@@ -395,7 +449,8 @@ export function PlayerFreezeScreen() {
                 <Button
                   fullWidth
                   onPress={submitRequest}
-                  disabled={!validation.valid}
+                  loading={isSubmittingRequest}
+                  disabled={!validation.valid || isSubmittingRequest}
                   leadingIcon={<Snowflake size={14} color={colors.white} strokeWidth={2.2} />}
                 >
                   {t('playerPortal.freeze.actions.submitRequest')}
@@ -426,7 +481,7 @@ export function PlayerFreezeScreen() {
             <PortalSkeletonCard rows={[18, 12, 12]} />
           ) : null}
 
-          {!showInitialLoading && error && items.length === 0 ? (
+          {!showInitialLoading && error && items.length === 0 && !isEmptyLikeError ? (
             <PortalErrorState
               title={t('playerPortal.freeze.errors.loadTitle')}
               error={error}
@@ -436,7 +491,7 @@ export function PlayerFreezeScreen() {
             />
           ) : null}
 
-          {!showInitialLoading && !error && items.length === 0 ? (
+          {!showInitialLoading && items.length === 0 && (!error || isEmptyLikeError) ? (
             <PortalEmptyState
               title={t('playerPortal.freeze.empty.title')}
               description={t('playerPortal.freeze.empty.description')}
@@ -511,7 +566,7 @@ export function PlayerFreezeScreen() {
         </PortalSectionCard>
       ) : null}
 
-      {canFetch && error && items.length > 0 ? (
+      {canFetch && error && items.length > 0 && !isEmptyLikeError ? (
         <Pressable onPress={() => refreshAll()}>
           <Text variant="caption" color={colors.textMuted}>
             {t('playerPortal.freeze.errors.partialLoad')}

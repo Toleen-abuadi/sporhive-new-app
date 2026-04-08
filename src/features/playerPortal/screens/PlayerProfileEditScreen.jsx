@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { RefreshControl, StyleSheet, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Linking, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useToast } from '../../../components/feedback/ToastHost';
 import { AppScreen } from '../../../components/ui/AppScreen';
@@ -17,6 +17,12 @@ import { borderRadius, spacing } from '../../../theme/tokens';
 import { PortalEmptyState, PortalErrorState, PortalSectionCard, PortalSkeletonCard } from '../components';
 import { usePlayerProfileEditor } from '../hooks';
 import { resolvePortalGuardMessage } from '../utils/playerPortal.messages';
+import {
+  GOOGLE_MAPS_DEFAULT_URL,
+  MIN_PLAYER_AGE_YEARS,
+  getMaxDateOfBirthISO,
+  validateProfileField,
+} from '../utils/playerPortal.profile';
 
 function Field({
   label,
@@ -69,7 +75,64 @@ export function PlayerProfileEditScreen() {
 
   const profileEditor = usePlayerProfileEditor();
   const [pickerError, setPickerError] = useState(null);
-  const todayISO = new Date().toISOString().slice(0, 10);
+  const maxDateOfBirthISO = useMemo(() => getMaxDateOfBirthISO(), []);
+
+  const getFieldErrorMessage = useCallback(
+    (field) => {
+      const code = profileEditor.fieldErrors?.[field];
+      if (!code) return '';
+
+      if (field === 'date_of_birth') {
+        if (code === 'future') return t('playerPortal.profile.validation.dateOfBirthFuture');
+        if (code === 'too_young') {
+          return t('playerPortal.profile.validation.dateOfBirthMinAge', {
+            age: MIN_PLAYER_AGE_YEARS,
+          });
+        }
+        return t('playerPortal.profile.validation.dateOfBirth');
+      }
+
+      if (field === 'google_maps_location') {
+        return t('playerPortal.profile.validation.googleMapsLocation');
+      }
+
+      if (field === 'first_eng_name' || field === 'middle_eng_name' || field === 'last_eng_name') {
+        return t('playerPortal.profile.validation.englishName');
+      }
+
+      if (field === 'first_ar_name' || field === 'middle_ar_name' || field === 'last_ar_name') {
+        return t('playerPortal.profile.validation.arabicName');
+      }
+
+      if (field === 'phone1') return t('playerPortal.profile.validation.phone1');
+      if (field === 'weight') return t('playerPortal.profile.validation.weight');
+      if (field === 'height') return t('playerPortal.profile.validation.height');
+      return '';
+    },
+    [profileEditor.fieldErrors, t]
+  );
+
+  const onOpenMaps = useCallback(async () => {
+    const value = String(profileEditor.draft.google_maps_location || '').trim();
+    const validationCode = validateProfileField('google_maps_location', value);
+
+    if (value && validationCode) {
+      toast.error(t('playerPortal.profile.validation.googleMapsLocation'));
+      return;
+    }
+
+    const targetUrl = value || GOOGLE_MAPS_DEFAULT_URL;
+    try {
+      const canOpen = await Linking.canOpenURL(targetUrl);
+      if (!canOpen) {
+        toast.error(t('playerPortal.profile.validation.googleMapsLocation'));
+        return;
+      }
+      await Linking.openURL(targetUrl);
+    } catch {
+      toast.error(t('playerPortal.profile.validation.googleMapsLocation'));
+    }
+  }, [profileEditor.draft.google_maps_location, t, toast]);
 
   useEffect(() => {
     setPickerError(null);
@@ -83,7 +146,7 @@ export function PlayerProfileEditScreen() {
     }
 
     toast.success(t('playerPortal.profile.messages.updated'));
-    router.replace(ROUTES.PLAYER_PROFILE);
+    router.navigate(ROUTES.PLAYER_PROFILE);
   };
 
   return (
@@ -102,7 +165,7 @@ export function PlayerProfileEditScreen() {
       <ScreenHeader
         title={t('playerPortal.profile.editTitle')}
         subtitle={t('playerPortal.profile.editSubtitle')}
-        onBack={() => router.replace(ROUTES.PLAYER_PROFILE)}
+        onBack={() => router.navigate(ROUTES.PLAYER_PROFILE)}
         right={<LanguageSwitch compact />}
       />
 
@@ -191,6 +254,7 @@ export function PlayerProfileEditScreen() {
               onChangeText={(value) => profileEditor.setFieldValue('first_eng_name', value)}
               placeholder="-"
               colors={colors}
+              error={getFieldErrorMessage('first_eng_name')}
             />
             <Field
               label={t('playerPortal.profile.labels.middleEnglishLabel')}
@@ -198,6 +262,7 @@ export function PlayerProfileEditScreen() {
               onChangeText={(value) => profileEditor.setFieldValue('middle_eng_name', value)}
               placeholder="-"
               colors={colors}
+              error={getFieldErrorMessage('middle_eng_name')}
             />
             <Field
               label={t('playerPortal.profile.labels.lastEnglishLabel')}
@@ -205,6 +270,7 @@ export function PlayerProfileEditScreen() {
               onChangeText={(value) => profileEditor.setFieldValue('last_eng_name', value)}
               placeholder="-"
               colors={colors}
+              error={getFieldErrorMessage('last_eng_name')}
             />
             <Field
               label={t('playerPortal.profile.labels.firstArabicLabel')}
@@ -212,6 +278,7 @@ export function PlayerProfileEditScreen() {
               onChangeText={(value) => profileEditor.setFieldValue('first_ar_name', value)}
               placeholder="-"
               colors={colors}
+              error={getFieldErrorMessage('first_ar_name')}
             />
             <Field
               label={t('playerPortal.profile.labels.middleArabicLabel')}
@@ -219,6 +286,7 @@ export function PlayerProfileEditScreen() {
               onChangeText={(value) => profileEditor.setFieldValue('middle_ar_name', value)}
               placeholder="-"
               colors={colors}
+              error={getFieldErrorMessage('middle_ar_name')}
             />
             <Field
               label={t('playerPortal.profile.labels.lastArabicLabel')}
@@ -226,6 +294,7 @@ export function PlayerProfileEditScreen() {
               onChangeText={(value) => profileEditor.setFieldValue('last_ar_name', value)}
               placeholder="-"
               colors={colors}
+              error={getFieldErrorMessage('last_ar_name')}
             />
           </PortalSectionCard>
 
@@ -239,11 +308,7 @@ export function PlayerProfileEditScreen() {
               onChange={(payload) => profileEditor.updatePhoneField('phone1', payload)}
               placeholder={t('playerPortal.profile.labels.phonePlaceholder')}
               showRuleHint={false}
-              error={
-                profileEditor.fieldErrors.phone1
-                  ? t('playerPortal.profile.validation.phone1')
-                  : ''
-              }
+              error={getFieldErrorMessage('phone1')}
             />
             <PhoneField
               label={t('playerPortal.profile.labels.phone2Label')}
@@ -259,12 +324,8 @@ export function PlayerProfileEditScreen() {
               onChange={(value) => profileEditor.updateDateField(value)}
               placeholder={t('common.formats.isoDatePlaceholder')}
               minDate="1900-01-01"
-              maxDate={todayISO}
-              error={
-                profileEditor.fieldErrors.date_of_birth
-                  ? t('playerPortal.profile.validation.dateOfBirth')
-                  : ''
-              }
+              maxDate={maxDateOfBirthISO}
+              error={getFieldErrorMessage('date_of_birth')}
             />
             <Field
               label={t('playerPortal.profile.labels.addressLabel')}
@@ -280,7 +341,11 @@ export function PlayerProfileEditScreen() {
               onChangeText={(value) => profileEditor.setFieldValue('google_maps_location', value)}
               placeholder={t('playerPortal.profile.labels.locationPlaceholder')}
               colors={colors}
+              error={getFieldErrorMessage('google_maps_location')}
             />
+            <Button variant="ghost" size="sm" style={styles.mapsButton} onPress={onOpenMaps}>
+              {t('playerPortal.profile.actions.openMaps')}
+            </Button>
           </PortalSectionCard>
 
           <PortalSectionCard
@@ -294,11 +359,7 @@ export function PlayerProfileEditScreen() {
               placeholder="0"
               colors={colors}
               keyboardType="decimal-pad"
-              error={
-                profileEditor.fieldErrors.weight
-                  ? t('playerPortal.profile.validation.weight')
-                  : ''
-              }
+              error={getFieldErrorMessage('weight')}
             />
             <Field
               label={t('playerPortal.profile.labels.heightLabel')}
@@ -307,11 +368,7 @@ export function PlayerProfileEditScreen() {
               placeholder="0"
               colors={colors}
               keyboardType="decimal-pad"
-              error={
-                profileEditor.fieldErrors.height
-                  ? t('playerPortal.profile.validation.height')
-                  : ''
-              }
+              error={getFieldErrorMessage('height')}
             />
           </PortalSectionCard>
 
@@ -368,5 +425,8 @@ const styles = StyleSheet.create({
   },
   actions: {
     gap: spacing.sm,
+  },
+  mapsButton: {
+    alignSelf: 'flex-start',
   },
 });

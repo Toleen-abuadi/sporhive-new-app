@@ -1,5 +1,6 @@
 import { normalizeOverviewData, normalizeProxyCollection, toArray, toNumber, toObject } from '../utils/playerPortal.normalizers';
 import { mapFreezeRows } from '../utils/playerPortal.freeze';
+import { getUniformStatusStepIndex, normalizeUniformStatus, UNIFORM_STATUS_FLOW } from '../utils/playerPortal.uniform';
 
 const cleanString = (value) => {
   if (value == null) return '';
@@ -103,20 +104,28 @@ export function mapProfileFromOverview(overview) {
   const player = toObject(source.player);
   const health = toObject(source.health);
   const profileImage = toObject(source.profileImage);
+  const playerData = toObject(source.raw?.player_data);
+  const playerInfo = toObject(playerData.player_info);
+  const registrationInfo = toObject(playerData.registration_info);
 
   return {
     id: toNumber(player.id),
-    first_eng_name: cleanString(source.raw?.player_data?.player_info?.first_eng_name),
-    middle_eng_name: cleanString(source.raw?.player_data?.player_info?.middle_eng_name),
-    last_eng_name: cleanString(source.raw?.player_data?.player_info?.last_eng_name),
-    first_ar_name: cleanString(source.raw?.player_data?.player_info?.first_ar_name),
-    middle_ar_name: cleanString(source.raw?.player_data?.player_info?.middle_ar_name),
-    last_ar_name: cleanString(source.raw?.player_data?.player_info?.last_ar_name),
-    phone1: cleanString(source.raw?.player_data?.player_info?.phone_numbers?.['1'] || player.phone),
-    phone2: cleanString(source.raw?.player_data?.player_info?.phone_numbers?.['2']),
+    first_eng_name: cleanString(playerInfo.first_eng_name),
+    middle_eng_name: cleanString(playerInfo.middle_eng_name),
+    last_eng_name: cleanString(playerInfo.last_eng_name),
+    first_ar_name: cleanString(playerInfo.first_ar_name),
+    middle_ar_name: cleanString(playerInfo.middle_ar_name),
+    last_ar_name: cleanString(playerInfo.last_ar_name),
+    phone1: cleanString(playerInfo.phone_numbers?.['1'] || player.phone),
+    phone2: cleanString(playerInfo.phone_numbers?.['2']),
     date_of_birth: cleanString(player.dateOfBirth),
-    address: cleanString(source.raw?.player_data?.registration_info?.address),
-    google_maps_location: cleanString(source.raw?.player_data?.registration_info?.google_maps_location),
+    address: cleanString(registrationInfo.address || playerInfo.address),
+    google_maps_location: cleanString(
+      registrationInfo.google_maps_location ||
+      registrationInfo.google_map_location ||
+      playerInfo.google_maps_location ||
+      playerInfo.google_map_location
+    ),
     weight: health.weight,
     height: health.height,
     image: cleanString(profileImage.image),
@@ -142,7 +151,12 @@ export function mapProfileGetResponse(payload) {
     phone2: cleanString(profile.phone2 || phoneNumbers['2']),
     date_of_birth: cleanString(profile.date_of_birth),
     address: cleanString(profile.address),
-    google_maps_location: cleanString(profile.google_maps_location),
+    google_maps_location: cleanString(
+      profile.google_maps_location ||
+      profile.google_map_location ||
+      profile.google_maps_url ||
+      profile.location
+    ),
     weight: profile.weight == null ? null : Number(profile.weight),
     height: profile.height == null ? null : Number(profile.height),
     image: cleanString(profile.image),
@@ -502,26 +516,8 @@ export function mapUniformStoreResponse(payload) {
   };
 }
 
-const UNIFORM_STATUS_FLOW = [
-  'pending_payment',
-  'paid',
-  'printed',
-  'received',
-  'received_and_player_notified',
-  'collected',
-];
-
-const normalizeUniformOrderStatus = (status) => {
-  const value = cleanString(status).toLowerCase();
-  if (!value) return 'pending_payment';
-  return value;
-};
-
 const statusRank = (status) => {
-  const normalized = normalizeUniformOrderStatus(status);
-  const foundIndex = UNIFORM_STATUS_FLOW.findIndex((item) => item === normalized);
-  if (foundIndex >= 0) return foundIndex + 1;
-  return 1;
+  return getUniformStatusStepIndex(status) + 1;
 };
 
 const mapUniformOrderRow = (order) => {
@@ -541,7 +537,7 @@ const mapUniformOrderRow = (order) => {
     quantity: Math.max(1, toNumber(row.uniform_quantity || row.quantity) || 1),
     playerNumber: cleanString(row.player_number),
     nickname: cleanString(row.nickname),
-    status: normalizeUniformOrderStatus(row.status),
+    status: normalizeUniformStatus(row.status),
     paymentRef: cleanString(row.additional_payment_ref || row.payment_ref || row.payment_id || row.id),
     createdAt: cleanString(row.created_at),
     updatedAt: cleanString(row.updated_at),
@@ -556,6 +552,7 @@ const groupUniformOrders = (rows) => {
       ref: key,
       items: [],
       highestStatusRank: 1,
+      latestStatus: normalizeUniformStatus(item.status),
       latestUpdatedAt: '',
       createdAt: item.createdAt || '',
     };
@@ -563,6 +560,7 @@ const groupUniformOrders = (rows) => {
     const rank = statusRank(item.status);
     if (rank >= current.highestStatusRank) {
       current.highestStatusRank = rank;
+      current.latestStatus = normalizeUniformStatus(item.status);
       current.latestUpdatedAt = item.updatedAt || item.createdAt || current.latestUpdatedAt;
     }
     if (!current.createdAt && item.createdAt) {
@@ -575,7 +573,10 @@ const groupUniformOrders = (rows) => {
   return Object.values(byRef)
     .map((group) => ({
       ...group,
-      status: UNIFORM_STATUS_FLOW[group.highestStatusRank - 1] || 'pending_payment',
+      status:
+        cleanString(group.latestStatus) ||
+        UNIFORM_STATUS_FLOW[group.highestStatusRank - 1] ||
+        'pending_payment',
       totalQuantity: group.items.reduce((sum, item) => sum + (toNumber(item.quantity) || 0), 0),
       itemCount: group.items.length,
     }))
@@ -628,10 +629,20 @@ export function mapUniformOrderCreateResponse(payload) {
 
 export function mapRenewalOptionsFromOverview(overviewPayload) {
   const overview = mapOverviewResponse(overviewPayload);
+  const rawOverview = toObject(overview.raw);
+  const rawData = toObject(rawOverview.data);
   return {
     eligible: true,
     daysLeft: null,
     currentEnd: cleanString(overview.subscription.endDate),
+    hasPendingRequest: Boolean(
+      rawOverview.has_pending_request ||
+      rawOverview.hasPendingRequest ||
+      rawData.has_pending_request ||
+      rawData.hasPendingRequest
+    ),
+    isBlocked: false,
+    blockingReason: '',
     courses: toArray(overview.subscription.availableCourses).map((course) => {
       const row = toObject(course);
       const id = toNumber(row.id);
@@ -687,11 +698,32 @@ export function mapRenewalOptionsFromOverview(overviewPayload) {
 
 export function mapRenewalEligibilityResponse(payload) {
   const root = toObject(payload);
+  const data = toObject(root.data);
+  const hasPendingRequest = Boolean(
+    root.has_pending_request ||
+    root.hasPendingRequest ||
+    data.has_pending_request ||
+    data.hasPendingRequest
+  );
+  const blockingReason = cleanString(
+    root.blocking_reason ||
+    root.block_reason ||
+    root.reason ||
+    data.blocking_reason ||
+    data.block_reason ||
+    data.reason
+  );
+  const isBlocked =
+    Boolean(root.is_blocked || root.isBlocked || data.is_blocked || data.isBlocked) ||
+    cleanString(root.block_code || root.blockCode || data.block_code || data.blockCode).length > 0;
+
   return {
-    eligible: Boolean(root.eligible),
-    daysLeft: toNumber(root.days_left || root.daysLeft),
-    endDate: cleanString(root.end_date || root.endDate),
-    hasPendingRequest: Boolean(root.has_pending_request || root.hasPendingRequest),
+    eligible: Boolean(root.eligible ?? data.eligible),
+    daysLeft: toNumber(root.days_left || root.daysLeft || data.days_left || data.daysLeft),
+    endDate: cleanString(root.end_date || root.endDate || data.end_date || data.endDate),
+    hasPendingRequest,
+    isBlocked,
+    blockingReason,
     raw: root,
   };
 }
@@ -747,6 +779,21 @@ export function mapRenewalOptionsResponse(payload) {
     eligible: Boolean(root.eligible ?? data.eligible),
     daysLeft: toNumber(root.days_left || root.daysLeft || data.days_left || data.daysLeft),
     currentEnd: cleanString(root.current_end || root.currentEnd || data.current_end || data.currentEnd),
+    hasPendingRequest: Boolean(
+      root.has_pending_request ||
+      root.hasPendingRequest ||
+      data.has_pending_request ||
+      data.hasPendingRequest
+    ),
+    isBlocked: Boolean(root.is_blocked || root.isBlocked || data.is_blocked || data.isBlocked),
+    blockingReason: cleanString(
+      root.blocking_reason ||
+      root.block_reason ||
+      root.reason ||
+      data.blocking_reason ||
+      data.block_reason ||
+      data.reason
+    ),
     courses: toArray(root.courses || data.courses).map(normalizeRenewalCourseOption),
     groups: toArray(root.groups || data.groups).map(normalizeRenewalGroupOption),
     levels,
@@ -766,10 +813,66 @@ export function mapRenewalOptionsResponse(payload) {
   };
 }
 
-export function mapFreezeListResponse(payload) {
+const extractFreezeRows = (payload) => {
   const root = toObject(payload);
   const data = toObject(root.data);
-  const rows = toArray(root.rows || data.rows || data.items || root.items);
+
+  const groupedRows = [
+    ['pending', root.pending || data.pending],
+    ['active', root.active || data.active || root.current || data.current],
+    ['upcoming', root.upcoming || data.upcoming || root.scheduled || data.scheduled],
+    ['ended', root.ended || data.ended || root.archived || data.archived],
+    ['approved', root.approved || data.approved],
+    ['rejected', root.rejected || data.rejected],
+    ['cancelled', root.cancelled || data.cancelled || root.canceled || data.canceled],
+  ].flatMap(([status, list]) =>
+    toArray(list).map((row) => {
+      const item = toObject(row);
+      if (cleanString(item.status)) return item;
+      return {
+        ...item,
+        status,
+      };
+    })
+  );
+
+  const directRows = [
+    ...toArray(root.rows),
+    ...toArray(data.rows),
+    ...toArray(root.items),
+    ...toArray(data.items),
+    ...toArray(root.history),
+    ...toArray(data.history),
+    ...toArray(root.freezes),
+    ...toArray(data.freezes),
+  ];
+
+  const merged = [...groupedRows, ...directRows];
+  const seen = new Set();
+
+  return merged.filter((row) => {
+    const item = toObject(row);
+    const identity =
+      cleanString(item.id) ||
+      [
+        cleanString(item.startDate || item.start_date),
+        cleanString(item.endDate || item.end_date),
+        cleanString(item.status),
+        cleanString(item.createdAt || item.created_at),
+      ]
+        .filter(Boolean)
+        .join('|');
+
+    const key = identity || JSON.stringify(item);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+export function mapFreezeListResponse(payload) {
+  const root = toObject(payload);
+  const rows = extractFreezeRows(payload);
   const mapped = mapFreezeRows(rows);
   return {
     ...mapped,

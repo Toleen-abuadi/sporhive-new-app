@@ -509,6 +509,11 @@
         "loading": "Preparing invoice PDF...",
         "readyHint": "Ready file: {{name}}",
         "shareMessage": "Player portal invoice",
+        "language": {
+          "label": "Invoice language",
+          "ar": "Arabic invoice",
+          "en": "English invoice"
+        },
         "errors": {
           "loadTitle": "Unable to load invoice",
           "loadFallback": "Please retry in a few seconds.",
@@ -641,6 +646,7 @@
       },
       "empty": {
         "catalogTitle": "No products available",
+        "itemsTitle": "No items available",
         "catalogDescription": "Uniform products will appear here when your academy publishes them.",
         "searchDescription": "No products matched your search.",
         "cartTitle": "Cart is empty",
@@ -652,7 +658,8 @@
       },
       "messages": {
         "addedToCart": "Item added to cart.",
-        "orderCreated": "Order created successfully."
+        "orderCreated": "Order created successfully.",
+        "orderPlaced": "Order placed successfully"
       },
       "product": {
         "title": "Product Details",
@@ -790,7 +797,7 @@
       },
       "errors": {
         "pickDates": "Please enter a valid start and end date.",
-        "badRange": "End date cannot be before start date.",
+        "badRange": "End date must be after start date.",
         "pastStart": "Start date must be after today.",
         "tooLong": "Freeze duration exceeds the allowed {{days}} days.",
         "yearLimit": "You reached the yearly freeze limit ({{count}}).",
@@ -809,7 +816,7 @@
         "cancelFailed": "Unable to cancel this freeze."
       },
       "empty": {
-        "title": "No freeze records yet",
+        "title": "No freeze history available",
         "description": "Freeze history will appear here once requests are created."
       }
     },
@@ -865,6 +872,8 @@
         "loadTitle": "Unable to load renewal data",
         "loadFallback": "Retry to load eligibility and options.",
         "pendingRequest": "A pending renewal request exists. You cannot submit another yet.",
+        "serverBlocked": "Renewal request is currently blocked.",
+        "overlapCourse": "Only courses starting after {{date}} are allowed.",
         "submitTitle": "Unable to submit renewal request",
         "submitFallback": "Please review selections and retry."
       },
@@ -873,7 +882,7 @@
         "submitFailed": "Failed to submit renewal request."
       },
       "empty": {
-        "courses": "No eligible courses found around your renewal anchor date.",
+        "courses": "No eligible courses found after your current subscription end date.",
         "courseGroups": "No groups are linked to the selected course.",
         "subscriptionGroups": "No subscription-only groups are currently available."
       }
@@ -902,7 +911,8 @@
         "clearImage": "Remove Selected Image",
         "reset": "Reset Changes",
         "save": "Save Profile",
-        "replaceImage": "Replace Image"
+        "replaceImage": "Replace Image",
+        "openMaps": "Open Maps"
       },
       "labels": {
         "noImage": "No image selected.",
@@ -951,6 +961,11 @@
       "validation": {
         "phone1": "Primary phone number is required and must be valid.",
         "dateOfBirth": "Date of birth must use YYYY-MM-DD format.",
+        "dateOfBirthFuture": "Date of birth cannot be in the future.",
+        "dateOfBirthMinAge": "Player must be at least {{age}} years old.",
+        "englishName": "Use English letters only.",
+        "arabicName": "Use Arabic letters only.",
+        "googleMapsLocation": "Enter a valid Google Maps URL.",
         "weight": "Weight must be a valid number within allowed range.",
         "height": "Height must be a valid number within allowed range."
       }

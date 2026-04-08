@@ -44,6 +44,7 @@ export function usePlayerUniformStore({ auto = true } = {}) {
     if (!session.canFetchOverview || !session.requestContext) return;
     if (query.error) return;
     if (query.isLoading || query.isRefreshing) return;
+    if (query.lastUpdatedAt) return;
     if ((query.data?.products || []).length > 0) return;
     fetchStore();
   }, [
@@ -53,6 +54,7 @@ export function usePlayerUniformStore({ auto = true } = {}) {
     query.error,
     query.isLoading,
     query.isRefreshing,
+    query.lastUpdatedAt,
     session.canFetchOverview,
     session.requestContext,
   ]);

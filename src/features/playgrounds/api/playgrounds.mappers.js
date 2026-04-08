@@ -103,8 +103,8 @@ export function mapVenueRow(venue, options = {}) {
   const academyProfile = mapAcademyProfileMarketplace(item.academy_profile);
   const images = mapVenueImages(item.images, options);
   const image =
-    cleanString(item.image) ||
-    cleanString(item.main_image) ||
+    mapVenueImageUrl(item.image, options) ||
+    mapVenueImageUrl(item.main_image, options) ||
     cleanString(images[0]?.url) ||
     '';
 
@@ -203,7 +203,7 @@ const canModifyBy24hWindow = (dateValue, timeValue) => {
   return bookingStart.getTime() > minAllowed.getTime();
 };
 
-export function mapBookingRow(booking, { locale = 'en' } = {}) {
+export function mapBookingRow(booking, { locale = 'en', ...options } = {}) {
   const item = toObject(booking);
   const venue = toObject(item.venue);
   const duration = toObject(item.duration);
@@ -241,7 +241,10 @@ export function mapBookingRow(booking, { locale = 'en' } = {}) {
     numberOfPlayers: toNumber(item.number_of_players) || 0,
     venueId: toStringId(venue.id || item.venue_id),
     venueName: cleanString(venue.name || item.venue_name),
-    venueImage: cleanString(venue.image || venue.main_image),
+    venueImage: mapVenueImageUrl(
+      venue.image || venue.main_image,
+      options
+    ),
     venueLocation: cleanString(venue.base_location || venue.location || item.venue_location),
     academyName: cleanString(academy.public_name || academy.name),
     academyPhone: cleanString(

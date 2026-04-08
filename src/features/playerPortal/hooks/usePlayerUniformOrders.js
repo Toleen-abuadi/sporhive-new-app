@@ -63,6 +63,7 @@ export function usePlayerUniformOrders({ auto = false } = {}) {
     if (!session.canFetchOverview || !session.requestContext) return;
     if (query.error) return;
     if (query.isLoading || query.isRefreshing) return;
+    if (query.lastUpdatedAt) return;
     if ((query.data?.groups || []).length > 0) return;
     fetchOrders();
   }, [
@@ -72,6 +73,7 @@ export function usePlayerUniformOrders({ auto = false } = {}) {
     query.error,
     query.isLoading,
     query.isRefreshing,
+    query.lastUpdatedAt,
     session.canFetchOverview,
     session.requestContext,
   ]);

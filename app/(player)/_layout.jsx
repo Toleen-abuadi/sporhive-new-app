@@ -288,7 +288,7 @@ export default function PlayerLayout() {
     (href) => {
       closeMenu();
       if (isPathActive(href, pathname)) return;
-      router.replace(href);
+      router.navigate(href);
     },
     [closeMenu, pathname, router]
   );

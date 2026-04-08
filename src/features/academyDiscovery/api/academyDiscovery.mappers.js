@@ -246,6 +246,53 @@ export function mapAcademiesMapResponse(payload, options = {}) {
   };
 }
 
+const mapTemplateCoach = (coach) => {
+  if (typeof coach === 'string') {
+    const label = cleanString(coach);
+    return label
+      ? {
+          name: label,
+          certification: '',
+          experienceYears: null,
+          label,
+          raw: coach,
+        }
+      : null;
+  }
+
+  const item = toObject(coach);
+  const name = cleanString(
+    item.name ||
+      item.Name ||
+      item.coach_name ||
+      item.coachName
+  );
+  const certification = cleanString(
+    item.certification ||
+      item.Certification
+  );
+  const experienceYears = toNumber(
+    item.experience_years ||
+      item.Experience_years ||
+      item.years_of_experience
+  );
+
+  const label =
+    name ||
+    certification ||
+    (experienceYears != null ? `${experienceYears}` : '');
+
+  if (!label) return null;
+
+  return {
+    name,
+    certification,
+    experienceYears,
+    label,
+    raw: item,
+  };
+};
+
 const mapCourseSchedule = (row) => {
   const item = toObject(row);
   return {
@@ -271,7 +318,9 @@ const mapTemplateCourse = (course) => {
     level: cleanString(item.level),
     ageFrom: toNumber(item.age_from || item.ages_from),
     ageTo: toNumber(item.age_to || item.ages_to),
-    coaches: toArray(item.coaches || item.coaches_json).filter(Boolean),
+    coaches: toArray(item.coaches || item.coaches_json)
+  .map(mapTemplateCoach)
+  .filter(Boolean),
     schedules: toArray(item.schedules).map(mapCourseSchedule),
     posterMeta,
     posterUrl: toDataUrl({ base64: posterBase64, mime: posterMeta.mime }),

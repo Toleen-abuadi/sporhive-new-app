@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Image, Pressable, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ChevronRight, Image as ImageIcon, PackageCheck, Search } from 'lucide-react-native';
@@ -103,6 +103,15 @@ export function PlayerStoreCatalogScreen() {
   }, [products, query]);
 
   const showLoading = (isLoading || (!lastUpdatedAt && !error)) && products.length === 0;
+  const hasCatalogItems = products.length > 0;
+  const handleOpenProduct = useCallback(
+    (productId) => {
+      const id = String(productId == null ? '' : productId).trim();
+      if (!id) return;
+      router.push(buildPlayerStoreProductRoute(id));
+    },
+    [router]
+  );
 
   return (
     <AppScreen
@@ -236,9 +245,13 @@ export function PlayerStoreCatalogScreen() {
 
             {!showLoading && !error && filteredProducts.length === 0 ? (
               <PortalEmptyState
-                title={t('playerPortal.store.empty.catalogTitle')}
+                title={
+                  hasCatalogItems
+                    ? t('playerPortal.store.empty.catalogTitle')
+                    : t('playerPortal.store.empty.itemsTitle')
+                }
                 description={
-                  query
+                  hasCatalogItems && query
                     ? t('playerPortal.store.empty.searchDescription')
                     : t('playerPortal.store.empty.catalogDescription')
                 }
@@ -252,7 +265,7 @@ export function PlayerStoreCatalogScreen() {
                     <ProductCard
                       product={product}
                       locale={locale}
-                      onPress={() => router.push(buildPlayerStoreProductRoute(product.id))}
+                      onPress={() => handleOpenProduct(product.id)}
                     />
                   </View>
                 ))}

@@ -4,6 +4,11 @@ import { playerPortalApi } from '../api/playerPortal.api';
 import { usePlayerPortalStore } from '../state/playerPortal.store';
 import { usePlayerOverview } from './usePlayerOverview';
 
+const cleanString = (value) => {
+  if (value == null) return '';
+  return String(value).trim();
+};
+
 const buildGuardError = () => ({
   code: 'PLAYER_PORTAL_CONTEXT_MISSING',
   status: 0,
@@ -93,7 +98,11 @@ export function usePlayerProfile() {
 
       if (overviewResult.success) {
         actions.setOverviewSuccess(overviewResult.data);
-        setProfileSnapshot(mapProfileFromOverview(overviewResult.data));
+        const mappedProfile = mapProfileFromOverview(overviewResult.data);
+        if (Object.prototype.hasOwnProperty.call(payload || {}, 'google_maps_location')) {
+          mappedProfile.google_maps_location = cleanString(payload?.google_maps_location);
+        }
+        setProfileSnapshot(mappedProfile);
       } else {
         actions.setOverviewError(overviewResult.error);
       }

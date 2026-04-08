@@ -1,6 +1,6 @@
 import { Image, RefreshControl, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { PencilLine, RefreshCw } from 'lucide-react-native';
+import { PencilLine } from 'lucide-react-native';
 import { AppScreen } from '../../../components/ui/AppScreen';
 import { Button } from '../../../components/ui/Button';
 import { LanguageSwitch } from '../../../components/ui/LanguageSwitch';
@@ -172,14 +172,6 @@ export function PlayerProfileScreen() {
                 value: formatNumberLabel(profile.height, { locale, fallback: '-' }),
               })}
             </Text>
-            <Button
-              fullWidth
-              variant="secondary"
-              onPress={() => profileEditor.fetchProfile()}
-              leadingIcon={<RefreshCw size={14} color={colors.textPrimary} strokeWidth={2.2} />}
-            >
-              {t('playerPortal.profile.actions.refreshProfile')}
-            </Button>
           </PortalSectionCard>
         </>
       ) : null}

@@ -91,7 +91,7 @@ export async function shareInvoiceDocument(docRef, { message = '' } = {}) {
   }
 
   if (Platform.OS === 'web') {
-    await downloadInvoiceDocument(document);
+    await downloadInvoiceDocument(docRef);
     return;
   }
 
