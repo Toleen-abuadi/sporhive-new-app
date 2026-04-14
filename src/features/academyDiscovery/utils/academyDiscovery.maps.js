@@ -1,5 +1,26 @@
 import { cleanString, pickFirst, toNumber } from './academyDiscovery.normalizers';
 
+export const isValidLatitude = (value) => {
+  const numeric = toNumber(value);
+  return numeric != null && numeric >= -90 && numeric <= 90;
+};
+
+export const isValidLongitude = (value) => {
+  const numeric = toNumber(value);
+  return numeric != null && numeric >= -180 && numeric <= 180;
+};
+
+const toValidCoordinates = (latValue, lngValue) => {
+  const lat = toNumber(latValue);
+  const lng = toNumber(lngValue);
+
+  if (!isValidLatitude(lat) || !isValidLongitude(lng)) {
+    return null;
+  }
+
+  return { lat, lng };
+};
+
 export function extractLatLngFromGoogleMapsUrl(url) {
   const value = cleanString(url);
   if (!value) return { lat: null, lng: null };
@@ -14,10 +35,8 @@ export function extractLatLngFromGoogleMapsUrl(url) {
   for (let index = 0; index < patterns.length; index += 1) {
     const match = value.match(patterns[index]);
     if (!match) continue;
-    return {
-      lat: toNumber(match[1]),
-      lng: toNumber(match[2]),
-    };
+    const coords = toValidCoordinates(match[1], match[2]);
+    if (coords) return coords;
   }
 
   return { lat: null, lng: null };
@@ -25,11 +44,9 @@ export function extractLatLngFromGoogleMapsUrl(url) {
 
 export function toAcademyCoordinates(academy) {
   const item = academy || {};
-  const lat = toNumber(item.lat ?? item.latitude);
-  const lng = toNumber(item.lng ?? item.longitude);
-
-  if (lat != null && lng != null) {
-    return { lat, lng };
+  const direct = toValidCoordinates(item.lat ?? item.latitude, item.lng ?? item.longitude);
+  if (direct) {
+    return direct;
   }
 
   const fallbackLink = cleanString(

@@ -102,13 +102,11 @@ export function PlaygroundVenueScreen() {
                     icon={<Users size={15} color={colors.textMuted} strokeWidth={2.2} />}
                     label={copy.labels.playersRange}
                     value={formatPlayersRange(venue.minPlayers, venue.maxPlayers, locale)}
-                    valueStyle={styles.ltrValue}
                   />
                   <VenueMetaRow
                     icon={<Star size={15} color={colors.warning} strokeWidth={2.2} />}
                     label={copy.labels.rating}
                     value={`${(venue.avgRating || 0).toFixed(1)} (${venue.ratingsCount || 0})`}
-                    valueStyle={styles.ltrValue}
                   />
                 </View>
 

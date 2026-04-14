@@ -363,18 +363,6 @@ export function LoginScreen() {
               {t('auth.actions.forgotPassword')}
             </Button>
           </View>
-
-          {!isPublicMode ? (
-            <Text variant="caption" color={colors.textMuted} style={styles.playerHintText}>
-              {t('auth.login.playerAccountHint')}
-            </Text>
-          ) : null}
-
-          {redirectTo ? (
-            <Text variant="caption" color={colors.textMuted} style={styles.hintText}>
-              {t('auth.login.redirectHint')}
-            </Text>
-          ) : null}
         </AuthCard>
       </View>
     </AppScreen>

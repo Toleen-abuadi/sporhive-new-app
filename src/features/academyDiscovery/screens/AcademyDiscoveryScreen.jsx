@@ -55,6 +55,7 @@ const DEFAULT_FILTERS = Object.freeze({
 
 const PAGE_SIZE = 12;
 const EMPTY_SERVER_FILTERS = Object.freeze({});
+const MAP_ACCESS_TOKEN = String(process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || '').trim();
 
 const resolveSportOptions = (items = []) => {
   const map = new Map();
@@ -662,6 +663,8 @@ export function AcademyDiscoveryScreen() {
               academies={mapItems}
               copy={copy}
               pinnedSlug={pinnedAcademy?.slug || ''}
+              accessToken={MAP_ACCESS_TOKEN}
+              isRTL={isRTL}
               onMarkerPress={(academy) =>
                 router.push(buildAcademyTemplateRoute(academy.slug))
               }

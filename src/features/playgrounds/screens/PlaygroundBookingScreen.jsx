@@ -1,7 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Minus, Plus } from "lucide-react-native";
+import {
+  CalendarClock,
+  CalendarDays,
+  Check,
+  Clock4,
+  CreditCard,
+  House,
+  Minus,
+  Plus,
+  ReceiptText,
+  Users,
+} from "lucide-react-native";
 import { AppScreen } from "../../../components/ui/AppScreen";
 import { Button } from "../../../components/ui/Button";
 import { DatePickerField } from "../../../components/ui/DatePickerField";
@@ -75,22 +86,51 @@ const buildQuickPlayersOptions = (minPlayers, maxPlayers) => {
 function StepIndicator({ steps = [], activeIndex = 0, locale = "en" }) {
   const { colors } = useTheme();
   const { isRTL } = useI18n();
+  const safeActiveIndex = Math.max(0, Math.min(activeIndex, steps.length - 1));
+  const progressPercent =
+    steps.length <= 1 ? 100 : (safeActiveIndex / (steps.length - 1)) * 100;
 
   return (
-    <Surface variant="soft" padding="md" style={styles.stepperCard}>
-      <Text variant="caption" color={colors.textMuted}>
+    <View style={styles.stepperCard}>
+      <View
+        style={[
+          styles.stepCounterRow,
+          { flexDirection: getRowDirection(isRTL) },
+        ]}
+      >
+        <Text variant="bodySmall" color={colors.textSecondary}>
         {tPlaygrounds(locale, "labels.stepLabel", {
-          current: activeIndex + 1,
+            current: safeActiveIndex + 1,
           total: steps.length,
         })}
       </Text>
+      </View>
 
+      <View style={styles.stepperTrackWrap}>
+        <View
+          style={[
+            styles.stepperTrack,
+            { backgroundColor: colors.borderStrong },
+          ]}
+        />
+        <View
+          style={[
+            styles.stepperTrackProgress,
+            {
+              backgroundColor: colors.accentOrange,
+              width: `${progressPercent}%`,
+              left: isRTL ? undefined : 0,
+              right: isRTL ? 0 : undefined,
+            },
+          ]}
+        />
       <View
         style={[styles.stepperRow, { flexDirection: getRowDirection(isRTL) }]}
       >
         {steps.map((step, index) => {
-          const isActive = index === activeIndex;
-          const isDone = index < activeIndex;
+            const isActive = index === safeActiveIndex;
+            const isDone = index < safeActiveIndex;
+            const isPending = !isActive && !isDone;
 
           return (
             <View key={step.key} style={styles.stepItem}>
@@ -99,30 +139,30 @@ function StepIndicator({ steps = [], activeIndex = 0, locale = "en" }) {
                   styles.stepCircle,
                   {
                     borderColor:
-                      isActive || isDone
-                        ? colors.accentOrange
-                        : colors.borderStrong,
+                      isActive || isDone ? colors.accentOrange : colors.border,
                     backgroundColor:
-                      isActive || isDone
-                        ? colors.accentOrangeSoft
-                        : colors.surface,
+                      isActive || isDone ? colors.accentOrange : colors.surface,
                   },
                 ]}
               >
+                  {isDone ? (
+                    <Check size={17} color={colors.white} strokeWidth={2.6} />
+                  ) : (
                 <Text
-                  variant="caption"
-                  weight="semibold"
-                  color={
-                    isActive || isDone ? colors.accentOrange : colors.textMuted
-                  }
+                      variant={isActive ? "body" : "caption"}
+                      weight="bold"
+                  color={isPending ? colors.textMuted : colors.white}
                 >
                   {index + 1}
                 </Text>
+                  )}
               </View>
               <Text
                 variant="caption"
-                color={isActive ? colors.textPrimary : colors.textMuted}
+                  weight={isActive ? "bold" : "medium"}
+                color={isActive ? colors.textPrimary : colors.textSecondary}
                 numberOfLines={1}
+                  style={styles.stepLabel}
               >
                 {step.label}
               </Text>
@@ -130,7 +170,8 @@ function StepIndicator({ steps = [], activeIndex = 0, locale = "en" }) {
           );
         })}
       </View>
-    </Surface>
+      </View>
+    </View>
   );
 }
 
@@ -199,37 +240,36 @@ export function PlaygroundBookingScreen() {
     auto: true,
   });
 
+  const availableSlots = useMemo(() => slotsQuery.items || [], [slotsQuery.items]);
+  const selectedSlotId = String(selectedSlot?.id || "");
+  const selectedSlotFromAvailable = useMemo(() => {
+    if (!selectedSlotId) return null;
+
+    return (
+      availableSlots.find((slot) => String(slot.id) === selectedSlotId) || null
+    );
+  }, [availableSlots, selectedSlotId]);
+
   useEffect(() => {
-    const availableSlots = slotsQuery.items || [];
     if (!availableSlots.length) {
       if (selectedSlot) setSelectedSlot(null);
       return;
     }
 
-    const selectedId = selectedSlot?.id;
-    if (selectedId) {
-      const matched = availableSlots.find((slot) => slot.id === selectedId);
-      if (matched) {
-        if (matched !== selectedSlot) setSelectedSlot(matched);
-        return;
-      }
+    if (!selectedSlotId) {
+      return;
     }
 
-    const initialStart = String(
-      resolveParamValue(params.currentStartTime) || "",
-    ).slice(0, 5);
-    if (isUpdateMode && initialStart) {
-      const preselected = availableSlots.find(
-        (slot) => slot.startTime === initialStart,
-      );
-      if (preselected) {
-        setSelectedSlot(preselected);
-        return;
-      }
+    const matched = availableSlots.find(
+      (slot) => String(slot.id) === selectedSlotId,
+    );
+    if (!matched) {
+      setSelectedSlot(null);
+      return;
     }
 
-    setSelectedSlot(availableSlots[0]);
-  }, [isUpdateMode, params.currentStartTime, selectedSlot, slotsQuery.items]);
+    if (matched !== selectedSlot) setSelectedSlot(matched);
+  }, [availableSlots, selectedSlot, selectedSlotId]);
 
   const createBookingMutation = useCreateBooking();
   const updateBookingMutation = useUpdateBooking();
@@ -318,7 +358,9 @@ export function PlaygroundBookingScreen() {
   const isOnReview = currentStep?.key === "review";
 
   const durationValid = Boolean(selectedDuration?.id);
-  const slotValid = Boolean(bookingDate) && Boolean(selectedSlot?.startTime);
+  const hasAvailableSlots = availableSlots.length > 0;
+  const slotValid =
+    Boolean(bookingDate) && Boolean(selectedSlotFromAvailable?.startTime);
   const playersValid = playersCount >= minPlayers && playersCount <= maxPlayers;
   const paymentValid =
     isUpdateMode ||
@@ -375,7 +417,10 @@ export function PlaygroundBookingScreen() {
       if (!bookingDate) {
         return copy.errors.scheduleRequired;
       }
-      if (!selectedSlot?.startTime) {
+      if (!slotsQuery.isLoading && !hasAvailableSlots) {
+        return copy.labels.emptySlots || copy.labels.slotUnavailable;
+      }
+      if (!slotValid) {
         return copy.labels.slotUnavailable;
       }
     }
@@ -435,7 +480,7 @@ export function PlaygroundBookingScreen() {
     if (isUpdateMode) {
       const result = await updateBookingMutation.updateBooking(bookingId, {
         new_date: bookingDate,
-        new_start_time: selectedSlot?.startTime,
+        new_start_time: selectedSlotFromAvailable?.startTime,
       });
 
       if (!result.success) {
@@ -460,7 +505,7 @@ export function PlaygroundBookingScreen() {
       venue_id: venue?.id,
       duration_id: selectedDuration?.id,
       booking_date: bookingDate,
-      start_time: selectedSlot?.startTime,
+      start_time: selectedSlotFromAvailable?.startTime,
       number_of_players: playersCount,
       payment_type: paymentType,
       cash_payment_on_date: paymentType === "cash" ? cashOnDate : false,
@@ -485,36 +530,42 @@ export function PlaygroundBookingScreen() {
   const summaryRows = [
     {
       label: copy.labels.academy,
-      value: venue?.academyProfile?.publicName,
+      value: venue?.academyProfile?.publicName || venue?.name,
+      icon: House,
     },
     {
       label: copy.labels.date,
       value: formatPlaygroundDate(bookingDate, locale),
       forceLTR: true,
+      icon: CalendarDays,
     },
     {
       label: copy.labels.chooseSlot,
       value: formatPlaygroundTimeRange(
-        selectedSlot?.startTime,
-        selectedSlot?.endTime,
+        selectedSlotFromAvailable?.startTime,
+        selectedSlotFromAvailable?.endTime,
         locale,
       ),
       forceLTR: true,
+      icon: CalendarClock,
     },
     {
       label: copy.labels.chooseDuration,
       value: formatDurationMinutes(selectedDuration?.minutes, locale),
+      icon: Clock4,
     },
     {
       label: copy.labels.players,
       value: isUpdateMode ? undefined : String(playersCount || ""),
       forceLTR: true,
+      icon: Users,
     },
     {
       label: copy.labels.payment,
       value: isUpdateMode
         ? copy.labels.notAvailable
         : resolvePaymentType(paymentType, locale),
+      icon: CreditCard,
     },
     {
       label: copy.labels.price,
@@ -522,6 +573,7 @@ export function PlaygroundBookingScreen() {
         ? formatPlaygroundPrice(selectedDuration?.basePrice, { locale })
         : copy.labels.notAvailable,
       forceLTR: true,
+      icon: ReceiptText,
     },
   ];
 
@@ -666,8 +718,8 @@ export function PlaygroundBookingScreen() {
                       </Text>
 
                       <SlotPicker
-                        slots={slotsQuery.items}
-                        selectedSlotId={selectedSlot?.id || ""}
+                        slots={availableSlots}
+                        selectedSlotId={selectedSlotFromAvailable?.id || ""}
                         onSelect={(slot) => {
                           setStepError("");
                           setSelectedSlot(slot);
@@ -898,6 +950,8 @@ export function PlaygroundBookingScreen() {
                 <BookingSummaryCard
                   title={copy.labels.summary}
                   rows={summaryRows}
+                  variant="review"
+                  style={styles.reviewSummaryCard}
                 />
               ) : null}
 
@@ -921,6 +975,7 @@ export function PlaygroundBookingScreen() {
                   borderTopColor: colors.border,
                   backgroundColor: colors.surfaceElevated,
                 },
+                isOnReview ? styles.reviewStickyBar : null,
               ]}
             >
               {!isOnReview ? (
@@ -930,9 +985,11 @@ export function PlaygroundBookingScreen() {
               ) : (
                 <Button
                   fullWidth
+                  size="lg"
                   onPress={handleSubmit}
                   loading={isSubmitting}
                   disabled={!canSubmitBooking}
+                  style={styles.reviewPrimaryButton}
                 >
                   {isUpdateMode
                     ? copy.actions.reschedule
@@ -946,7 +1003,31 @@ export function PlaygroundBookingScreen() {
                 </Text>
               ) : null}
 
-              <Button fullWidth variant="secondary" onPress={handleBack}>
+              <Button
+                fullWidth
+                size={isOnReview ? "lg" : "md"}
+                variant="secondary"
+                onPress={handleBack}
+                style={
+                  isOnReview
+                    ? [
+                        styles.reviewSecondaryButton,
+                        {
+                          borderColor: colors.accentOrange,
+                          backgroundColor: colors.surface,
+                        },
+                      ]
+                    : null
+                }
+                textStyle={
+                  isOnReview
+                    ? {
+                        color: colors.accentOrange,
+                        fontWeight: "700",
+                      }
+                    : null
+                }
+              >
                 {copy.actions.previous}
               </Button>
             </View>
@@ -969,24 +1050,51 @@ const styles = StyleSheet.create({
     paddingBottom: spacing["3xl"],
   },
   stepperCard: {
-    gap: spacing.sm,
+    gap: spacing.md,
+    paddingHorizontal: spacing.xs,
+  },
+  stepCounterRow: {
+    justifyContent: "flex-start",
+  },
+  stepperTrackWrap: {
+    position: "relative",
+    paddingTop: spacing.xs,
+  },
+  stepperTrack: {
+    position: "absolute",
+    top: 29,
+    left: 20,
+    right: 20,
+    height: 3,
+    borderRadius: borderRadius.pill,
+  },
+  stepperTrackProgress: {
+    position: "absolute",
+    top: 29,
+    height: 3,
+    borderRadius: borderRadius.pill,
   },
   stepperRow: {
-    flexWrap: "wrap",
-    gap: spacing.sm,
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: spacing.xs,
   },
   stepItem: {
-    flexDirection: "row",
+    flex: 1,
     alignItems: "center",
+    justifyContent: "flex-start",
     gap: spacing.xs,
   },
   stepCircle: {
-    width: 28,
-    height: 28,
+    width: 40,
+    height: 40,
     borderRadius: borderRadius.pill,
-    borderWidth: 1,
+    borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
+  },
+  stepLabel: {
+    textAlign: "center",
   },
   noticeCard: {
     borderWidth: 1,
@@ -1031,10 +1139,23 @@ const styles = StyleSheet.create({
   errorCard: {
     borderWidth: 1,
   },
+  reviewSummaryCard: {
+    marginTop: spacing.xs,
+  },
   stickyBar: {
     borderTopWidth: 1,
     paddingTop: spacing.sm,
     paddingBottom: spacing.md,
     gap: spacing.sm,
+  },
+  reviewStickyBar: {
+    paddingTop: spacing.md,
+    gap: spacing.md,
+  },
+  reviewPrimaryButton: {
+    minHeight: 58,
+  },
+  reviewSecondaryButton: {
+    minHeight: 58,
   },
 });

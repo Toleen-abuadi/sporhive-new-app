@@ -367,7 +367,6 @@ export function PlaygroundMyBookingsScreen() {
       buildPlaygroundBookingRoute(booking.venueId, {
         bookingId: booking.id,
         currentDate: booking.date,
-        currentStartTime: booking.startTime,
         currentPlayers: String(booking.numberOfPlayers || ''),
       })
     );

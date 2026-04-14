@@ -22,9 +22,23 @@ Create a `.env` file and set:
 
 ```bash
 EXPO_PUBLIC_API_BASE_URL=https://your-backend-base-url/api/v1
+EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN=pk.your_public_mapbox_token
 ```
 
 Auth and academy endpoints in this app are resolved from `EXPO_PUBLIC_API_BASE_URL`.
+Mapbox-powered screens (playgrounds + academies map views) require
+`EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN`.
+
+## Mapbox Native Build Notes
+
+- `@rnmapbox/maps` is configured through `app.json` plugin and committed Android native files.
+- Mapbox does not run in Expo Go. Use a development build (`expo run:android`).
+- If you change Mapbox plugin/native settings, regenerate native projects then rebuild:
+
+```bash
+npx expo prebuild
+npx expo run:android
+```
 
 In the output, you'll find options to open the app in a
 
