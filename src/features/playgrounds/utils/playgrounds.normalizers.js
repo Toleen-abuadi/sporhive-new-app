@@ -109,5 +109,11 @@ export const sanitizePlaygroundsFilters = (filters = {}) => {
     order_by: cleanString(pickFirst(source.order_by, source.orderBy)) || undefined,
     lat: toNumber(source.lat),
     lng: toNumber(source.lng),
+    user_lat: toNumber(pickFirst(source.user_lat, source.userLat, source.lat)),
+    user_lng: toNumber(pickFirst(source.user_lng, source.userLng, source.lng)),
+    min_lat: toNumber(pickFirst(source.min_lat, source.minLat)),
+    max_lat: toNumber(pickFirst(source.max_lat, source.maxLat)),
+    min_lng: toNumber(pickFirst(source.min_lng, source.minLng)),
+    max_lng: toNumber(pickFirst(source.max_lng, source.maxLng)),
   });
 };

@@ -8,3 +8,4 @@ export { ActivityChips } from './ActivityChips';
 export { BookingStatusBadge } from './BookingStatusBadge';
 export { EmptyPlaygroundsState } from './EmptyPlaygroundsState';
 export { PlaygroundsErrorState } from './PlaygroundsErrorState';
+export * from './map';

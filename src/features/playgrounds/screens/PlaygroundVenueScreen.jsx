@@ -1,4 +1,4 @@
-import { Linking, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MapPin, Star, Users } from 'lucide-react-native';
 import { AppScreen } from '../../../components/ui/AppScreen';
@@ -26,20 +26,9 @@ import {
   PlaygroundsErrorState,
   VenueGallery,
   VenueMetaRow,
+  buildPlaygroundMapsHref,
+  openExternalMapUrl,
 } from '../components';
-
-const openMapsUrl = async (url) => {
-  const link = String(url || '').trim();
-  if (!link) return;
-
-  try {
-    const canOpen = await Linking.canOpenURL(link);
-    if (!canOpen) return;
-    await Linking.openURL(link);
-  } catch {
-    // ignore safely
-  }
-};
 
 export function PlaygroundVenueScreen() {
   const { venueId } = useLocalSearchParams();
@@ -54,6 +43,7 @@ export function PlaygroundVenueScreen() {
   });
 
   const venue = detailsQuery.venue;
+  const venueDirectionsUrl = buildPlaygroundMapsHref(venue);
 
   return (
     <AppScreen safe>
@@ -170,14 +160,14 @@ export function PlaygroundVenueScreen() {
                     ? copy.labels.paymentCliqAvailable
                     : copy.labels.paymentCliqUnavailable}
                 </Text>
-                {venue.academyProfile?.mapsUrl ? (
+                {venueDirectionsUrl ? (
                   <View style={[styles.mapButtonWrap, { flexDirection: getRowDirection(isRTL) }]}>
                     <Button
                       size="sm"
                       variant="secondary"
-                      onPress={() => openMapsUrl(venue.academyProfile.mapsUrl)}
+                      onPress={() => openExternalMapUrl(venueDirectionsUrl)}
                     >
-                      {copy.actions.openMapDirections}
+                      {copy.actions.openInMaps || copy.actions.openMapDirections}
                     </Button>
                   </View>
                 ) : null}

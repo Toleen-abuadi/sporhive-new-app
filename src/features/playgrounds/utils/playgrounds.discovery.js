@@ -1,0 +1,234 @@
+import {
+  cleanString,
+  pickFirst,
+  removeEmptyValues,
+  toIsoDate,
+  toNumber,
+} from './playgrounds.normalizers';
+
+export const PLAYGROUNDS_TAB_CONFIG = Object.freeze([
+  'all',
+  'offers',
+  'featured',
+  'premium',
+  'pro',
+]);
+
+export const PLAYGROUNDS_SORT_CONFIG = Object.freeze([
+  'recommended',
+  'distance_asc',
+  'price_asc',
+  'rating_desc',
+]);
+
+export const PLAYGROUNDS_SORT_LABEL_KEY = Object.freeze({
+  recommended: 'recommended',
+  distance_asc: 'distanceAsc',
+  price_asc: 'priceAsc',
+  rating_desc: 'ratingDesc',
+});
+
+export const PLAYGROUNDS_DISCOVERY_DEFAULTS = Object.freeze({
+  tab: 'all',
+  selectedActivityId: '',
+  selectedDate: '',
+  selectedPlayers: null,
+  sortBy: 'recommended',
+  selectedLocation: '',
+});
+
+const resolveParamValue = (value) => (Array.isArray(value) ? value[0] : value);
+const cleanText = (value) => cleanString(value);
+
+const normalizeTab = (value) => {
+  const next = cleanText(value).toLowerCase();
+  if (!next) return PLAYGROUNDS_DISCOVERY_DEFAULTS.tab;
+  return PLAYGROUNDS_TAB_CONFIG.includes(next)
+    ? next
+    : PLAYGROUNDS_DISCOVERY_DEFAULTS.tab;
+};
+
+const normalizeSortBy = (value) => {
+  const next = cleanText(value).toLowerCase();
+  if (!next) return PLAYGROUNDS_DISCOVERY_DEFAULTS.sortBy;
+  return PLAYGROUNDS_SORT_CONFIG.includes(next)
+    ? next
+    : PLAYGROUNDS_DISCOVERY_DEFAULTS.sortBy;
+};
+
+const normalizePlayers = (value) => {
+  const numeric = toNumber(value);
+  if (numeric == null) return null;
+  const rounded = Math.floor(numeric);
+  return rounded > 0 ? rounded : null;
+};
+
+export function parsePlaygroundsDiscoveryParams(params = {}) {
+  const source = params || {};
+
+  return {
+    tab: normalizeTab(resolveParamValue(pickFirst(source.tab, source.mode))),
+    selectedActivityId: cleanText(
+      resolveParamValue(pickFirst(source.activityId, source.activity_id, source.activity))
+    ),
+    selectedDate: toIsoDate(
+      resolveParamValue(pickFirst(source.date, source.bookingDate, source.booking_date))
+    ),
+    selectedPlayers: normalizePlayers(
+      resolveParamValue(pickFirst(source.players, source.number_of_players, source.numberOfPlayers))
+    ),
+    sortBy: normalizeSortBy(resolveParamValue(pickFirst(source.sortBy, source.order_by, source.orderBy))),
+    selectedLocation: cleanText(
+      resolveParamValue(pickFirst(source.location, source.base_location, source.baseLocation))
+    ),
+  };
+}
+
+export function buildPlaygroundsDiscoveryRouteParams(state = {}) {
+  const normalized = {
+    ...PLAYGROUNDS_DISCOVERY_DEFAULTS,
+    ...(state || {}),
+  };
+
+  return removeEmptyValues({
+    tab: normalizeTab(normalized.tab),
+    activityId: cleanText(normalized.selectedActivityId) || undefined,
+    date: toIsoDate(normalized.selectedDate) || undefined,
+    players:
+      normalized.selectedPlayers == null
+        ? undefined
+        : String(Math.max(1, Math.floor(Number(normalized.selectedPlayers) || 0))),
+    sortBy: normalizeSortBy(normalized.sortBy),
+    location: cleanText(normalized.selectedLocation) || undefined,
+  });
+}
+
+export function buildPlaygroundsFiltersFromState(state = {}) {
+  const normalized = {
+    ...PLAYGROUNDS_DISCOVERY_DEFAULTS,
+    ...(state || {}),
+  };
+
+  const base = removeEmptyValues({
+    activity_id: cleanText(normalized.selectedActivityId) || undefined,
+    date: toIsoDate(normalized.selectedDate) || undefined,
+    number_of_players:
+      normalized.selectedPlayers == null ? undefined : normalizePlayers(normalized.selectedPlayers),
+    base_location: cleanText(normalized.selectedLocation) || undefined,
+    order_by: normalizeSortBy(normalized.sortBy),
+  });
+
+  if (normalized.tab === 'offers') {
+    return {
+      ...base,
+      has_special_offer: true,
+    };
+  }
+
+  if (normalized.tab === 'featured') {
+    return {
+      ...base,
+      featured_only: true,
+    };
+  }
+
+  if (normalized.tab === 'premium') {
+    return {
+      ...base,
+      premium_only: true,
+    };
+  }
+
+  if (normalized.tab === 'pro') {
+    return {
+      ...base,
+      pro_only: true,
+    };
+  }
+
+  return base;
+}
+
+export function countActivePlaygroundsDiscoveryFilters(state = {}) {
+  const normalized = {
+    ...PLAYGROUNDS_DISCOVERY_DEFAULTS,
+    ...(state || {}),
+  };
+
+  return [
+    Boolean(cleanText(normalized.selectedActivityId)),
+    Boolean(toIsoDate(normalized.selectedDate)),
+    normalizePlayers(normalized.selectedPlayers) != null,
+    Boolean(cleanText(normalized.selectedLocation)),
+    normalizeTab(normalized.tab) !== 'all',
+  ].filter(Boolean).length;
+}
+
+export function hasActivePlaygroundsDiscoveryFilters(state = {}) {
+  return countActivePlaygroundsDiscoveryFilters(state) > 0;
+}
+
+export function resolveVenueTier(venue) {
+  const tier = cleanText(venue?.marketplace?.tier || venue?.marketplace_tier).toLowerCase();
+  if (tier) return tier;
+  if (venue?.marketplace?.isPro) return 'pro';
+  if (venue?.marketplace?.isFeatured) return 'featured';
+  return 'standard';
+}
+
+export function uniqueLocationOptions(venues = [], locale = 'en') {
+  const map = new Map();
+  venues.forEach((venue) => {
+    const label = cleanText(venue?.location || venue?.academyProfile?.locationText);
+    if (!label) return;
+    const key = label.toLowerCase();
+    if (!map.has(key)) {
+      map.set(key, label);
+    }
+  });
+
+  return [...map.values()].sort((left, right) =>
+    left.localeCompare(right, locale === 'ar' ? 'ar' : 'en')
+  );
+}
+
+export function buildDynamicPlayersOptions(venues = [], selectedPlayers = null) {
+  const values = new Set();
+
+  venues.forEach((venue) => {
+    const min = Number(venue?.minPlayers);
+    const max = Number(venue?.maxPlayers);
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return;
+
+    const safeMin = Math.max(1, Math.floor(min));
+    const safeMax = Math.max(safeMin, Math.floor(max));
+    const midpoint = Math.round((safeMin + safeMax) / 2);
+
+    values.add(safeMin);
+    values.add(safeMax);
+    values.add(midpoint);
+  });
+
+  if (selectedPlayers != null) {
+    values.add(Number(selectedPlayers));
+  }
+
+  const sorted = [...values]
+    .filter((value) => Number.isFinite(value) && value > 0)
+    .sort((left, right) => left - right);
+
+  if (sorted.length <= 10) return sorted;
+
+  const sampled = new Set();
+  const step = (sorted.length - 1) / 9;
+  for (let index = 0; index < 10; index += 1) {
+    sampled.add(sorted[Math.round(index * step)]);
+  }
+
+  if (selectedPlayers != null) {
+    sampled.add(Number(selectedPlayers));
+  }
+
+  return [...sampled].sort((left, right) => left - right);
+}
+

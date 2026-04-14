@@ -33,6 +33,12 @@
       "expo-web-browser",
       "expo-secure-store",
       [
+        "@rnmapbox/maps",
+        {
+          "RNMapboxMapsVersion": "11.18.2"
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#232323",
@@ -50,15 +56,18 @@
           "photosPermission": "Allow SporHive to access your photos so you can update your profile image."
         }
       ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow SporHive to use your location to discover nearby playgrounds on the map."
+        }
+      ],
       "@react-native-community/datetimepicker"
     ],
     "extra": {
       "router": {
         "origin": "sporhive://",
         "links": [
-          {
-            "path": "r/:token"
-          },
           {
             "path": "r/:token"
           }

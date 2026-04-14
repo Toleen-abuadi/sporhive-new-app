@@ -11,8 +11,8 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
 } from 'react-native-reanimated';
-import { useRouter } from 'expo-router';
-import { ChevronDown, ChevronUp, SlidersHorizontal } from 'lucide-react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ChevronDown, SlidersHorizontal } from 'lucide-react-native';
 import { AppScreen } from '../../../components/ui/AppScreen';
 import { Button } from '../../../components/ui/Button';
 import { Chip } from '../../../components/ui/Chip';
@@ -24,6 +24,7 @@ import { Surface } from '../../../components/ui/Surface';
 import { Text } from '../../../components/ui/Text';
 import {
   ROUTES,
+  buildPlaygroundsMapRoute,
   buildPlaygroundBookingRoute,
   buildPlaygroundVenueRoute,
 } from '../../../constants/routes';
@@ -34,6 +35,18 @@ import { getRowDirection } from '../../../utils/rtl';
 import { formatPlaygroundDate } from '../utils/playgrounds.formatters';
 import { toIsoDate } from '../utils/playgrounds.normalizers';
 import { getPlaygroundsCopy, tPlaygrounds } from '../utils/playgrounds.copy';
+import {
+  buildDynamicPlayersOptions,
+  buildPlaygroundsDiscoveryRouteParams,
+  buildPlaygroundsFiltersFromState,
+  countActivePlaygroundsDiscoveryFilters,
+  hasActivePlaygroundsDiscoveryFilters,
+  parsePlaygroundsDiscoveryParams,
+  PLAYGROUNDS_SORT_CONFIG,
+  PLAYGROUNDS_SORT_LABEL_KEY,
+  resolveVenueTier,
+  uniqueLocationOptions,
+} from '../utils/playgrounds.discovery';
 import { useActivities, useVenues } from '../hooks';
 import {
   ActivityChips,
@@ -44,96 +57,59 @@ import {
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 
+// Public Mapbox token is optional in development; map screen handles missing-token fallback.
+const MAP_ACCESS_TOKEN = String(process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || '').trim();
 const TAB_CONFIG = ['all', 'offers', 'featured', 'premium', 'pro'];
-const SORT_CONFIG = ['recommended', 'distance_asc', 'price_asc', 'rating_desc'];
-
-const SORT_LABEL_KEY = Object.freeze({
-  recommended: 'recommended',
-  distance_asc: 'distanceAsc',
-  price_asc: 'priceAsc',
-  rating_desc: 'ratingDesc',
-});
-
-const cleanText = (value) => String(value || '').trim();
-
-const resolveVenueTier = (venue) => {
-  const tier = cleanText(venue?.marketplace?.tier || venue?.marketplace_tier).toLowerCase();
-  if (tier) return tier;
-  if (venue?.marketplace?.isPro) return 'pro';
-  if (venue?.marketplace?.isFeatured) return 'featured';
-  return 'standard';
-};
-
-const uniqueLocationOptions = (venues = [], locale = 'en') => {
-  const map = new Map();
-  venues.forEach((venue) => {
-    const label = cleanText(venue?.location || venue?.academyProfile?.locationText);
-    if (!label) return;
-    const key = label.toLowerCase();
-    if (!map.has(key)) {
-      map.set(key, label);
-    }
-  });
-
-  return [...map.values()].sort((left, right) =>
-    left.localeCompare(right, locale === 'ar' ? 'ar' : 'en')
-  );
-};
-
-const buildDynamicPlayersOptions = (venues = [], selectedPlayers = null) => {
-  const values = new Set();
-
-  venues.forEach((venue) => {
-    const min = Number(venue?.minPlayers);
-    const max = Number(venue?.maxPlayers);
-    if (!Number.isFinite(min) || !Number.isFinite(max)) return;
-
-    const safeMin = Math.max(1, Math.floor(min));
-    const safeMax = Math.max(safeMin, Math.floor(max));
-    const midpoint = Math.round((safeMin + safeMax) / 2);
-
-    values.add(safeMin);
-    values.add(safeMax);
-    values.add(midpoint);
-  });
-
-  if (selectedPlayers != null) {
-    values.add(Number(selectedPlayers));
-  }
-
-  const sorted = [...values]
-    .filter((value) => Number.isFinite(value) && value > 0)
-    .sort((left, right) => left - right);
-
-  if (sorted.length <= 10) return sorted;
-
-  const sampled = new Set();
-  const step = (sorted.length - 1) / 9;
-  for (let index = 0; index < 10; index += 1) {
-    sampled.add(sorted[Math.round(index * step)]);
-  }
-
-  if (selectedPlayers != null) {
-    sampled.add(Number(selectedPlayers));
-  }
-
-  return [...sampled].sort((left, right) => left - right);
-};
 
 export function PlaygroundsIndexScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const { colors } = useTheme();
   const { locale, isRTL, t } = useI18n();
   const copy = getPlaygroundsCopy(locale);
 
+  const routeDiscoveryState = useMemo(
+    () =>
+      parsePlaygroundsDiscoveryParams({
+        tab: params?.tab,
+        activityId: params?.activityId,
+        date: params?.date,
+        players: params?.players,
+        sortBy: params?.sortBy,
+        location: params?.location,
+      }),
+    [
+      params?.activityId,
+      params?.date,
+      params?.location,
+      params?.players,
+      params?.sortBy,
+      params?.tab,
+    ]
+  );
+
+  const routeDiscoverySignature = useMemo(
+    () => JSON.stringify(routeDiscoveryState),
+    [routeDiscoveryState]
+  );
+
   const [filtersExpanded, setFiltersExpanded] = useState(false);
-  const [tab, setTab] = useState('all');
-  const [selectedActivityId, setSelectedActivityId] = useState('');
-  const [selectedDate, setSelectedDate] = useState('');
-  const [selectedPlayers, setSelectedPlayers] = useState(null);
-  const [sortBy, setSortBy] = useState('recommended');
-  const [selectedLocation, setSelectedLocation] = useState('');
+  const [tab, setTab] = useState(routeDiscoveryState.tab);
+  const [selectedActivityId, setSelectedActivityId] = useState(routeDiscoveryState.selectedActivityId);
+  const [selectedDate, setSelectedDate] = useState(routeDiscoveryState.selectedDate);
+  const [selectedPlayers, setSelectedPlayers] = useState(routeDiscoveryState.selectedPlayers);
+  const [sortBy, setSortBy] = useState(routeDiscoveryState.sortBy);
+  const [selectedLocation, setSelectedLocation] = useState(routeDiscoveryState.selectedLocation);
   const [filtersUniverseVenues, setFiltersUniverseVenues] = useState([]);
+
+  useEffect(() => {
+    setTab(routeDiscoveryState.tab);
+    setSelectedActivityId(routeDiscoveryState.selectedActivityId);
+    setSelectedDate(routeDiscoveryState.selectedDate);
+    setSelectedPlayers(routeDiscoveryState.selectedPlayers);
+    setSortBy(routeDiscoveryState.sortBy);
+    setSelectedLocation(routeDiscoveryState.selectedLocation);
+  }, [routeDiscoverySignature, routeDiscoveryState]);
 
   const chevronAnimatedStyle = useAnimatedStyle(() => ({
     transform: [
@@ -147,61 +123,32 @@ export function PlaygroundsIndexScreen() {
 
   const activitiesQuery = useActivities({ auto: true });
 
-  const hasActiveRefinements = Boolean(
-    selectedActivityId ||
-      selectedDate ||
-      selectedPlayers != null ||
-      selectedLocation ||
-      tab !== 'all'
+  const discoveryState = useMemo(
+    () => ({
+      tab,
+      selectedActivityId,
+      selectedDate,
+      selectedPlayers,
+      sortBy,
+      selectedLocation,
+    }),
+    [selectedActivityId, selectedDate, selectedLocation, selectedPlayers, sortBy, tab]
   );
 
-  const activeFiltersCount = [
-    Boolean(selectedActivityId),
-    Boolean(selectedDate),
-    selectedPlayers != null,
-    Boolean(selectedLocation),
-    tab !== 'all',
-  ].filter(Boolean).length;
+  const hasActiveRefinements = useMemo(
+    () => hasActivePlaygroundsDiscoveryFilters(discoveryState),
+    [discoveryState]
+  );
 
-  const filters = useMemo(() => {
-    const base = {
-      activity_id: selectedActivityId || undefined,
-      date: selectedDate || undefined,
-      number_of_players: selectedPlayers == null ? undefined : selectedPlayers,
-      base_location: selectedLocation || undefined,
-      order_by: sortBy,
-    };
+  const activeFiltersCount = useMemo(
+    () => countActivePlaygroundsDiscoveryFilters(discoveryState),
+    [discoveryState]
+  );
 
-    if (tab === 'offers') {
-      return {
-        ...base,
-        has_special_offer: true,
-      };
-    }
-
-    if (tab === 'featured') {
-      return {
-        ...base,
-        featured_only: true,
-      };
-    }
-
-    if (tab === 'premium') {
-      return {
-        ...base,
-        premium_only: true,
-      };
-    }
-
-    if (tab === 'pro') {
-      return {
-        ...base,
-        pro_only: true,
-      };
-    }
-
-    return base;
-  }, [selectedActivityId, selectedDate, selectedLocation, selectedPlayers, sortBy, tab]);
+  const filters = useMemo(
+    () => buildPlaygroundsFiltersFromState(discoveryState),
+    [discoveryState]
+  );
 
   const venuesQuery = useVenues({
     filters,
@@ -225,7 +172,7 @@ export function PlaygroundsIndexScreen() {
   const availableActivityIds = useMemo(() => {
     const ids = new Set();
     optionsSourceVenues.forEach((venue) => {
-      const value = cleanText(venue?.activityId);
+      const value = String(venue?.activityId || '').trim();
       if (!value) return;
       ids.add(value);
     });
@@ -350,6 +297,11 @@ export function PlaygroundsIndexScreen() {
     tab,
   ]);
 
+  const mapRouteParams = useMemo(
+    () => buildPlaygroundsDiscoveryRouteParams(discoveryState),
+    [discoveryState]
+  );
+
   const isInitialLoading =
     venuesQuery.venuesLoading &&
     !venuesQuery.venues.length &&
@@ -389,9 +341,18 @@ export function PlaygroundsIndexScreen() {
         layout={LinearTransition.duration(220)}
         style={[styles.topActionsRow, { flexDirection: getRowDirection(isRTL) }]}
       >
-        <Button size="sm" variant="secondary" onPress={() => router.push(ROUTES.PLAYGROUNDS_MY_BOOKINGS)}>
-          {copy.actions.myBookings}
-        </Button>
+        <View style={[styles.topActionsGroup, { flexDirection: getRowDirection(isRTL) }]}>
+          <Button size="sm" variant="secondary" onPress={() => router.push(ROUTES.PLAYGROUNDS_MY_BOOKINGS)}>
+            {copy.actions.myBookings}
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            onPress={() => router.push(buildPlaygroundsMapRoute(mapRouteParams))}
+          >
+            {copy.actions.mapMode}
+          </Button>
+        </View>
 
         {hasActiveRefinements ? (
           <Button size="sm" variant="ghost" onPress={resetFilters}>
@@ -557,10 +518,10 @@ export function PlaygroundsIndexScreen() {
               </Text>
 
               <View style={[styles.playersRow, { flexDirection: getRowDirection(isRTL) }]}>
-                {SORT_CONFIG.map((sortKey) => (
+                {PLAYGROUNDS_SORT_CONFIG.map((sortKey) => (
                   <Chip
                     key={sortKey}
-                    label={copy.sort[SORT_LABEL_KEY[sortKey]]}
+                    label={copy.sort[PLAYGROUNDS_SORT_LABEL_KEY[sortKey]]}
                     selected={sortBy === sortKey}
                     onPress={() => setSortBy(sortKey)}
                   />
@@ -574,21 +535,47 @@ export function PlaygroundsIndexScreen() {
       <AnimatedView layout={LinearTransition.duration(220)}>
         <Surface variant="default" padding="md" style={styles.mapCard}>
           <Text variant="bodySmall" weight="semibold">
-            {copy.labels.mapReady}
+            {copy.labels.mapMode}
           </Text>
           <Text variant="caption" color={colors.textSecondary}>
             {tPlaygrounds(locale, 'labels.mapHint', {
               count: venuesQuery.mapVenuesTotal,
             })}
           </Text>
-          <Text variant="caption" color={colors.textMuted}>
-            {copy.labels.mapHidden}
-          </Text>
+
+          {!MAP_ACCESS_TOKEN ? (
+            <Text variant="caption" color={colors.warning}>
+              {copy.labels.mapConfigMissing}
+            </Text>
+          ) : null}
+
+          {MAP_ACCESS_TOKEN && !venuesQuery.mapVenuesError && !venuesQuery.mapVenuesTotal ? (
+            <Text variant="caption" color={colors.textMuted}>
+              {copy.labels.mapEmpty}
+            </Text>
+          ) : null}
+
           {venuesQuery.mapVenuesError ? (
             <Text variant="caption" color={colors.error}>
               {copy.errors.loadVenues}
             </Text>
           ) : null}
+
+          <View style={[styles.mapActionsRow, { flexDirection: getRowDirection(isRTL) }]}>
+            <Button
+              size="sm"
+              variant="secondary"
+              onPress={() => router.push(buildPlaygroundsMapRoute(mapRouteParams))}
+            >
+              {copy.actions.mapMode}
+            </Button>
+            <Button
+              size="sm"
+              onPress={() => router.push(buildPlaygroundsMapRoute(mapRouteParams))}
+            >
+              {copy.actions.showResultsInArea}
+            </Button>
+          </View>
         </Surface>
       </AnimatedView>
 
@@ -648,6 +635,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
+  topActionsGroup: {
+    alignItems: 'center',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
+  },
   filtersToggleCard: {
     gap: spacing.xs,
   },
@@ -699,6 +691,13 @@ const styles = StyleSheet.create({
   },
   mapCard: {
     gap: spacing.xs,
+  },
+  mapActionsRow: {
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+    flexWrap: 'wrap',
   },
   listWrap: {
     gap: spacing.sm,

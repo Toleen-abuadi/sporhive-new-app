@@ -11,3 +11,6 @@ export { useUpdateBooking } from './useUpdateBooking';
 export { useCanRateBooking } from './useCanRateBooking';
 export { useCreateBookingRating } from './useCreateBookingRating';
 export { useResolveRatingToken } from './useResolveRatingToken';
+export { usePlaygroundsMapState } from './usePlaygroundsMapState';
+export { usePlaygroundsMapViewport } from './usePlaygroundsMapViewport';
+export { useUserMapLocation } from './useUserMapLocation';

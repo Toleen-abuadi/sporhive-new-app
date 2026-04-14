@@ -329,6 +329,8 @@ export const playgroundsApi = {
 
     return request(PLAYGROUNDS_ENDPOINTS.PUBLIC_VENUES_MAP, {
       method: 'POST',
+      // Map viewport keys (min/max lat/lng) are passed through when available.
+      // Backward compatible: backend can safely ignore unsupported keys.
       payload,
       timeoutMs: options.timeoutMs,
     }).then((result) =>
