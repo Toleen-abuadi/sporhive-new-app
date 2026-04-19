@@ -14,6 +14,7 @@ import { ROUTES } from '../../../constants/routes';
 import { useI18n } from '../../../hooks/useI18n';
 import { useTheme } from '../../../hooks/useTheme';
 import { getRowDirection } from '../../../utils/rtl';
+import { normalizeNumericInput } from '../../../utils/numbering';
 import { borderRadius, spacing } from '../../../theme/tokens';
 import {
   PortalEmptyState,
@@ -89,6 +90,7 @@ export function PlayerRenewalScreen() {
 
   const flow = usePlayerRenewalFlow({ auto: true });
   const hasPendingRenewalRequest = Boolean(flow.eligibility?.hasPendingRequest);
+  const isArabic = locale === 'ar';
 
   const currentRegistration = flow.currentRegistration;
   const stepTitle = normalizeStepTitle(flow.step, t);
@@ -102,6 +104,28 @@ export function PlayerRenewalScreen() {
     if (!flow.hasServerBlockingCondition) return '';
     return flow.blockingReason || t('playerPortal.renewal.errors.serverBlocked');
   }, [flow.blockingReason, flow.hasServerBlockingCondition, t]);
+  const startBoundsHelperText = useMemo(() => {
+    const min = formatDateLabel(flow.bounds.startMin, { locale, fallback: '-' });
+    const max = formatDateLabel(flow.bounds.startMax, { locale, fallback: '-' });
+    if (flow.bounds.startMin && flow.bounds.startMax) {
+      return t('playerPortal.renewal.labels.startBounds', { min, max });
+    }
+    if (flow.bounds.startMin) {
+      return t('playerPortal.renewal.labels.startFrom', { date: min });
+    }
+    return '';
+  }, [flow.bounds.startMax, flow.bounds.startMin, locale, t]);
+  const endBoundsHelperText = useMemo(() => {
+    const min = formatDateLabel(flow.bounds.endMin, { locale, fallback: '-' });
+    const max = formatDateLabel(flow.bounds.endMax, { locale, fallback: '-' });
+    if (flow.bounds.endMin && flow.bounds.endMax) {
+      return t('playerPortal.renewal.labels.endBounds', { min, max });
+    }
+    if (flow.bounds.endMin) {
+      return t('playerPortal.renewal.labels.endFrom', { date: min });
+    }
+    return '';
+  }, [flow.bounds.endMax, flow.bounds.endMin, locale, t]);
 
   const canSubmit =
     flow.isValid &&
@@ -129,18 +153,22 @@ export function PlayerRenewalScreen() {
     const result = await flow.submitRenewalRequest();
     if (!result.success) {
       if (result.error?.code === 'RENEWAL_SERVER_BLOCKED') {
-        toast.error(result.error?.message || serverBlockedMessage || t('playerPortal.renewal.errors.serverBlocked'));
+        toast.error(serverBlockedMessage || t('playerPortal.renewal.errors.serverBlocked'));
         return;
       }
       if (result.error?.code === 'COURSE_OVERLAP_WITH_ACTIVE_SUBSCRIPTION') {
         toast.error(courseOverlapMessage || t('playerPortal.renewal.errors.overlapCourse', { date: '-' }));
         return;
       }
-      toast.error(result.error?.message || t('playerPortal.renewal.messages.submitFailed'));
+      toast.error(
+        (isArabic ? '' : result.error?.message) || t('playerPortal.renewal.messages.submitFailed')
+      );
       return;
     }
 
-    toast.success(result.data?.payload?.message || t('playerPortal.renewal.messages.submitted'));
+    toast.success(
+      (isArabic ? '' : result.data?.payload?.message) || t('playerPortal.renewal.messages.submitted')
+    );
     flow.resetFlow();
     router.replace(ROUTES.PLAYER_HOME);
   };
@@ -412,10 +440,7 @@ export function PlayerRenewalScreen() {
                     placeholder={t('common.formats.isoDatePlaceholder')}
                     minDate={flow.bounds.startMin}
                     maxDate={flow.bounds.startMax}
-                    helperText={t('playerPortal.renewal.labels.startBounds', {
-                      min: formatDateLabel(flow.bounds.startMin, { locale, fallback: '-' }),
-                      max: formatDateLabel(flow.bounds.startMax, { locale, fallback: '-' }),
-                    })}
+                    helperText={startBoundsHelperText}
                   />
                 </View>
 
@@ -430,10 +455,7 @@ export function PlayerRenewalScreen() {
                     placeholder={t('common.formats.isoDatePlaceholder')}
                     minDate={flow.bounds.endMin}
                     maxDate={flow.bounds.endMax}
-                    helperText={t('playerPortal.renewal.labels.endBounds', {
-                      min: formatDateLabel(flow.bounds.endMin, { locale, fallback: '-' }),
-                      max: formatDateLabel(flow.bounds.endMax, { locale, fallback: '-' }),
-                    })}
+                    helperText={endBoundsHelperText}
                   />
                 </View>
 
@@ -444,7 +466,7 @@ export function PlayerRenewalScreen() {
                   <TextInput
                     value={String(flow.numSessions || '')}
                     onChangeText={(value) => {
-                      const parsed = Number.parseInt(value, 10);
+                      const parsed = Number.parseInt(normalizeNumericInput(value), 10);
                       if (Number.isNaN(parsed)) {
                         flow.setNumSessions(0);
                         return;

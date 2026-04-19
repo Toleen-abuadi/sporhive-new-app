@@ -129,6 +129,7 @@ export function PlayerFreezeScreen() {
   const router = useRouter();
   const toast = useToast();
   const { t, locale, isRTL } = useI18n();
+  const isArabic = locale === 'ar';
   const { colors } = useTheme();
   const overviewQuery = usePlayerOverview({ auto: true, enabled: true });
 
@@ -237,11 +238,17 @@ export function PlayerFreezeScreen() {
         : result.error;
 
       setSubmitError(nextError);
-      toast.error(localizedSubmitError || result.error?.message || t('playerPortal.freeze.messages.submitFailed'));
+      toast.error(
+        localizedSubmitError ||
+          (isArabic ? '' : result.error?.message) ||
+          t('playerPortal.freeze.messages.submitFailed')
+      );
       return;
     }
 
-    toast.success(result.data?.payload?.message || t('playerPortal.freeze.messages.submitted'));
+    toast.success(
+      (isArabic ? '' : result.data?.payload?.message) || t('playerPortal.freeze.messages.submitted')
+    );
     setReason('');
     setRequestStep(REQUEST_STEPS.FORM);
     const nextStart = addDaysISODate(toISODate(new Date()), 1);

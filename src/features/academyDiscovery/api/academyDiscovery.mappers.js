@@ -49,13 +49,23 @@ const toDataUrl = ({ base64, mime }) => {
   return `data:${contentType};base64,${encoded}`;
 };
 
+const isLikelyBase64Image = (value) => {
+  const raw = cleanString(value);
+  if (!raw || raw.length < 80) return false;
+  return /^[A-Za-z0-9+/=\r\n]+$/.test(raw);
+};
+
 const resolveImageUrl = ({ slug, kind, direct, hasImage }, options = {}) => {
   const raw = cleanString(direct);
   const apiBaseUrl = cleanString(options.apiBaseUrl);
   const apiOrigin = cleanString(options.apiOrigin || resolveApiOrigin(apiBaseUrl));
 
-  if (raw.startsWith('http') || raw.startsWith('data:image')) {
+  if (raw.startsWith('http') || raw.startsWith('data:')) {
     return raw;
+  }
+
+  if (isLikelyBase64Image(raw)) {
+    return toDataUrl({ base64: raw });
   }
 
   if (raw.startsWith('/api/')) {
@@ -136,7 +146,15 @@ export function mapAcademyDiscoveryRow(row, options = {}) {
       {
         slug,
         kind: 'logo',
-        direct: pickFirst(item.logo_url, item.logo, item.logo_image),
+        direct: pickFirst(
+          item.logo_url,
+          item.logo,
+          item.logo_image,
+          item.logoUrl,
+          item.avatar,
+          item.avatar_url,
+          item.image_logo
+        ),
         hasImage: toBoolean(logoMeta.has),
       },
       options
@@ -145,7 +163,18 @@ export function mapAcademyDiscoveryRow(row, options = {}) {
       {
         slug,
         kind: 'cover',
-        direct: pickFirst(item.cover_url, item.cover_image, item.cover),
+        direct: pickFirst(
+          item.cover_url,
+          item.cover_image,
+          item.cover,
+          item.coverUrl,
+          item.hero_image,
+          item.heroImage,
+          item.banner,
+          item.banner_url,
+          item.image,
+          item.main_image
+        ),
         hasImage: toBoolean(coverMeta.has),
       },
       options

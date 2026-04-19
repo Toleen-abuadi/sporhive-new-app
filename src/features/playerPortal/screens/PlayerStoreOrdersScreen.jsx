@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { PackageCheck } from 'lucide-react-native';
 import { AppScreen } from '../../../components/ui/AppScreen';
 import { Button } from '../../../components/ui/Button';
 import { LanguageSwitch } from '../../../components/ui/LanguageSwitch';
@@ -28,7 +27,7 @@ import { usePlayerUniformOrders } from '../hooks';
 import { usePlayerUniformCart } from '../state';
 import { formatDateLabel, formatNumberLabel, formatOrderStatusLabel } from '../utils/playerPortal.formatters';
 import { resolvePortalGuardMessage } from '../utils/playerPortal.messages';
-import { normalizeUniformStatus } from '../utils/playerPortal.uniform';
+import { getUniformProductName, normalizeUniformStatus } from '../utils/playerPortal.uniform';
 
 function resolveOrderStatusLabel(status, t, locale) {
   return formatOrderStatusLabel(normalizeUniformStatus(status), { t, locale, fallback: '-' });
@@ -86,7 +85,7 @@ function OrderGroupCard({ group, locale, t, colors, onPress, isRTL }) {
       {latestItems.map((item) => (
         <Text key={item.id} variant="caption" color={colors.textSecondary} numberOfLines={1}>
           {t('playerPortal.store.orders.labels.itemPreview', {
-            name: item.productName || '-',
+            name: getUniformProductName(item, locale) || '-',
             size: item.size || '-',
             quantity: formatNumberLabel(item.quantity, { locale, fallback: '1' }),
           })}
@@ -149,6 +148,7 @@ export function PlayerStoreOrdersScreen() {
             cartCount={cartSummary.totalItems}
             onPressCart={() => router.push(ROUTES.PLAYER_STORE_CART)}
             onPressOrders={() => router.push(ROUTES.PLAYER_STORE_ORDERS)}
+            hideOrders
           />
         }
       />
@@ -168,7 +168,6 @@ export function PlayerStoreOrdersScreen() {
         <PortalSectionCard
           title={t('playerPortal.store.orders.sections.listTitle')}
           subtitle={t('playerPortal.store.orders.sections.listSubtitle')}
-          right={<PackageCheck size={16} color={colors.accentOrange} strokeWidth={2.2} />}
         >
           {statusPreview.length > 0 ? (
             <Text variant="caption" color={colors.textMuted}>

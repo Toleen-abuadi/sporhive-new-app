@@ -14,6 +14,7 @@ import {
 import { useI18n } from '../../../hooks/useI18n';
 import { useTheme } from '../../../hooks/useTheme';
 import { getRowDirection } from '../../../utils/rtl';
+import { normalizeNumericInput } from '../../../utils/numbering';
 import { borderRadius, spacing } from '../../../theme/tokens';
 import {
   PortalEmptyState,
@@ -114,7 +115,9 @@ export function PlayerStoreProductScreen() {
     }
 
     toast.success(t('playerPortal.store.messages.addedToCart'));
-    router.push(ROUTES.PLAYER_STORE_CART);
+    setTimeout(() => {
+      router.push(ROUTES.PLAYER_STORE);
+    }, 500);
   };
 
   return (
@@ -294,7 +297,9 @@ export function PlayerStoreProductScreen() {
                 </Text>
                 <TextInput
                   value={playerNumber}
-                  onChangeText={(text) => setPlayerNumber(text.replace(/[^\d]/g, '').slice(0, 6))}
+                  onChangeText={(text) =>
+                    setPlayerNumber(normalizeNumericInput(text).replace(/[^\d]/g, '').slice(0, 6))
+                  }
                   placeholder={t('playerPortal.store.labels.playerNumberPlaceholder')}
                   placeholderTextColor={colors.textMuted}
                   keyboardType="number-pad"

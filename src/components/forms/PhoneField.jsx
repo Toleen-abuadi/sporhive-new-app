@@ -8,6 +8,7 @@ import { DEFAULT_PHONE_COUNTRY_CODE, PHONE_COUNTRIES } from '../../constants/pho
 import {
   createPhonePayload,
   digitsOnly,
+  getCountryByDialCode,
   normalizeCountryCode,
   parsePhoneValue,
 } from '../../utils/phone';
@@ -19,11 +20,6 @@ const translateWithFallback = (t, key, fallback) => {
   if (translated && translated !== key) return translated;
   return fallback;
 };
-
-const interpolateRuleHint = (template, min, max) =>
-  String(template || '')
-    .replace('{{min}}', String(min))
-    .replace('{{max}}', String(max));
 
 const toValueObject = (value, options, defaultCountryCode) => {
   if (value && typeof value === 'object') {
@@ -58,7 +54,6 @@ export function PhoneField({
   countryPickerTitle,
   countrySearchPlaceholder,
   countryNoResultsLabel,
-  phoneRuleHintLabel,
 }) {
   const { colors, isDark } = useTheme();
   const { t } = useI18n();
@@ -79,11 +74,6 @@ export function PhoneField({
   const invalidLabel =
     invalidMessage ||
     translateWithFallback(t, 'common.phone.invalid', translateWithFallback(t, 'auth.errors.phoneInvalid', 'Invalid phone number.'));
-  const ruleHint = phoneRuleHintLabel || translateWithFallback(
-    t,
-    'common.phone.ruleHint',
-    translateWithFallback(t, 'auth.phoneRuleHint', 'Expected length: {{min}}-{{max}} digits')
-  );
 
   useEffect(() => {
     const next = toValueObject(value, options, defaultCountryCode);
@@ -95,6 +85,12 @@ export function PhoneField({
     () => createPhonePayload({ countryCode, nationalNumber }, options),
     [countryCode, nationalNumber, options]
   );
+  const selectedCountry = useMemo(
+    () => getCountryByDialCode(countryCode, options),
+    [countryCode, options]
+  );
+  const maxNationalLength = Number(phonePayload.maxLength) || 15;
+  const inputMaxLength = maxNationalLength + (selectedCountry?.stripLeadingZero ? 1 : 0);
 
   const showError = touched && !error && required && !phonePayload.isValid && nationalNumber.length > 0;
   const inlineError = showError ? invalidLabel : error || '';
@@ -112,12 +108,24 @@ export function PhoneField({
 
   const onCountryChange = (nextCode) => {
     const normalized = normalizeCountryCode(nextCode, options);
+    const nextPayload = createPhonePayload(
+      {
+        countryCode: normalized,
+        nationalNumber,
+      },
+      options
+    );
+    const bounded = digitsOnly(nextPayload.nationalNumber).slice(
+      0,
+      Number(nextPayload.maxLength) || 15
+    );
     setCountryCode(normalized);
-    emitChange(normalized, nationalNumber);
+    setNationalNumber(bounded);
+    emitChange(normalized, bounded);
   };
 
   const onNumberChange = (text) => {
-    const digits = digitsOnly(text);
+    const digits = digitsOnly(text).slice(0, inputMaxLength);
     setNationalNumber(digits);
     emitChange(countryCode, digits);
   };
@@ -160,6 +168,7 @@ export function PhoneField({
             onChangeText={onNumberChange}
             onBlur={() => setTouched(true)}
             keyboardType="phone-pad"
+            maxLength={inputMaxLength}
             autoCapitalize="none"
             editable={!disabled}
             placeholder={placeholder || defaultPlaceholder}
@@ -174,12 +183,6 @@ export function PhoneField({
           />
         </View>
       </View>
-
-      {showRuleHint ? (
-        <Text variant="caption" color={colors.textMuted} style={styles.helper}>
-          {interpolateRuleHint(ruleHint, phonePayload.minLength || 7, phonePayload.maxLength || 15)}
-        </Text>
-      ) : null}
 
       {inlineError ? (
         <Text variant="caption" color={colors.error} style={styles.error}>

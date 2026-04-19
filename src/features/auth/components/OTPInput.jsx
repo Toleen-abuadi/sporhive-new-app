@@ -1,11 +1,20 @@
-import { useMemo, useRef } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { useEffect, useMemo, useRef } from 'react';
+import { InteractionManager, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Text } from '../../../components/ui/Text';
 import { useTheme } from '../../../hooks/useTheme';
 import { borderRadius, spacing } from '../../../theme/tokens';
 import { digitsOnly } from '../utils/phone';
 
-export function OTPInput({ value, onChange, length = 6, error, style }) {
+export function OTPInput({
+  value,
+  onChange,
+  length = 6,
+  error,
+  style,
+  editable = true,
+  autoFocus = false,
+  focusKey = '',
+}) {
   const { colors } = useTheme();
   const inputRef = useRef(null);
 
@@ -21,8 +30,28 @@ export function OTPInput({ value, onChange, length = 6, error, style }) {
     onChange?.(clean);
   };
 
+  useEffect(() => {
+    if (!autoFocus || !editable) return undefined;
+
+    let cancelled = false;
+    let timerId = null;
+    const interaction = InteractionManager.runAfterInteractions(() => {
+      timerId = setTimeout(() => {
+        if (cancelled) return;
+        inputRef.current?.focus();
+      }, 40);
+    });
+
+    return () => {
+      cancelled = true;
+      if (timerId != null) clearTimeout(timerId);
+      interaction?.cancel?.();
+    };
+  }, [autoFocus, editable, focusKey]);
+
   return (
-    <Pressable onPress={() => inputRef.current?.focus()} style={style}>
+    <View style={style}>
+      <Pressable onPress={() => editable && inputRef.current?.focus()}>
       <View style={styles.row}>
         {digits.map((digit, index) => {
           const isFocused = index === activeIndex;
@@ -48,6 +77,7 @@ export function OTPInput({ value, onChange, length = 6, error, style }) {
           );
         })}
       </View>
+      </Pressable>
 
       <TextInput
         ref={inputRef}
@@ -55,8 +85,11 @@ export function OTPInput({ value, onChange, length = 6, error, style }) {
         onChangeText={onChangeText}
         keyboardType="number-pad"
         textContentType="oneTimeCode"
+        autoComplete="sms-otp"
         maxLength={length}
-        style={styles.hiddenInput}
+        editable={editable}
+        showSoftInputOnFocus
+        style={styles.inputOverlay}
       />
 
       {error ? (
@@ -64,7 +97,7 @@ export function OTPInput({ value, onChange, length = 6, error, style }) {
           {error}
         </Text>
       ) : null}
-    </Pressable>
+    </View>
   );
 }
 
@@ -82,9 +115,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  hiddenInput: {
-    width: 1,
-    height: 1,
+  inputOverlay: {
+    ...StyleSheet.absoluteFillObject,
     position: 'absolute',
     opacity: 0,
   },

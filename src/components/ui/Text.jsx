@@ -2,12 +2,26 @@ import { Text as RNText, StyleSheet } from 'react-native';
 import { useI18n } from '../../hooks/useI18n';
 import { useTheme } from '../../hooks/useTheme';
 import { getTextAlign, getWritingDirection } from '../../utils/rtl';
+import { toEnglishDigits } from '../../utils/numbering';
 
 const WEIGHTS = {
   regular: '400',
   medium: '500',
   semibold: '600',
   bold: '700',
+};
+
+const normalizeTextNode = (node) => {
+  if (typeof node === 'string' || typeof node === 'number') {
+    return toEnglishDigits(node);
+  }
+  if (Array.isArray(node)) {
+    return node.map((item) => {
+      const normalized = normalizeTextNode(item);
+      return normalized == null ? item : normalized;
+    });
+  }
+  return node;
 };
 
 export function Text({
@@ -50,7 +64,7 @@ export function Text({
       ]}
       {...props}
     >
-      {children}
+      {normalizeTextNode(children)}
     </RNText>
   );
 }

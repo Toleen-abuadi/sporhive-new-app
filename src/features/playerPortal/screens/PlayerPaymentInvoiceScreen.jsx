@@ -27,6 +27,22 @@ const resolveParam = (value) => (Array.isArray(value) ? value[0] : value);
 const normalizeInvoiceLanguage = (value) =>
   String(value || "").toLowerCase() === "ar" ? "ar" : "en";
 
+const resolveInvoiceErrorMessage = (reason, t) => {
+  const code = String(reason?.code || "").toUpperCase();
+  if (
+    code === "INVOICE_RESPONSE_INVALID" ||
+    code === "HTTP_ERROR" ||
+    code === "NETWORK_ERROR" ||
+    code === "AUTH_REQUEST_FAILED" ||
+    code === "UNAUTHORIZED" ||
+    code === "CONFIG_ERROR"
+  ) {
+    return t("playerPortal.payments.invoice.errors.download");
+  }
+
+  return reason?.message || t("playerPortal.payments.invoice.errors.download");
+};
+
 export function PlayerPaymentInvoiceScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -85,13 +101,15 @@ export function PlayerPaymentInvoiceScreen() {
       setError(null);
 
       try {
+        const resolvedPaymentId = Number(payment.id);
+        if (!Number.isFinite(resolvedPaymentId)) {
+          throw new Error("Invoice payment reference is invalid.");
+        }
+
         const result = await playerPortalApi.printInvoice(
           session.requestContext,
           {
-            id: payment.id,
-            invoice_id: payment.invoiceId || undefined,
-            external_invoice_number:
-              payment.externalInvoiceNumber || undefined,
+            id: resolvedPaymentId,
             language: invoiceLanguage,
             player_name:
               invoiceLanguage === "ar"
@@ -167,10 +185,7 @@ export function PlayerPaymentInvoiceScreen() {
     });
 
     if (!result?.success) {
-      toast.error(
-        result?.error?.message ||
-          t("playerPortal.payments.invoice.errors.download"),
-      );
+      toast.error(resolveInvoiceErrorMessage(result?.error, t));
     }
   };
 

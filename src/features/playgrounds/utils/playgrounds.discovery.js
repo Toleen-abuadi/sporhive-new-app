@@ -2,6 +2,7 @@ import {
   cleanString,
   pickFirst,
   removeEmptyValues,
+  toBoolean,
   toIsoDate,
   toNumber,
 } from './playgrounds.normalizers';
@@ -35,6 +36,9 @@ export const PLAYGROUNDS_DISCOVERY_DEFAULTS = Object.freeze({
   selectedPlayers: null,
   sortBy: 'recommended',
   selectedLocation: '',
+  hasSpecialOffer: false,
+  selectedDurationId: '',
+  selectedTags: [],
 });
 
 const resolveParamValue = (value) => (Array.isArray(value) ? value[0] : value);
@@ -63,8 +67,34 @@ const normalizePlayers = (value) => {
   return rounded > 0 ? rounded : null;
 };
 
+const normalizeDurationId = (value) => cleanText(value);
+const resolveSportFromActivityValue = (value) => {
+  const clean = cleanText(value).toLowerCase();
+  if (!clean.startsWith('sport:')) return '';
+  return clean.replace('sport:', '');
+};
+
+const normalizeTags = (value) => {
+  const source = Array.isArray(value)
+    ? value
+    : cleanText(value).split(',');
+
+  const unique = new Set();
+  source.forEach((item) => {
+    const normalized = cleanText(item).toLowerCase();
+    if (!normalized) return;
+    unique.add(normalized);
+  });
+
+  return [...unique];
+};
+
 export function parsePlaygroundsDiscoveryParams(params = {}) {
   const source = params || {};
+  const hasSpecialOffer = toBoolean(
+    resolveParamValue(pickFirst(source.hasSpecialOffer, source.has_special_offer, source.specialOffer))
+  );
+  const tagsInput = pickFirst(source.tags, source.tag);
 
   return {
     tab: normalizeTab(resolveParamValue(pickFirst(source.tab, source.mode))),
@@ -81,6 +111,11 @@ export function parsePlaygroundsDiscoveryParams(params = {}) {
     selectedLocation: cleanText(
       resolveParamValue(pickFirst(source.location, source.base_location, source.baseLocation))
     ),
+    hasSpecialOffer,
+    selectedDurationId: normalizeDurationId(
+      resolveParamValue(pickFirst(source.durationId, source.duration_id, source.duration))
+    ),
+    selectedTags: normalizeTags(resolveParamValue(tagsInput)),
   };
 }
 
@@ -100,6 +135,9 @@ export function buildPlaygroundsDiscoveryRouteParams(state = {}) {
         : String(Math.max(1, Math.floor(Number(normalized.selectedPlayers) || 0))),
     sortBy: normalizeSortBy(normalized.sortBy),
     location: cleanText(normalized.selectedLocation) || undefined,
+    hasSpecialOffer: normalized.hasSpecialOffer ? '1' : undefined,
+    durationId: normalizeDurationId(normalized.selectedDurationId) || undefined,
+    tags: normalizeTags(normalized.selectedTags).join(',') || undefined,
   });
 }
 
@@ -109,12 +147,21 @@ export function buildPlaygroundsFiltersFromState(state = {}) {
     ...(state || {}),
   };
 
+  const normalizedTags = normalizeTags(normalized.selectedTags);
+  const normalizedDurationId = normalizeDurationId(normalized.selectedDurationId);
+  const activityValue = cleanText(normalized.selectedActivityId);
+  const sportValue = resolveSportFromActivityValue(activityValue);
+
   const base = removeEmptyValues({
-    activity_id: cleanText(normalized.selectedActivityId) || undefined,
+    activity_id: sportValue ? undefined : activityValue || undefined,
+    sport: sportValue || undefined,
     date: toIsoDate(normalized.selectedDate) || undefined,
     number_of_players:
       normalized.selectedPlayers == null ? undefined : normalizePlayers(normalized.selectedPlayers),
     base_location: cleanText(normalized.selectedLocation) || undefined,
+    has_special_offer: normalized.hasSpecialOffer ? true : undefined,
+    duration_id: normalizedDurationId || undefined,
+    tags: normalizedTags.length ? normalizedTags : undefined,
     order_by: normalizeSortBy(normalized.sortBy),
   });
 
@@ -160,6 +207,9 @@ export function countActivePlaygroundsDiscoveryFilters(state = {}) {
     Boolean(toIsoDate(normalized.selectedDate)),
     normalizePlayers(normalized.selectedPlayers) != null,
     Boolean(cleanText(normalized.selectedLocation)),
+    Boolean(normalized.hasSpecialOffer),
+    Boolean(normalizeDurationId(normalized.selectedDurationId)),
+    normalizeTags(normalized.selectedTags).length > 0,
     normalizeTab(normalized.tab) !== 'all',
   ].filter(Boolean).length;
 }
@@ -231,4 +281,3 @@ export function buildDynamicPlayersOptions(venues = [], selectedPlayers = null) 
 
   return [...sampled].sort((left, right) => left - right);
 }
-

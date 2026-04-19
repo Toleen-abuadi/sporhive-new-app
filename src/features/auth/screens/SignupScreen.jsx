@@ -27,6 +27,7 @@ import {
 } from '../components';
 import {
   hasValidationErrors,
+  normalizeAlphabeticInput,
   resolveAuthErrorMessage,
   validatePublicSignup,
 } from '../utils';
@@ -45,6 +46,14 @@ const styles = StyleSheet.create({
   },
   form: {
     gap: spacing.sm,
+  },
+  ctaGroup: {
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  primaryCta: {
+    minHeight: 58,
+    borderRadius: 999,
   },
 });
 
@@ -67,6 +76,9 @@ export function SignupScreen() {
     setFieldErrors({});
     setSubmitError('');
   };
+
+  const handleFirstNameChange = (value) => setFirstName(normalizeAlphabeticInput(value));
+  const handleLastNameChange = (value) => setLastName(normalizeAlphabeticInput(value));
 
   const onSubmit = async () => {
     clearErrors();
@@ -144,7 +156,7 @@ export function SignupScreen() {
             <AuthTextField
               label={t('auth.fields.firstName')}
               value={firstName}
-              onChangeText={setFirstName}
+              onChangeText={handleFirstNameChange}
               placeholder={t('auth.placeholders.firstName')}
               leftIcon="user"
               error={fieldErrors.firstName}
@@ -153,7 +165,7 @@ export function SignupScreen() {
             <AuthTextField
               label={t('auth.fields.lastName')}
               value={lastName}
-              onChangeText={setLastName}
+              onChangeText={handleLastNameChange}
               placeholder={t('auth.placeholders.lastName')}
               leftIcon="user"
               error={fieldErrors.lastName}
@@ -190,13 +202,15 @@ export function SignupScreen() {
           <PasswordHints password={password} confirmPassword={confirmPassword} />
           <ErrorBanner message={submitError} />
 
-          <Button onPress={onSubmit} loading={isLoading} fullWidth>
-            {t('auth.actions.signup')}
-          </Button>
+          <View style={styles.ctaGroup}>
+            <Button onPress={onSubmit} loading={isLoading} fullWidth size="lg" style={styles.primaryCta}>
+              {t('auth.actions.signup')}
+            </Button>
 
-          <Button variant="ghost" onPress={() => router.replace(ROUTES.AUTH_LOGIN)} fullWidth>
-            {t('auth.actions.backToLogin')}
-          </Button>
+            <Button variant="ghost" onPress={() => router.replace(ROUTES.AUTH_LOGIN)} fullWidth>
+              {t('auth.actions.backToLogin')}
+            </Button>
+          </View>
         </AuthCard>
       </View>
     </AppScreen>

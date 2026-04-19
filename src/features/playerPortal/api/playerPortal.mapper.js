@@ -1,6 +1,11 @@
 import { normalizeOverviewData, normalizeProxyCollection, toArray, toNumber, toObject } from '../utils/playerPortal.normalizers';
 import { mapFreezeRows } from '../utils/playerPortal.freeze';
-import { getUniformStatusStepIndex, normalizeUniformStatus, UNIFORM_STATUS_FLOW } from '../utils/playerPortal.uniform';
+import {
+  compareUniformStatusProgress,
+  getUniformStatusStepIndex,
+  normalizeUniformStatus,
+  STATUS_ORDER,
+} from '../utils/playerPortal.uniform';
 
 const cleanString = (value) => {
   if (value == null) return '';
@@ -265,6 +270,7 @@ const normalizePaymentRow = (payment) => {
     label: subType ? `${type} / ${subType}` : type,
     status,
     amount: cleanString(row.amount || amountNumber || '0'),
+    currency: cleanString(row.currency || 'JOD'),
     amountNumber,
     dueDate: cleanString(row.dueDate),
     paidOn: cleanString(row.paidOn),
@@ -516,16 +522,34 @@ export function mapUniformStoreResponse(payload) {
   };
 }
 
-const statusRank = (status) => {
-  return getUniformStatusStepIndex(status) + 1;
-};
+const statusRank = (status) => getUniformStatusStepIndex(status);
 
 const mapUniformOrderRow = (order) => {
   const row = toObject(order);
+  const product = toObject(row.product);
+
+  const productNameEn = cleanString(
+    row.uniform_type_en ||
+      row.product_name_en ||
+      product.name_en ||
+      product.name ||
+      row.uniform_type ||
+      row.product_name ||
+      row.name
+  );
+  const productNameAr = cleanString(
+    row.uniform_type_ar ||
+      row.product_name_ar ||
+      product.name_ar ||
+      product.label_ar
+  );
+
   return {
     id: toNumber(row.id),
     productId: toNumber(row.product_id || row.product?.id),
     variantId: toNumber(row.variant_id || row.variant?.id),
+    productNameEn,
+    productNameAr,
     productName: cleanString(
       row.uniform_type ||
         row.product_name ||
@@ -551,14 +575,19 @@ const groupUniformOrders = (rows) => {
     const current = acc[key] || {
       ref: key,
       items: [],
-      highestStatusRank: 1,
+      highestStatusRank: statusRank(item.status),
       latestStatus: normalizeUniformStatus(item.status),
       latestUpdatedAt: '',
       createdAt: item.createdAt || '',
     };
     current.items.push(item);
     const rank = statusRank(item.status);
-    if (rank >= current.highestStatusRank) {
+    if (
+      rank > current.highestStatusRank ||
+      (rank === current.highestStatusRank &&
+        new Date(item.updatedAt || item.createdAt || 0).getTime() >=
+          new Date(current.latestUpdatedAt || current.createdAt || 0).getTime())
+    ) {
       current.highestStatusRank = rank;
       current.latestStatus = normalizeUniformStatus(item.status);
       current.latestUpdatedAt = item.updatedAt || item.createdAt || current.latestUpdatedAt;
@@ -575,12 +604,14 @@ const groupUniformOrders = (rows) => {
       ...group,
       status:
         cleanString(group.latestStatus) ||
-        UNIFORM_STATUS_FLOW[group.highestStatusRank - 1] ||
+        STATUS_ORDER[group.highestStatusRank] ||
         'pending_payment',
       totalQuantity: group.items.reduce((sum, item) => sum + (toNumber(item.quantity) || 0), 0),
       itemCount: group.items.length,
     }))
     .sort((left, right) => {
+      const statusSort = compareUniformStatusProgress(right.status, left.status);
+      if (statusSort !== 0) return statusSort;
       const rightTime = new Date(right.latestUpdatedAt || right.createdAt || 0).getTime();
       const leftTime = new Date(left.latestUpdatedAt || left.createdAt || 0).getTime();
       return rightTime - leftTime;

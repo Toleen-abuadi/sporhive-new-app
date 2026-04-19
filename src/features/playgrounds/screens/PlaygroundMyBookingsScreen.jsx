@@ -285,12 +285,6 @@ function BookingCard({ booking, locale = 'en', copy, onCancel, onReschedule, onR
           </Button>
         ) : null}
       </View>
-
-      {!canAnyAction && restrictionMessage ? (
-        <Text variant="caption" color={colors.warning}>
-          {restrictionMessage}
-        </Text>
-      ) : null}
     </Surface>
   );
 }

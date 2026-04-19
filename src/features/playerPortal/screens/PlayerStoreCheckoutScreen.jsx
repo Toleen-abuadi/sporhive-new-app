@@ -126,9 +126,11 @@ export function PlayerStoreCheckoutScreen() {
     () => resolveCheckoutErrors(validation.errors, t),
     [t, validation.errors]
   );
+  const hasBlockingValidationError = !validation.valid;
+  const canPlaceOrder = !isSubmitting && cartItems.length > 0 && !hasBlockingValidationError;
 
   const handleSubmitOrder = async () => {
-    if (!validation.valid) {
+    if (hasBlockingValidationError) {
       toast.error(
         validationMessages[0] || t('playerPortal.store.checkout.errors.validationFallback')
       );
@@ -177,7 +179,9 @@ export function PlayerStoreCheckoutScreen() {
         router.replace(buildPlayerStoreOrderDetailsRoute(matchedOrder.ref));
         return;
       }
-      router.replace(ROUTES.PLAYER_STORE_ORDERS);
+      setTimeout(() => {
+      router.push(ROUTES.PLAYER_STORE_ORDERS);
+    }, 500);
     } catch (error) {
       toast.error(
         error?.message || t('playerPortal.store.checkout.errors.submitFallback')
@@ -295,7 +299,7 @@ export function PlayerStoreCheckoutScreen() {
             </View>
           </PortalSectionCard>
 
-          {!validation.valid ? (
+          {hasBlockingValidationError ? (
             <PortalSectionCard
               title={t('playerPortal.store.checkout.errors.validationTitle')}
               subtitle={t('playerPortal.store.checkout.errors.validationSubtitle')}
@@ -314,7 +318,7 @@ export function PlayerStoreCheckoutScreen() {
             fullWidth
             onPress={handleSubmitOrder}
             loading={isSubmitting}
-            disabled={!validation.valid || isSubmitting}
+            disabled={!canPlaceOrder}
           >
             {t('playerPortal.store.actions.placeOrder')}
           </Button>

@@ -19,8 +19,8 @@ import { usePlayerProfileEditor } from '../hooks';
 import { resolvePortalGuardMessage } from '../utils/playerPortal.messages';
 import {
   GOOGLE_MAPS_DEFAULT_URL,
-  MIN_PLAYER_AGE_YEARS,
   getMaxDateOfBirthISO,
+  resolveProfileValidationMessage,
   validateProfileField,
 } from '../utils/playerPortal.profile';
 
@@ -81,33 +81,7 @@ export function PlayerProfileEditScreen() {
     (field) => {
       const code = profileEditor.fieldErrors?.[field];
       if (!code) return '';
-
-      if (field === 'date_of_birth') {
-        if (code === 'future') return t('playerPortal.profile.validation.dateOfBirthFuture');
-        if (code === 'too_young') {
-          return t('playerPortal.profile.validation.dateOfBirthMinAge', {
-            age: MIN_PLAYER_AGE_YEARS,
-          });
-        }
-        return t('playerPortal.profile.validation.dateOfBirth');
-      }
-
-      if (field === 'google_maps_location') {
-        return t('playerPortal.profile.validation.googleMapsLocation');
-      }
-
-      if (field === 'first_eng_name' || field === 'middle_eng_name' || field === 'last_eng_name') {
-        return t('playerPortal.profile.validation.englishName');
-      }
-
-      if (field === 'first_ar_name' || field === 'middle_ar_name' || field === 'last_ar_name') {
-        return t('playerPortal.profile.validation.arabicName');
-      }
-
-      if (field === 'phone1') return t('playerPortal.profile.validation.phone1');
-      if (field === 'weight') return t('playerPortal.profile.validation.weight');
-      if (field === 'height') return t('playerPortal.profile.validation.height');
-      return '';
+      return resolveProfileValidationMessage(field, code, t);
     },
     [profileEditor.fieldErrors, t]
   );
@@ -141,6 +115,13 @@ export function PlayerProfileEditScreen() {
   const submit = async () => {
     const result = await profileEditor.saveProfile();
     if (!result.success) {
+      if (result.error?.code === 'PROFILE_VALIDATION_FAILED' && result.error?.details) {
+        const [firstField] = Object.keys(result.error.details);
+        const code = result.error.details?.[firstField];
+        const localizedMessage = resolveProfileValidationMessage(firstField, code, t);
+        toast.error(localizedMessage || t('playerPortal.profile.errors.submitFallback'));
+        return;
+      }
       toast.error(result.error?.message || t('playerPortal.profile.errors.submitFallback'));
       return;
     }

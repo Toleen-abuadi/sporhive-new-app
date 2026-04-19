@@ -20,6 +20,7 @@ export function PlayerPaymentCard({ item, locale = 'en', onPress, onInvoicePress
   const amount = formatAmountLabel(item.amountNumber || item.amount, {
     locale,
     fallback: '0',
+    currency: item.currency || 'JOD',
   });
   const paymentLabel = formatPaymentTypeLabel(item.type, item.subType, {
     t,

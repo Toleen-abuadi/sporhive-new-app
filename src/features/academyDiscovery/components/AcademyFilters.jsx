@@ -9,6 +9,7 @@ import { useI18n } from '../../../hooks/useI18n';
 import { useTheme } from '../../../hooks/useTheme';
 import { borderRadius, spacing } from '../../../theme/tokens';
 import { getRowDirection } from '../../../utils/rtl';
+import { normalizeNumericInput } from '../../../utils/numbering';
 import {
   ACADEMY_DISCOVERY_SORT,
   normalizeAcademySort,
@@ -159,7 +160,7 @@ export function AcademyFilters({
   };
 
   const updateAge = (field, nextValue) => {
-    const digitsOnly = cleanString(nextValue).replace(/[^\d]/g, '').slice(0, 2);
+    const digitsOnly = normalizeNumericInput(nextValue).replace(/[^\d]/g, '').slice(0, 2);
     onChange?.({
       ...filters,
       age_group: '',

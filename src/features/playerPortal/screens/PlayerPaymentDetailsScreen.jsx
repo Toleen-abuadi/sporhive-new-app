@@ -105,6 +105,7 @@ export function PlayerPaymentDetailsScreen() {
               {formatAmountLabel(payment.amountNumber || payment.amount, {
                 locale,
                 fallback: '0',
+                currency: payment.currency || 'JOD',
               })}
             </Text>
             <DetailRow
@@ -146,6 +147,7 @@ export function PlayerPaymentDetailsScreen() {
                 value={formatAmountLabel(payment.creditsUsed, {
                   locale,
                   fallback: '0',
+                  currency: payment.currency || 'JOD',
                 })}
               />
             ) : null}

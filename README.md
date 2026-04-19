@@ -18,16 +18,27 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 
 ## Environment
 
-Create a `.env` file and set:
+Copy `.env.example` to `.env` and set:
 
 ```bash
 EXPO_PUBLIC_API_BASE_URL=https://your-backend-base-url/api/v1
+EXPO_PUBLIC_GOOGLE_MAPS_API_KEY=YOUR_KEY_HERE
 EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN=pk.your_public_mapbox_token
 ```
 
-Auth and academy endpoints in this app are resolved from `EXPO_PUBLIC_API_BASE_URL`.
+`EXPO_PUBLIC_API_BASE_URL` must be defined for local development and all EAS build profiles (`development`, `preview`, `production` in `eas.json`).
+Use an `https://` endpoint for device/release builds; Android may block clear-text `http://` requests.
+If you need a local backend, use an HTTPS tunnel (recommended) or configure Android network security for clear-text traffic.
+
+Auth and academy/playgrounds endpoints in this app are resolved from `EXPO_PUBLIC_API_BASE_URL`.
 Mapbox-powered screens (playgrounds + academies map views) require
 `EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN`.
+
+To quickly verify runtime config inside the app, log:
+
+```js
+playgroundsApi.getApiBaseUrl();
+```
 
 ## Mapbox Native Build Notes
 

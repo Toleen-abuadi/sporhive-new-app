@@ -18,6 +18,7 @@ import {
 import { useI18n } from '../../../hooks/useI18n';
 import { useTheme } from '../../../hooks/useTheme';
 import { getRowDirection } from '../../../utils/rtl';
+import { resolveNumericLocale, toEnglishDigits } from '../../../utils/numbering';
 import { spacing } from '../../../theme/tokens';
 import {
   PlayerHeaderCard,
@@ -45,12 +46,12 @@ const resolveLastUpdated = (value, locale) => {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return '';
 
-  const intlLocale = locale === 'ar' ? 'ar-JO' : 'en-US';
+  const intlLocale = resolveNumericLocale(locale, locale === 'ar' ? 'ar-JO' : 'en-US');
   try {
-    return parsed.toLocaleTimeString(intlLocale, {
+    return toEnglishDigits(parsed.toLocaleTimeString(intlLocale, {
       hour: '2-digit',
       minute: '2-digit',
-    });
+    }));
   } catch {
     return '';
   }
@@ -329,6 +330,7 @@ export function PlayerHomeScreen() {
                     amount: formatAmountLabel(overview.latestPayment.amount, {
                       locale,
                       fallback: '0',
+                      currency: overview.latestPayment.currency || 'JOD',
                     }),
                   })}
                 </Text>
@@ -358,37 +360,6 @@ export function PlayerHomeScreen() {
           </PortalSectionCard>
         </>
       ) : null}
-
-      <PortalSectionCard
-        title={t('playerPortal.home.sections.calendarTitle')}
-        subtitle={t('playerPortal.home.sections.calendarSubtitle')}
-      >
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.push(ROUTES.BOOKING_HOME)}
-          style={({ pressed }) => [
-            styles.bookingShortcut,
-            {
-              flexDirection: getRowDirection(isRTL),
-              borderColor: colors.border,
-              backgroundColor: colors.surfaceSoft,
-              opacity: pressed ? 0.84 : 1,
-            },
-          ]}
-        >
-          <View style={[styles.shortcutIcon, { backgroundColor: colors.accentOrangeSoft }]}>
-            <CalendarClock size={18} color={colors.accentOrange} strokeWidth={2.3} />
-          </View>
-          <View style={styles.shortcutText}>
-            <Text variant="bodySmall" weight="semibold">
-              {t('playerPortal.home.calendar.cta')}
-            </Text>
-            <Text variant="caption" color={colors.textSecondary}>
-              {t('playerPortal.home.calendar.hint')}
-            </Text>
-          </View>
-        </Pressable>
-      </PortalSectionCard>
     </AppScreen>
   );
 }

@@ -35,6 +35,8 @@ import {
   formatPlaygroundPrice,
   formatPlaygroundTimeRange,
   resolvePaymentType,
+  toIsoDate,
+  toTimeHHMM,
 } from "../utils";
 import {
   getPlaygroundsCopy,
@@ -73,14 +75,14 @@ const todayIso = () => {
   return `${year}-${month}-${day}`;
 };
 
-const buildQuickPlayersOptions = (minPlayers, maxPlayers) => {
-  const min = Math.max(1, Number(minPlayers) || 1);
-  const max = Math.max(min, Number(maxPlayers) || min);
-  const preset = [min, Math.ceil((min + max) / 2), max, 2, 4, 6, 8];
-  const unique = [...new Set(preset)].filter(
-    (value) => value >= min && value <= max,
-  );
-  return unique.slice(0, 4);
+const resolveSlotStartTimestamp = (dateValue, startTimeValue) => {
+  const date = toIsoDate(dateValue);
+  const time = toTimeHHMM(startTimeValue);
+  if (!date || !time) return null;
+
+  const parsed = new Date(`${date}T${time}:00`);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.getTime();
 };
 
 function StepIndicator({ steps = [], activeIndex = 0, locale = "en" }) {
@@ -200,6 +202,7 @@ export function PlaygroundBookingScreen() {
   const [paymentType, setPaymentType] = useState("cash");
   const [cashOnDate, setCashOnDate] = useState(false);
   const [cliqImage, setCliqImage] = useState(null);
+  const [nowTick, setNowTick] = useState(() => Date.now());
 
   const venueQuery = useVenueDetails({
     venueId,
@@ -240,7 +243,32 @@ export function PlaygroundBookingScreen() {
     auto: true,
   });
 
-  const availableSlots = useMemo(() => slotsQuery.items || [], [slotsQuery.items]);
+  const rawSlots = useMemo(() => slotsQuery.items || [], [slotsQuery.items]);
+  const isBookingDateToday = useMemo(
+    () => toIsoDate(bookingDate) === toIsoDate(new Date(nowTick)),
+    [bookingDate, nowTick]
+  );
+
+  useEffect(() => {
+    if (!isBookingDateToday) return undefined;
+
+    const timer = setInterval(() => {
+      setNowTick(Date.now());
+    }, 30000);
+
+    return () => clearInterval(timer);
+  }, [isBookingDateToday]);
+
+  const availableSlots = useMemo(() => {
+    if (!rawSlots.length) return [];
+    if (!isBookingDateToday) return rawSlots;
+
+    return rawSlots.filter((slot) => {
+      const slotStart = resolveSlotStartTimestamp(bookingDate, slot?.startTime);
+      if (slotStart == null) return false;
+      return slotStart > nowTick;
+    });
+  }, [bookingDate, isBookingDateToday, nowTick, rawSlots]);
   const selectedSlotId = String(selectedSlot?.id || "");
   const selectedSlotFromAvailable = useMemo(() => {
     if (!selectedSlotId) return null;
@@ -577,8 +605,6 @@ export function PlaygroundBookingScreen() {
     },
   ];
 
-  const quickPlayers = buildQuickPlayersOptions(minPlayers, maxPlayers);
-
   return (
     <AppScreen safe>
       <View style={styles.root}>
@@ -811,29 +837,6 @@ export function PlaygroundBookingScreen() {
                         strokeWidth={2.4}
                       />
                     </Pressable>
-                  </View>
-
-                  <View
-                    style={[
-                      styles.quickPlayersWrap,
-                      { flexDirection: getRowDirection(isRTL) },
-                    ]}
-                  >
-                    {quickPlayers.map((value) => (
-                      <Button
-                        key={String(value)}
-                        size="sm"
-                        variant={
-                          playersCount === value ? "primary" : "secondary"
-                        }
-                        onPress={() => {
-                          setStepError("");
-                          setPlayersCount(value);
-                        }}
-                      >
-                        {value}
-                      </Button>
-                    ))}
                   </View>
                 </Surface>
               ) : null}

@@ -101,7 +101,11 @@ export function PlayerPaymentsScreen() {
           />
           <PlayerKpiCard
             label={t('playerPortal.payments.summary.pending')}
-            value={formatAmountLabel(paymentSummary.totalPendingAmount, { locale, fallback: '0' })}
+            value={formatAmountLabel(paymentSummary.totalPendingAmount, {
+              locale,
+              fallback: '0',
+              currency: 'JOD',
+            })}
             hint={t('playerPortal.payments.summary.pendingCount', {
               count: formatNumberLabel(paymentSummary.pendingCount, { locale, fallback: '0' }),
             })}
@@ -110,7 +114,11 @@ export function PlayerPaymentsScreen() {
           />
           <PlayerKpiCard
             label={t('playerPortal.payments.summary.paid')}
-            value={formatAmountLabel(paymentSummary.totalPaidAmount, { locale, fallback: '0' })}
+            value={formatAmountLabel(paymentSummary.totalPaidAmount, {
+              locale,
+              fallback: '0',
+              currency: 'JOD',
+            })}
             hint={t('playerPortal.payments.summary.paidCount', {
               count: formatNumberLabel(paymentSummary.paidCount, { locale, fallback: '0' }),
             })}

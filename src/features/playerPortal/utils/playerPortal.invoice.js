@@ -1,14 +1,32 @@
 import { Linking, Platform, Share } from 'react-native';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 
-const BASE64_TABLE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+const BASE64_TABLE =
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+const DEFAULT_FILE_NAME = 'invoice.pdf';
+const DEFAULT_CONTENT_TYPE = 'application/pdf';
 
 const normalizeFileName = (fileName) => {
-  const value = String(fileName || 'invoice.pdf').trim();
-  if (!value) return 'invoice.pdf';
+  const value = String(fileName || DEFAULT_FILE_NAME).trim();
+  if (!value) return DEFAULT_FILE_NAME;
   return value.replace(/[^\w.-]+/g, '_');
 };
 
-const encodeBase64 = (arrayBuffer) => {
+const ensureArrayBuffer = (value) => {
+  if (value instanceof ArrayBuffer) return value;
+
+  if (ArrayBuffer.isView(value)) {
+    const view = value;
+    return view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength);
+  }
+
+  throw new Error('Invoice payload is invalid.');
+};
+
+const encodeBase64 = (input) => {
+  const arrayBuffer = ensureArrayBuffer(input);
   const bytes = new Uint8Array(arrayBuffer);
   let output = '';
 
@@ -29,37 +47,67 @@ const encodeBase64 = (arrayBuffer) => {
 };
 
 const createWebObjectUrl = (arrayBuffer, contentType) => {
-  const blob = new Blob([arrayBuffer], { type: contentType || 'application/pdf' });
+  const blob = new Blob([arrayBuffer], {
+    type: contentType || DEFAULT_CONTENT_TYPE,
+  });
   return URL.createObjectURL(blob);
+};
+
+const ensureDirectoryAvailable = () => {
+  const baseDir =
+    FileSystem.cacheDirectory || FileSystem.documentDirectory || null;
+
+  if (!baseDir) {
+    throw new Error('File storage is unavailable on this device.');
+  }
+
+  return baseDir.endsWith('/') ? baseDir : `${baseDir}/`;
+};
+
+const buildNativeFileUri = (fileName) => {
+  const baseDir = ensureDirectoryAvailable();
+  const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return `${baseDir}${stamp}-${normalizeFileName(fileName)}`;
 };
 
 export async function createInvoiceDocument({
   arrayBuffer,
-  fileName = 'invoice.pdf',
-  contentType = 'application/pdf',
+  fileName = DEFAULT_FILE_NAME,
+  contentType = DEFAULT_CONTENT_TYPE,
 } = {}) {
-  if (!(arrayBuffer instanceof ArrayBuffer)) {
-    throw new Error('Invoice payload is invalid.');
+  const safeBuffer = ensureArrayBuffer(arrayBuffer);
+
+  if (safeBuffer.byteLength === 0) {
+    throw new Error('Invoice file is empty.');
   }
 
   const safeName = normalizeFileName(fileName);
+  const safeType = String(contentType || DEFAULT_CONTENT_TYPE).trim() || DEFAULT_CONTENT_TYPE;
 
   if (Platform.OS === 'web') {
-    const objectUrl = createWebObjectUrl(arrayBuffer, contentType);
+    const objectUrl = createWebObjectUrl(safeBuffer, safeType);
     return {
       uri: objectUrl,
       fileName: safeName,
-      contentType,
+      contentType: safeType,
       isWebObjectUrl: true,
+      isNativeFile: false,
     };
   }
 
-  const base64 = encodeBase64(arrayBuffer);
+  const fileUri = buildNativeFileUri(safeName);
+  const base64 = encodeBase64(safeBuffer);
+
+  await FileSystem.writeAsStringAsync(fileUri, base64, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+
   return {
-    uri: `data:${contentType};base64,${base64}`,
+    uri: fileUri,
     fileName: safeName,
-    contentType,
+    contentType: safeType,
     isWebObjectUrl: false,
+    isNativeFile: true,
   };
 }
 
@@ -81,6 +129,7 @@ export async function openInvoiceDocument(docRef) {
   if (!canOpen) {
     throw new Error('No application can open this invoice file.');
   }
+
   await Linking.openURL(uri);
 }
 
@@ -92,6 +141,16 @@ export async function shareInvoiceDocument(docRef, { message = '' } = {}) {
 
   if (Platform.OS === 'web') {
     await downloadInvoiceDocument(docRef);
+    return;
+  }
+
+  const sharingAvailable = await Sharing.isAvailableAsync();
+  if (sharingAvailable) {
+    await Sharing.shareAsync(uri, {
+      mimeType: docRef?.contentType || DEFAULT_CONTENT_TYPE,
+      dialogTitle: docRef?.fileName || 'Invoice',
+      UTI: 'com.adobe.pdf',
+    });
     return;
   }
 
@@ -119,21 +178,39 @@ export async function downloadInvoiceDocument(docRef) {
 
   const link = document.createElement('a');
   link.href = uri;
-  link.download = normalizeFileName(docRef?.fileName || 'invoice.pdf');
+  link.download = normalizeFileName(docRef?.fileName || DEFAULT_FILE_NAME);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
 }
 
-export function revokeInvoiceDocument(documentRef) {
-  if (Platform.OS !== 'web') return;
-  if (!documentRef?.isWebObjectUrl) return;
-  const uri = String(documentRef?.uri || '').trim();
+export async function deleteInvoiceDocument(docRef) {
+  if (Platform.OS === 'web') return;
+  if (!docRef?.isNativeFile) return;
+
+  const uri = String(docRef?.uri || '').trim();
   if (!uri) return;
 
   try {
-    URL.revokeObjectURL(uri);
+    const info = await FileSystem.getInfoAsync(uri);
+    if (info.exists) {
+      await FileSystem.deleteAsync(uri, { idempotent: true });
+    }
   } catch {
     // no-op
+  }
+}
+
+export function revokeInvoiceDocument(documentRef) {
+  if (Platform.OS === 'web') {
+    if (!documentRef?.isWebObjectUrl) return;
+    const uri = String(documentRef?.uri || '').trim();
+    if (!uri) return;
+
+    try {
+      URL.revokeObjectURL(uri);
+    } catch {
+      // no-op
+    }
   }
 }

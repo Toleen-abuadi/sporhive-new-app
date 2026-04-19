@@ -24,7 +24,7 @@ import { usePlayerUniformOrders } from '../hooks';
 import { usePlayerUniformCart } from '../state';
 import { formatDateLabel, formatNumberLabel, formatOrderStatusLabel } from '../utils/playerPortal.formatters';
 import { resolvePortalGuardMessage } from '../utils/playerPortal.messages';
-import { normalizeUniformStatus } from '../utils/playerPortal.uniform';
+import { getUniformProductName, normalizeUniformStatus } from '../utils/playerPortal.uniform';
 
 const resolveParam = (value) => (Array.isArray(value) ? value[0] : value);
 
@@ -38,7 +38,7 @@ function OrderItemCard({ item, locale, t, colors, isRTL }) {
     <View style={[styles.itemCard, { borderColor: colors.border, backgroundColor: colors.surface }]}>
       <View style={[styles.itemRow, { flexDirection: getRowDirection(isRTL) }]}>
         <Text variant="bodySmall" weight="bold" numberOfLines={1}>
-          {item.productName || t('playerPortal.store.labels.unknownProduct')}
+          {getUniformProductName(item, locale) || t('playerPortal.store.labels.unknownProduct')}
         </Text>
         <Text variant="caption" color={colors.textSecondary}>
           {t('playerPortal.store.checkout.labels.quantity', {
@@ -119,6 +119,7 @@ export function PlayerStoreOrderDetailsScreen() {
             cartCount={cartSummary.totalItems}
             onPressCart={() => router.push(ROUTES.PLAYER_STORE_CART)}
             onPressOrders={() => router.push(ROUTES.PLAYER_STORE_ORDERS)}
+            hideOrders
           />
         }
       />

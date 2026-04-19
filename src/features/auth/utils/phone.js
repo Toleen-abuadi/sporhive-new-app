@@ -1,6 +1,7 @@
 export {
   buildE164Phone,
   createPhonePayload,
+  formatPhoneForInlineText,
   defaultPhonePayload,
   digitsOnly,
   getCountryByDialCode,

@@ -35,6 +35,7 @@ const styles = StyleSheet.create({
   wrapper: {
     borderRadius: borderRadius.xl,
     overflow: 'hidden',
+    paddingTop: spacing.lg,
   },
   card: {
     borderWidth: 1,

@@ -51,6 +51,7 @@ const EN = {
     specialOffer: 'Special offer',
     chooseSlot: 'Choose slot',
     chooseDuration: 'Choose duration',
+    tags: 'Tags',
     payment: 'Payment',
     paymentDetails: 'Payment details',
     paymentCashAvailable: 'Cash payment available',
@@ -93,6 +94,7 @@ const EN = {
     mapMode: 'Map',
     listMode: 'List',
     searchThisArea: 'Search this area',
+    search: 'Search',
     useMyLocation: 'Use my location',
     showResultsInArea: 'Show results in area',
     fitResults: 'Fit results',
@@ -179,6 +181,8 @@ const EN = {
     updateBlocked: 'This booking can no longer be updated.',
     ownerOnly: 'Only the booking owner can modify this booking.',
     before24h: 'You can modify bookings only more than 24 hours before start time.',
+    multipleActiveBookings:
+      'You already have multiple active bookings. Please wait for them to be processed before creating new ones.',
     network: 'Network issue. Please check your connection.',
     server: 'Server issue. Please try again in a moment.',
     config: 'Playgrounds service is not configured yet.',
@@ -188,6 +192,8 @@ const EN = {
   empty: {
     venuesTitle: 'No venues found',
     venuesDescription: 'Try changing filters or date.',
+    filteredVenuesTitle: 'No results found',
+    filteredVenuesDescription: 'Try adjusting filters and search again.',
     bookingsTitle: 'No bookings yet',
     bookingsDescription: 'Your active bookings will appear here.',
   },
@@ -269,6 +275,7 @@ const AR = {
     specialOffer: 'عرض خاص',
     chooseSlot: 'اختر الموعد',
     chooseDuration: 'اختر المدة',
+    tags: 'الوسوم',
     payment: 'الدفع',
     paymentDetails: 'تفاصيل الدفع',
     paymentCashAvailable: 'الدفع النقدي متاح',
@@ -311,6 +318,7 @@ const AR = {
     mapMode: 'خريطة',
     listMode: 'قائمة',
     searchThisArea: 'ابحث في هذه المنطقة',
+    search: 'بحث',
     useMyLocation: 'استخدم موقعي',
     showResultsInArea: 'أظهر نتائج هذه المنطقة',
     fitResults: 'إظهار كل النتائج',
@@ -397,6 +405,8 @@ const AR = {
     updateBlocked: 'لا يمكن تعديل هذا الحجز حالياً.',
     ownerOnly: 'فقط صاحب الحجز يمكنه التعديل.',
     before24h: 'يمكن تعديل الحجز فقط قبل أكثر من 24 ساعة من وقت البداية.',
+    multipleActiveBookings:
+      'لديك عدة حجوزات نشطة بالفعل. يرجى الانتظار حتى تتم معالجتها قبل إنشاء حجز جديد.',
     network: 'مشكلة في الشبكة. يرجى التحقق من اتصالك.',
     server: 'مشكلة في الخادم. يرجى المحاولة بعد قليل.',
     config: 'خدمة الملاعب غير مكتملة الإعداد.',
@@ -406,6 +416,8 @@ const AR = {
   empty: {
     venuesTitle: 'لا توجد ملاعب',
     venuesDescription: 'جرّب تغيير الفلاتر أو التاريخ.',
+    filteredVenuesTitle: 'لا توجد نتائج',
+    filteredVenuesDescription: 'جرّب تعديل الفلاتر والبحث مرة أخرى.',
     bookingsTitle: 'لا توجد حجوزات بعد',
     bookingsDescription: 'ستظهر حجوزاتك النشطة هنا.',
   },
@@ -459,6 +471,91 @@ const interpolate = (message, params = {}) =>
   });
 
 const toCleanText = (value) => String(value || '').trim();
+const hasArabicText = (value) => /[\u0600-\u06FF]/.test(toCleanText(value));
+const includesAny = (value, fragments = []) => fragments.some((fragment) => value.includes(fragment));
+
+const resolveErrorByMessageText = (message, copy) => {
+  const normalized = toCleanText(message).toLowerCase();
+  if (!normalized) return '';
+
+  if (includesAny(normalized, ['network', 'failed to fetch', 'timeout', 'timed out', 'internet'])) {
+    return copy.errors.network;
+  }
+
+  if (includesAny(normalized, ['unauthorized', 'unauthenticated', 'token', 'public user'])) {
+    return copy.errors.userContextMissing;
+  }
+
+  if (includesAny(normalized, ['not found', 'no such'])) {
+    return copy.errors.notFound;
+  }
+
+  if (includesAny(normalized, ['config', 'base url', 'expo_public_api_base_url'])) {
+    return copy.errors.config;
+  }
+
+  if (includesAny(normalized, ['server error', 'internal server', '500'])) {
+    return copy.errors.server;
+  }
+
+  if (includesAny(normalized, ['24 hours', '24h', 'less than 24'])) {
+    return copy.errors.before24h;
+  }
+
+  if (
+    includesAny(normalized, ['multiple active bookings', 'too many pending bookings', 'max pending']) ||
+    (includesAny(normalized, ['active bookings']) &&
+      includesAny(normalized, ['wait', 'processed', 'before creating new']))
+  ) {
+    return copy.errors.multipleActiveBookings;
+  }
+
+  if (
+    includesAny(normalized, ['slot', 'time slot']) &&
+    includesAny(normalized, ['not available', 'unavailable', 'already booked', 'taken'])
+  ) {
+    return copy.labels.slotUnavailable;
+  }
+
+  if (includesAny(normalized, ['duration']) && includesAny(normalized, ['required', 'select'])) {
+    return copy.booking.selectDurationFirst;
+  }
+
+  if (
+    includesAny(normalized, ['players', 'number of players']) &&
+    includesAny(normalized, ['invalid', 'range', 'out of', 'minimum', 'maximum'])
+  ) {
+    return copy.errors.playersOutOfRange;
+  }
+
+  if (includesAny(normalized, ['payment']) && includesAny(normalized, ['required', 'invalid', 'missing'])) {
+    return copy.errors.paymentRequired;
+  }
+
+  if (
+    includesAny(normalized, ['cancel']) &&
+    includesAny(normalized, ['cannot', "can't", 'blocked', 'not allowed'])
+  ) {
+    return copy.errors.cancelBlocked;
+  }
+
+  if (
+    includesAny(normalized, ['update', 'reschedule', 'modify']) &&
+    includesAny(normalized, ['cannot', "can't", 'blocked', 'not allowed'])
+  ) {
+    return copy.errors.updateBlocked;
+  }
+
+  if (includesAny(normalized, ['owner', 'another account', 'belongs to another'])) {
+    return copy.errors.ownerOnly;
+  }
+
+  if (includesAny(normalized, ['required field', 'incomplete'])) {
+    return copy.booking.incomplete;
+  }
+
+  return '';
+};
 
 export function getPlaygroundsCopy(locale = 'en') {
   return locale === 'ar' ? dictionaries.ar : dictionaries.en;
@@ -474,12 +571,16 @@ export function tPlaygrounds(locale = 'en', key, params = {}) {
 
 export function resolvePlaygroundsErrorMessage(error, locale = 'en', fallbackMessage = '') {
   const copy = getPlaygroundsCopy(locale);
-  const code = toCleanText(error?.code).toUpperCase();
+  const isArabic = locale === 'ar';
+  const code = toCleanText(error?.code || error?.details?.code || error?.details?.error_code).toUpperCase();
 
   if (code === 'NETWORK_ERROR') return copy.errors.network;
   if (code === 'SERVER_ERROR') return copy.errors.server;
   if (code === 'CONFIG_ERROR') return copy.errors.config;
   if (code === 'NOT_FOUND') return copy.errors.notFound;
+  if (code === 'MAX_PENDING_BOOKINGS' || code === 'BOOKING_LIMIT_REACHED') {
+    return copy.errors.multipleActiveBookings;
+  }
 
   if (
     code === 'USER_ID_MISSING' ||
@@ -493,10 +594,24 @@ export function resolvePlaygroundsErrorMessage(error, locale = 'en', fallbackMes
 
   if (code === 'USER_ID_MISMATCH') return copy.rating.wrongAccount;
 
-  return (
-    toCleanText(error?.userMessage) ||
-    toCleanText(error?.message) ||
-    toCleanText(fallbackMessage) ||
-    copy.errors.actionFailed
-  );
+  const candidates = [
+    error?.userMessage,
+    error?.details?.message,
+    error?.details?.error,
+    error?.message,
+    fallbackMessage,
+  ].map(toCleanText).filter(Boolean);
+
+  for (const candidate of candidates) {
+    const mapped = resolveErrorByMessageText(candidate, copy);
+    if (mapped) return mapped;
+  }
+
+  const explicitFallback = toCleanText(fallbackMessage);
+  if (isArabic) {
+    if (explicitFallback && hasArabicText(explicitFallback)) return explicitFallback;
+    return copy.errors.actionFailed;
+  }
+
+  return candidates[0] || explicitFallback || copy.errors.actionFailed;
 }

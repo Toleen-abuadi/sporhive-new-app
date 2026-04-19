@@ -69,11 +69,26 @@ const normalizePreMappedAcademy = (academy = {}) => {
     sportTypes: toArraySafe(item.sportTypes || item.sport_types).filter(Boolean),
 
     coverUrl: cleanString(
-      item.coverUrl || item.cover_url || item.cover_image || item.cover
+      item.coverUrl ||
+        item.cover_url ||
+        item.cover_image ||
+        item.cover ||
+        item.heroImage ||
+        item.hero_image ||
+        item.banner ||
+        item.banner_url ||
+        item.main_image ||
+        item.image
     ),
 
     logoUrl: cleanString(
-      item.logoUrl || item.logo_url || item.logo || item.logo_image
+      item.logoUrl ||
+        item.logo_url ||
+        item.logo ||
+        item.logo_image ||
+        item.avatar ||
+        item.avatar_url ||
+        item.image_logo
     ),
 
     city: cleanString(item.city),

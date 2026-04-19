@@ -21,6 +21,7 @@ import {
 } from '../utils/playgrounds.normalizers';
 
 const DEFAULT_TIMEOUT_MS = 20000;
+const DEFAULT_API_BASE_URL = 'https://backend.sporhive.com/api/v1';
 
 const normalizePath = (value) => {
   const normalized = cleanString(value);
@@ -28,14 +29,35 @@ const normalizePath = (value) => {
   return normalized.startsWith('/') ? normalized : `/${normalized}`;
 };
 
+const isHttpUrl = (value) => /^https?:\/\//i.test(cleanString(value));
+const isHttpsUrl = (value) => /^https:\/\//i.test(cleanString(value));
+
 const resolveApiBaseUrl = () => {
-  const direct = cleanString(process.env.EXPO_PUBLIC_API_BASE_URL);
-  if (direct) return direct.replace(/\/+$/, '');
+  const configuredBase = cleanString(
+    process.env.EXPO_PUBLIC_API_BASE_URL || process.env.EXPO_PUBLIC_API_URL
+  ).replace(/\/+$/, '');
 
-  const fallback = cleanString(process.env.EXPO_PUBLIC_API_URL);
-  if (fallback) return fallback.replace(/\/+$/, '');
+  if (!configuredBase) {
+    console.warn(
+      `[playgroundsApi] Missing EXPO_PUBLIC_API_BASE_URL. Falling back to ${DEFAULT_API_BASE_URL}.`
+    );
+    return DEFAULT_API_BASE_URL;
+  }
 
-  return '';
+  if (!isHttpUrl(configuredBase)) {
+    console.error(
+      `[playgroundsApi] Invalid EXPO_PUBLIC_API_BASE_URL "${configuredBase}". Expected a full http(s) URL.`
+    );
+    return '';
+  }
+
+  if (!isHttpsUrl(configuredBase)) {
+    console.warn(
+      `[playgroundsApi] EXPO_PUBLIC_API_BASE_URL is using http (${configuredBase}). Android release builds may block clear-text requests.`
+    );
+  }
+
+  return configuredBase;
 };
 
 const API_BASE_URL = resolveApiBaseUrl();
@@ -181,7 +203,8 @@ async function request(endpoint, {
       success: false,
       error: createPlaygroundsError({
         code: 'CONFIG_ERROR',
-        message: 'EXPO_PUBLIC_API_BASE_URL is not configured.',
+        message:
+          'EXPO_PUBLIC_API_BASE_URL is missing or invalid. Set a full http(s) URL in .env or eas.json.',
       }),
     };
   }
@@ -343,15 +366,17 @@ export const playgroundsApi = {
   getVenueImageUrl(imageIdOrUrl) {
     const raw = cleanString(imageIdOrUrl);
     if (!raw) return '';
-
+    
     if (raw.startsWith('http') || raw.startsWith('data:image')) {
       return raw;
     }
-
+    console.warn(`[playgroundsApi] Received unrecognized image identifier "${raw}". Attempting to resolve as image ID, but consider updating the backend to return full URLs.`);
     if (raw.startsWith('/')) {
+      if (!API_BASE_URL) return '';
       return `${API_BASE_URL}${raw}`;
     }
 
+    if (!API_BASE_URL) return '';
     return `${API_BASE_URL}${PLAYGROUNDS_ENDPOINTS.PUBLIC_VENUE_IMAGE(raw)}`;
   },
 

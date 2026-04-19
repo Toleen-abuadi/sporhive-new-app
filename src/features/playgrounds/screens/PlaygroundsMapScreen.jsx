@@ -89,6 +89,18 @@ const getActiveFilterLabels = ({
     labels.push(state.selectedLocation);
   }
 
+  if (state.hasSpecialOffer) {
+    labels.push(copy.labels.specialOffer);
+  }
+
+  if (state.selectedDurationId) {
+    labels.push(`${copy.labels.chooseDuration}: ${state.selectedDurationId}`);
+  }
+
+  if (Array.isArray(state.selectedTags) && state.selectedTags.length) {
+    state.selectedTags.forEach((tag) => labels.push(String(tag)));
+  }
+
   return labels;
 };
 
@@ -116,13 +128,19 @@ export function PlaygroundsMapScreen() {
         players: params?.players,
         sortBy: params?.sortBy,
         location: params?.location,
+        hasSpecialOffer: params?.hasSpecialOffer,
+        durationId: params?.durationId,
+        tags: params?.tags,
       }),
     [
       params?.activityId,
       params?.date,
+      params?.durationId,
+      params?.hasSpecialOffer,
       params?.location,
       params?.players,
       params?.sortBy,
+      params?.tags,
       params?.tab,
     ]
   );

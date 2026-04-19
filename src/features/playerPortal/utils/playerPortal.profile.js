@@ -320,3 +320,36 @@ export const validateProfileDraft = (draft) => {
     errors,
   };
 };
+
+export const resolveProfileValidationMessage = (field, code, t) => {
+  const translate = typeof t === 'function' ? t : () => '';
+  if (!field || !code) return '';
+
+  if (field === 'date_of_birth') {
+    if (code === 'future') return translate('playerPortal.profile.validation.dateOfBirthFuture');
+    if (code === 'too_young') {
+      return translate('playerPortal.profile.validation.dateOfBirthMinAge', {
+        age: MIN_PLAYER_AGE_YEARS,
+      });
+    }
+    return translate('playerPortal.profile.validation.dateOfBirth');
+  }
+
+  if (field === 'google_maps_location') {
+    return translate('playerPortal.profile.validation.googleMapsLocation');
+  }
+
+  if (ENGLISH_NAME_FIELDS.has(field)) {
+    return translate('playerPortal.profile.validation.englishName');
+  }
+
+  if (ARABIC_NAME_FIELDS.has(field)) {
+    return translate('playerPortal.profile.validation.arabicName');
+  }
+
+  if (field === 'phone1') return translate('playerPortal.profile.validation.phone1');
+  if (field === 'weight') return translate('playerPortal.profile.validation.weight');
+  if (field === 'height') return translate('playerPortal.profile.validation.height');
+
+  return '';
+};

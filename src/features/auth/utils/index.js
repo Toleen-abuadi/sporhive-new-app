@@ -2,6 +2,7 @@ export {
   AUTH_OTP_LENGTH,
   AUTH_PASSWORD_MIN_LENGTH,
   hasValidationErrors,
+  normalizeAlphabeticInput,
   normalizeOtpValue,
   trimText,
   validateOtp,
@@ -13,3 +14,4 @@ export {
 } from './authValidation';
 export { resolveAuthErrorMessage } from './authErrorMessage';
 export { sanitizeRedirectTo } from './redirect';
+export { formatPhoneForInlineText } from './phone';

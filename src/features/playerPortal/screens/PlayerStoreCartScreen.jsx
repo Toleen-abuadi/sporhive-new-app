@@ -11,6 +11,7 @@ import { ROUTES } from '../../../constants/routes';
 import { useI18n } from '../../../hooks/useI18n';
 import { useTheme } from '../../../hooks/useTheme';
 import { getRowDirection } from '../../../utils/rtl';
+import { normalizeNumericInput } from '../../../utils/numbering';
 import { borderRadius, spacing } from '../../../theme/tokens';
 import {
   PortalEmptyState,
@@ -265,7 +266,7 @@ export function PlayerStoreCartScreen() {
                   onChangeText={(text) =>
                     cartActions.setPrinting({
                       ...cartState.printing,
-                      playerNumber: text.replace(/[^\d]/g, '').slice(0, 6),
+                      playerNumber: normalizeNumericInput(text).replace(/[^\d]/g, '').slice(0, 6),
                     })
                   }
                   placeholder={t('playerPortal.store.labels.playerNumberPlaceholder')}

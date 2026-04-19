@@ -1,6 +1,8 @@
+import { toEnglishDigits } from '../../../utils/numbering';
+
 const cleanString = (value) => {
   if (value == null) return '';
-  return String(value).trim();
+  return toEnglishDigits(String(value).trim());
 };
 
 export const toObject = (value) => {
@@ -12,7 +14,7 @@ export const toArray = (value) => (Array.isArray(value) ? value : []);
 
 export const toNumber = (value) => {
   if (value == null || value === '') return null;
-  const numeric = Number(value);
+  const numeric = Number(toEnglishDigits(value));
   return Number.isFinite(numeric) ? numeric : null;
 };
 
@@ -185,6 +187,7 @@ const normalizePaymentInfo = (source) => {
     subType: pickFirstString(data.sub_type),
     status: normalizePaymentStatus(data.status),
     amount: pickFirstString(data.amount, '0'),
+    currency: pickFirstString(data.currency, data.currency_code, 'JOD'),
     dueDate: normalizeIsoDate(data.due_date),
     paidOn: normalizeIsoDate(data.paid_on),
     paymentMethod: pickFirstString(data.payment_method),

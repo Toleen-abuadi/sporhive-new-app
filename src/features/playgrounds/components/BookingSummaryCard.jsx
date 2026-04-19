@@ -33,7 +33,7 @@ function SummaryRow({
   const { isRTL } = useI18n();
   const iconNode = resolveIconNode(icon, {
     color: colors.textMuted,
-    size: variant === 'review' ? 22 : 18,
+    size: variant === 'review' ? 18 : 18,
   });
 
   if (variant === 'review') {
@@ -46,14 +46,14 @@ function SummaryRow({
           ]}
         >
           {iconNode ? <View style={styles.iconWrap}>{iconNode}</View> : null}
-          <Text variant="h3" weight="medium" color={colors.textPrimary}>
+          <Text variant="bodySmall" weight="regular" color={colors.textPrimary}>
             {label}
           </Text>
         </View>
 
         <Text
-          variant="h3"
-          weight="semibold"
+          variant="body"
+          weight="regular"
           color={colors.textPrimary}
           style={[forceLTR ? styles.ltrValue : null, styles.reviewValue, valueStyle]}
           numberOfLines={2}
@@ -101,8 +101,8 @@ export function BookingSummaryCard({
     >
       {title ? (
         <Text
-          variant={isReviewVariant ? 'h1' : 'body'}
-          weight="bold"
+          variant={isReviewVariant ? 'body' : 'body'}
+          weight={isReviewVariant ? 'semibold' : 'bold'}
           style={[styles.title, isReviewVariant ? styles.reviewTitle : null]}
         >
           {title}
@@ -130,7 +130,7 @@ export function BookingSummaryCard({
 
 const styles = StyleSheet.create({
   card: {
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   reviewCard: {
     borderRadius: borderRadius.xl,
@@ -140,10 +140,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   reviewTitle: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.xs,
   },
   rows: {
-    gap: spacing.sm,
+    gap: spacing.xxs,
   },
   row: {
     justifyContent: 'space-between',

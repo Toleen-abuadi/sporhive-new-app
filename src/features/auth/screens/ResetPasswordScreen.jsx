@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -26,6 +26,8 @@ import {
 } from '../components';
 import {
   hasValidationErrors,
+  formatPhoneForInlineText,
+  normalizeAlphabeticInput,
   normalizeOtpValue,
   resolveAuthErrorMessage,
   validateOtp,
@@ -40,6 +42,7 @@ const STEPS = Object.freeze({
 });
 
 const RESEND_SECONDS = 45;
+const OTP_COOLDOWN_STORE = new Map();
 const getParamValue = (value) => (Array.isArray(value) ? value[0] : value);
 const normalizeResetPhone = (value) => {
   const raw = String(value || '').trim().replace(/\s+/g, '');
@@ -54,7 +57,32 @@ const maskPhone = (value) => {
   const visibleHead = clean.slice(0, 4);
   const visibleTail = clean.slice(-2);
   const maskedLength = Math.max(clean.length - visibleHead.length - visibleTail.length, 0);
-  return `${visibleHead}${'*'.repeat(maskedLength)}${visibleTail}`;
+  return formatPhoneForInlineText(`${visibleHead}${'*'.repeat(maskedLength)}${visibleTail}`) || clean;
+};
+
+const toSafeSeconds = (value) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return 0;
+  return Math.ceil(numeric);
+};
+
+const extractRetryAfterSeconds = (source) => {
+  if (!source || typeof source !== 'object') return 0;
+  const candidates = [
+    source.retry_after,
+    source.retryAfter,
+    source.resend_in,
+    source.resendIn,
+    source.cooldown_seconds,
+    source.cooldownSeconds,
+  ];
+
+  for (const candidate of candidates) {
+    const seconds = toSafeSeconds(candidate);
+    if (seconds > 0) return seconds;
+  }
+
+  return 0;
 };
 
 const styles = StyleSheet.create({
@@ -181,10 +209,12 @@ export function ResetPasswordScreen() {
   const [showGenerated, setShowGenerated] = useState(false);
   const [publicResetCompleted, setPublicResetCompleted] = useState(false);
   const [resetContext, setResetContext] = useState(null);
+  const [otpFocusKey, setOtpFocusKey] = useState(0);
 
   const [academies, setAcademies] = useState([]);
   const [academiesLoading, setAcademiesLoading] = useState(false);
   const [academyError, setAcademyError] = useState('');
+  const requestInFlightRef = useRef(false);
 
   const modeOptions = [
     { value: AUTH_LOGIN_MODES.PUBLIC, label: t('auth.mode.public') },
@@ -236,12 +266,52 @@ export function ResetPasswordScreen() {
     };
   }, [academy, fetchAcademies, lastSelectedAcademyId, mode, t]);
 
+  const buildContextKey = useCallback(
+    (context) =>
+      [
+        String(context?.mode || '').toLowerCase(),
+        String(context?.phone || '').trim(),
+        String(context?.academyId || ''),
+        String(context?.username || '').trim().toLowerCase(),
+      ].join('|'),
+    []
+  );
+
+  const getContextCooldownSeconds = useCallback(
+    (context) => {
+      const key = buildContextKey(context);
+      if (!key || key === '|||') return 0;
+      const until = Number(OTP_COOLDOWN_STORE.get(key)) || 0;
+      if (!until) return 0;
+
+      const remainingMs = until - Date.now();
+      if (remainingMs <= 0) {
+        OTP_COOLDOWN_STORE.delete(key);
+        return 0;
+      }
+      return Math.ceil(remainingMs / 1000);
+    },
+    [buildContextKey]
+  );
+
+  const applyContextCooldown = useCallback(
+    (context, seconds) => {
+      const safeSeconds = Math.max(1, toSafeSeconds(seconds));
+      const key = buildContextKey(context);
+      if (!key || key === '|||') return safeSeconds;
+      OTP_COOLDOWN_STORE.set(key, Date.now() + safeSeconds * 1000);
+      return safeSeconds;
+    },
+    [buildContextKey]
+  );
+
   const clearErrors = () => {
     setFieldErrors({});
     setSubmitError('');
   };
 
   const onModeChange = (nextMode) => {
+    requestInFlightRef.current = false;
     setMode(nextMode);
     setStep(STEPS.IDENTIFY);
     setPhone(defaultPhonePayload());
@@ -258,7 +328,7 @@ export function ResetPasswordScreen() {
     clearErrors();
   };
 
-  const startResend = () => setResendIn(RESEND_SECONDS);
+  const startResend = (seconds = RESEND_SECONDS) => setResendIn(Math.max(0, toSafeSeconds(seconds)));
 
   const buildResetContext = () => ({
     mode,
@@ -268,23 +338,44 @@ export function ResetPasswordScreen() {
   });
 
   const requestOtpWithContext = async (context) => {
-    setLoading(true);
-    const result =
-      context.mode === AUTH_LOGIN_MODES.PUBLIC
-        ? await passwordResetRequest({
-            user_kind: AUTH_LOGIN_MODES.PUBLIC,
-            phone: context.phone,
-          })
-        : await passwordResetRequest({
-            user_kind: AUTH_LOGIN_MODES.PLAYER,
-            academy_id: context.academyId,
-            username: context.username,
-            phone_number: context.phone,
-          });
-    setLoading(false);
+    if (requestInFlightRef.current) {
+      return { success: false };
+    }
 
-    if (!result.success) {
-      setSubmitError(resolveAuthErrorMessage(result.error, t, 'auth.errors.resetRequestFailed'));
+    requestInFlightRef.current = true;
+    setLoading(true);
+    let result;
+    try {
+      result =
+        context.mode === AUTH_LOGIN_MODES.PUBLIC
+          ? await passwordResetRequest({
+              user_kind: AUTH_LOGIN_MODES.PUBLIC,
+              phone: context.phone,
+            })
+          : await passwordResetRequest({
+              user_kind: AUTH_LOGIN_MODES.PLAYER,
+              academy_id: context.academyId,
+              username: context.username,
+              phone_number: context.phone,
+            });
+    } finally {
+      requestInFlightRef.current = false;
+      setLoading(false);
+    }
+
+    if (!result?.success) {
+      const retryAfter =
+        extractRetryAfterSeconds(result?.error?.details) ||
+        extractRetryAfterSeconds(result?.error);
+      if (retryAfter > 0) {
+        const remaining = applyContextCooldown(context, retryAfter);
+        setResetContext(context);
+        setStep(STEPS.OTP);
+        setOtp('');
+        startResend(remaining);
+        setOtpFocusKey((prev) => prev + 1);
+      }
+      setSubmitError(resolveAuthErrorMessage(result?.error, t, 'auth.errors.resetRequestFailed'));
       return { success: false };
     }
 
@@ -296,7 +387,9 @@ export function ResetPasswordScreen() {
     setOtp('');
     setStep(STEPS.OTP);
     setPublicResetCompleted(false);
-    startResend();
+    const retryAfter = extractRetryAfterSeconds(result.data) || RESEND_SECONDS;
+    startResend(applyContextCooldown(context, retryAfter));
+    setOtpFocusKey((prev) => prev + 1);
     toast.success(t('auth.messages.otpSent'));
     return { success: true };
   };
@@ -317,6 +410,16 @@ export function ResetPasswordScreen() {
     }
 
     const context = buildResetContext();
+    const localCooldown = getContextCooldownSeconds(context);
+    if (localCooldown > 0) {
+      setResetContext(context);
+      setOtp('');
+      setStep(STEPS.OTP);
+      startResend(localCooldown);
+      setOtpFocusKey((prev) => prev + 1);
+      return;
+    }
+
     await requestOtpWithContext(context);
   };
 
@@ -427,7 +530,7 @@ export function ResetPasswordScreen() {
   };
 
   const onResend = async () => {
-    if (resendIn > 0 || loading) return;
+    if (resendIn > 0 || loading || requestInFlightRef.current) return;
     clearErrors();
 
     if (!resetContext || resetContext.mode !== mode) {
@@ -436,8 +539,22 @@ export function ResetPasswordScreen() {
       return;
     }
 
+    const localCooldown = getContextCooldownSeconds(resetContext);
+    if (localCooldown > 0) {
+      startResend(localCooldown);
+      return;
+    }
+
     await requestOtpWithContext(resetContext);
   };
+
+  useEffect(() => {
+    if (step !== STEPS.OTP || !resetContext) return;
+    const remaining = getContextCooldownSeconds(resetContext);
+    if (remaining > resendIn) {
+      setResendIn(remaining);
+    }
+  }, [getContextCooldownSeconds, resendIn, resetContext, step]);
 
   return (
     <AppScreen scroll keyboardAware contentContainerStyle={styles.container}>
@@ -485,7 +602,7 @@ export function ResetPasswordScreen() {
                   <AuthTextField
                     label={t('auth.fields.username')}
                     value={username}
-                    onChangeText={setUsername}
+                    onChangeText={(value) => setUsername(normalizeAlphabeticInput(value))}
                     placeholder={t('auth.placeholders.username')}
                     leftIcon="user"
                     error={fieldErrors.username}
@@ -522,7 +639,14 @@ export function ResetPasswordScreen() {
                 {t('auth.reset.otpSentTo', { phone: maskPhone(resetContext?.phone || phone?.e164) })}
               </Text>
 
-              <OTPInput value={otp} onChange={setOtp} error={fieldErrors.otp} />
+              <OTPInput
+                value={otp}
+                onChange={setOtp}
+                error={fieldErrors.otp}
+                editable={!loading}
+                autoFocus
+                focusKey={otpFocusKey}
+              />
               <ErrorBanner message={submitError} />
 
               <View style={[styles.resendRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>

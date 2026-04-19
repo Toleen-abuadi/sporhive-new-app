@@ -1,8 +1,9 @@
 import { normalizeJoinStatus } from './academyDiscovery.statuses';
 import { cleanString, toArray, toNumber } from './academyDiscovery.normalizers';
+import { resolveNumericLocale, toEnglishDigits } from '../../../utils/numbering';
 
 const resolveLocaleTag = (locale) =>
-  String(locale || '').toLowerCase().startsWith('ar') ? 'ar-JO' : 'en-US';
+  resolveNumericLocale(locale, 'en-US');
 
 export const getLocalizedText = ({
   locale = 'en',
@@ -27,11 +28,11 @@ export const formatAcademyFee = (
 
   let formatted = '';
   try {
-    formatted = new Intl.NumberFormat(resolveLocaleTag(locale), {
+    formatted = toEnglishDigits(new Intl.NumberFormat(resolveLocaleTag(locale), {
       style: 'currency',
       currency,
       maximumFractionDigits: 2,
-    }).format(numeric);
+    }).format(numeric));
   } catch {
     formatted = `${numeric.toFixed(2)} ${currency}`;
   }
@@ -46,13 +47,13 @@ export const formatAcademyDistance = (distanceKm, locale = 'en') => {
   if (numeric == null) return '';
 
   if (numeric < 1) {
-    const meters = Math.max(1, Math.round(numeric * 1000));
+    const meters = toEnglishDigits(Math.max(1, Math.round(numeric * 1000)));
     return String(locale || '').toLowerCase().startsWith('ar')
       ? `${meters} متر`
       : `${meters} m`;
   }
 
-  const rounded = numeric.toFixed(numeric < 10 ? 1 : 0);
+  const rounded = toEnglishDigits(numeric.toFixed(numeric < 10 ? 1 : 0));
   return String(locale || '').toLowerCase().startsWith('ar')
     ? `${rounded} كم`
     : `${rounded} km`;

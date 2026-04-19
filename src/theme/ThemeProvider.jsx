@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { useColorScheme } from 'react-native';
+import { Platform, useColorScheme } from 'react-native';
+import * as SystemUI from 'expo-system-ui';
 import { getThemeColors } from './colors';
 import { borderRadius, layout, motion, shadow, spacing, typography } from './tokens';
 import { getThemePreference, setThemePreference } from '../services/storage';
@@ -67,6 +68,24 @@ export function ThemeProvider({ children }) {
 
   const resolvedMode = resolveTheme(themeMode, systemColorScheme);
   const colors = useMemo(() => getThemeColors(resolvedMode), [resolvedMode]);
+
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const root = document.documentElement;
+      const body = document.body;
+
+      root.setAttribute('data-theme', resolvedMode);
+      if (body) {
+        body.setAttribute('data-theme', resolvedMode);
+      }
+    }
+
+    if (Platform.OS !== 'web') {
+      SystemUI.setBackgroundColorAsync(colors.background).catch(() => {
+        // Ignore runtime platform differences (for example, unsupported envs).
+      });
+    }
+  }, [colors.background, resolvedMode]);
 
   const toggleTheme = useCallback(() => {
     setThemeMode(resolvedMode === 'dark' ? 'light' : 'dark');

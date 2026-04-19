@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Text } from '../../../components/ui/Text';
+import { KeyboardAwareModalSheet } from '../../../components/ui/KeyboardAwareModalSheet';
 import { useI18n } from '../../../hooks/useI18n';
 import { useTheme } from '../../../hooks/useTheme';
 import { withAlpha } from '../../../theme/colors';
@@ -72,16 +73,17 @@ export function AcademyPicker({
         <Feather name="chevron-down" size={18} color={colors.textMuted} />
       </Pressable>
 
-      <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
+      <Modal
+        visible={open}
+        transparent
+        animationType="slide"
+        statusBarTranslucent
+        onRequestClose={() => setOpen(false)}
+      >
         <View style={[styles.backdrop, { backgroundColor: colors.overlay || withAlpha(colors.black, 0.45) }]}>
-          <View
-            style={[
-              styles.sheet,
-              {
-                backgroundColor: colors.background,
-                borderColor: colors.border,
-              },
-            ]}
+          <KeyboardAwareModalSheet
+            backgroundColor={colors.background}
+            borderColor={colors.border}
           >
             <View style={[styles.sheetHeader, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
               <Text variant="h3" weight="bold">
@@ -156,7 +158,7 @@ export function AcademyPicker({
               <FlatList
                 data={filteredAcademies}
                 keyExtractor={(item) => String(item.id)}
-                keyboardShouldPersistTaps="handled"
+                keyboardShouldPersistTaps="always"
                 contentContainerStyle={styles.list}
                 ListEmptyComponent={
                   <View style={styles.loading}>
@@ -197,7 +199,7 @@ export function AcademyPicker({
                 }}
               />
             )}
-          </View>
+          </KeyboardAwareModalSheet>
         </View>
       </Modal>
     </View>
@@ -223,15 +225,6 @@ const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
     justifyContent: 'flex-end',
-  },
-  sheet: {
-    maxHeight: '84%',
-    borderTopLeftRadius: borderRadius.xl,
-    borderTopRightRadius: borderRadius.xl,
-    borderWidth: 1,
-    borderBottomWidth: 0,
-    padding: spacing.lg,
-    gap: spacing.sm,
   },
   sheetHeader: {
     alignItems: 'center',

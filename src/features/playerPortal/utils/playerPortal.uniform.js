@@ -9,11 +9,13 @@ const cleanString = (value) => {
 export const UNIFORM_STATUS_FLOW = Object.freeze([
   'pending_payment',
   'paid',
-  'printed',
   'received',
+  'printed',
   'received_and_player_notified',
   'collected',
 ]);
+
+export const STATUS_ORDER = UNIFORM_STATUS_FLOW;
 
 const ORDER_STATUS_TO_FLOW = Object.freeze({
   pending: 'pending_payment',
@@ -27,9 +29,18 @@ const ORDER_STATUS_TO_FLOW = Object.freeze({
   paid: 'paid',
   active: 'paid',
   valid: 'paid',
-  printed: 'printed',
+  received_by_printing_place: 'received',
+  received_by_printing: 'received',
+  printing_place_received: 'received',
+  printshop_received: 'received',
   received: 'received',
+  printed: 'printed',
+  print_completed: 'printed',
+  print_complete: 'printed',
+  completed_printing: 'printed',
   ready: 'received_and_player_notified',
+  notified: 'received_and_player_notified',
+  player_notified: 'received_and_player_notified',
   received_and_player_notified: 'received_and_player_notified',
   completed: 'collected',
   collected: 'collected',
@@ -43,9 +54,15 @@ export const normalizeUniformStatus = (status) => {
 
 export const getUniformStatusStepIndex = (status) => {
   const normalized = normalizeUniformStatus(status);
-  const index = UNIFORM_STATUS_FLOW.findIndex((item) => item === normalized);
+  const index = STATUS_ORDER.findIndex((item) => item === normalized);
   return index < 0 ? 0 : index;
 };
+
+export const compareUniformStatusProgress = (leftStatus, rightStatus) =>
+  getUniformStatusStepIndex(leftStatus) - getUniformStatusStepIndex(rightStatus);
+
+export const isUniformStatusReached = (currentStatus, targetStatus) =>
+  compareUniformStatusProgress(currentStatus, targetStatus) >= 0;
 
 export const getUniformSizeLabel = (size, t) => {
   const value = cleanString(size);

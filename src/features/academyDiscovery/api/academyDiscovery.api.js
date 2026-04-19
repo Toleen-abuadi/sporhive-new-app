@@ -16,6 +16,7 @@ import {
 } from '../utils/academyDiscovery.normalizers';
 
 const DEFAULT_TIMEOUT_MS = 20000;
+const DEFAULT_API_BASE_URL = 'https://backend.sporhive.com/api/v1';
 
 const normalizePath = (value) => {
   const normalized = cleanString(value);
@@ -23,14 +24,47 @@ const normalizePath = (value) => {
   return normalized.startsWith('/') ? normalized : `/${normalized}`;
 };
 
+const isHttpUrl = (value) => /^https?:\/\//i.test(cleanString(value));
+const isHttpsUrl = (value) => /^https:\/\//i.test(cleanString(value));
+
+const isLikelyBase64Image = (value) => {
+  const raw = cleanString(value);
+  if (!raw || raw.length < 80) return false;
+  return /^[A-Za-z0-9+/=\r\n]+$/.test(raw);
+};
+
+const toDataUrl = (base64, mime = 'image/jpeg') => {
+  const encoded = cleanString(base64).replace(/\s+/g, '');
+  if (!encoded) return '';
+  return `data:${cleanString(mime) || 'image/jpeg'};base64,${encoded}`;
+};
+
 const resolveApiBaseUrl = () => {
-  const direct = cleanString(process.env.EXPO_PUBLIC_API_BASE_URL);
-  if (direct) return direct.replace(/\/+$/, '');
+  const configuredBase = cleanString(
+    process.env.EXPO_PUBLIC_API_BASE_URL || process.env.EXPO_PUBLIC_API_URL
+  ).replace(/\/+$/, '');
 
-  const fallback = cleanString(process.env.EXPO_PUBLIC_API_URL);
-  if (fallback) return fallback.replace(/\/+$/, '');
+  if (!configuredBase) {
+    console.warn(
+      `[academyDiscoveryApi] Missing EXPO_PUBLIC_API_BASE_URL. Falling back to ${DEFAULT_API_BASE_URL}.`
+    );
+    return DEFAULT_API_BASE_URL;
+  }
 
-  return '';
+  if (!isHttpUrl(configuredBase)) {
+    console.error(
+      `[academyDiscoveryApi] Invalid EXPO_PUBLIC_API_BASE_URL "${configuredBase}". Expected a full http(s) URL.`
+    );
+    return '';
+  }
+
+  if (!isHttpsUrl(configuredBase)) {
+    console.warn(
+      `[academyDiscoveryApi] EXPO_PUBLIC_API_BASE_URL is using http (${configuredBase}). Android release builds may block clear-text requests.`
+    );
+  }
+
+  return configuredBase;
 };
 
 const resolveApiOrigin = (apiBaseUrl = '') => {
@@ -187,7 +221,8 @@ async function request(
       success: false,
       error: createAcademyDiscoveryError({
         code: 'CONFIG_ERROR',
-        message: 'EXPO_PUBLIC_API_BASE_URL is not configured.',
+        message:
+          'EXPO_PUBLIC_API_BASE_URL is missing or invalid. Set a full http(s) URL in .env or eas.json.',
       }),
     };
   }
@@ -268,17 +303,18 @@ const ensureMappedResult = (result, mapper, mapperOptions = {}) => {
 const resolveImageUrl = (path) => {
   const raw = cleanString(path);
   if (!raw) return '';
-  if (raw.startsWith('http') || raw.startsWith('data:image')) return raw;
+  if (raw.startsWith('http') || raw.startsWith('data:')) return raw;
+  if (isLikelyBase64Image(raw)) return toDataUrl(raw);
   if (raw.startsWith('/api/')) {
-    return `${API_ORIGIN}${raw}`;
+    return API_ORIGIN ? `${API_ORIGIN}${raw}` : '';
   }
   if (raw.startsWith('/public/')) {
-    return `${API_BASE_URL}${raw}`;
+    return API_BASE_URL ? `${API_BASE_URL}${raw}` : '';
   }
   if (raw.startsWith('/')) {
-    return `${API_ORIGIN || API_BASE_URL}${raw}`;
+    return API_ORIGIN || API_BASE_URL ? `${API_ORIGIN || API_BASE_URL}${raw}` : '';
   }
-  return `${API_BASE_URL}/${raw.replace(/^\/+/, '')}`;
+  return API_BASE_URL ? `${API_BASE_URL}/${raw.replace(/^\/+/, '')}` : '';
 };
 
 export const academyDiscoveryApi = {

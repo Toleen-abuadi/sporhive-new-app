@@ -7,8 +7,9 @@ import { getRowDirection } from '../../../utils/rtl';
 import { formatOrderStatusLabel } from '../utils/playerPortal.formatters';
 import {
   getUniformStatusStepIndex,
+  isUniformStatusReached,
   normalizeUniformStatus,
-  UNIFORM_STATUS_FLOW,
+  STATUS_ORDER,
 } from '../utils/playerPortal.uniform';
 
 export function UniformStatusTimeline({ status, t, style }) {
@@ -20,8 +21,8 @@ export function UniformStatusTimeline({ status, t, style }) {
 
   return (
     <View style={[styles.container, style]}>
-      {UNIFORM_STATUS_FLOW.map((step, index) => {
-        const done = index <= activeIndex;
+      {STATUS_ORDER.map((step, index) => {
+        const done = isUniformStatusReached(normalized, step);
         const isCurrent = step === normalized;
         return (
           <View key={step} style={styles.stepRow}>
@@ -37,7 +38,7 @@ export function UniformStatusTimeline({ status, t, style }) {
                   },
                 ]}
               />
-              {index < UNIFORM_STATUS_FLOW.length - 1 ? (
+              {index < STATUS_ORDER.length - 1 ? (
                 <View
                   style={[
                     styles.line,

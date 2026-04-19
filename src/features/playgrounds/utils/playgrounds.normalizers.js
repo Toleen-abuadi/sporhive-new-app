@@ -1,6 +1,8 @@
+import { toEnglishDigits } from '../../../utils/numbering';
+
 const cleanString = (value) => {
   if (value == null) return '';
-  return String(value).trim();
+  return toEnglishDigits(String(value).trim());
 };
 
 export { cleanString };
@@ -14,7 +16,7 @@ export const toArray = (value) => (Array.isArray(value) ? value : []);
 
 export const toNumber = (value) => {
   if (value == null || value === '') return null;
-  const numeric = Number(value);
+  const numeric = Number(toEnglishDigits(value));
   return Number.isFinite(numeric) ? numeric : null;
 };
 
@@ -88,6 +90,10 @@ export const removeEmptyValues = (payload = {}) => {
 
 export const sanitizePlaygroundsFilters = (filters = {}) => {
   const source = toObject(filters);
+  const normalizedTags = toArray(source.tags)
+    .map((item) => cleanString(item).toLowerCase())
+    .filter(Boolean);
+
   return removeEmptyValues({
     activity_id: pickFirst(source.activity_id, source.activityId, source.sport),
     sport: source.sport,
@@ -106,6 +112,7 @@ export const sanitizePlaygroundsFilters = (filters = {}) => {
     pro_only: source.pro_only == null ? source.proOnly : source.pro_only,
     tier: cleanString(source.tier) || undefined,
     tiers: toArray(source.tiers).filter(Boolean),
+    tags: normalizedTags.length ? normalizedTags : undefined,
     order_by: cleanString(pickFirst(source.order_by, source.orderBy)) || undefined,
     lat: toNumber(source.lat),
     lng: toNumber(source.lng),

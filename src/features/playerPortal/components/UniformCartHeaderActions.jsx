@@ -11,58 +11,64 @@ export function UniformCartHeaderActions({
   onPressCart,
   onPressOrders,
   compact = false,
+  hideCart = false,
+  hideOrders = false,
 }) {
   const { colors } = useTheme();
   const { isRTL } = useI18n();
 
   return (
     <View style={[styles.wrap, { flexDirection: getRowDirection(isRTL) }]}>
-      <Pressable
-        accessibilityRole="button"
-        onPress={onPressOrders}
-        style={({ pressed }) => [
-          styles.button,
-          {
-            flexDirection: getRowDirection(isRTL),
-            borderColor: colors.border,
-            backgroundColor: colors.surface,
-            opacity: pressed ? 0.8 : 1,
-            paddingHorizontal: compact ? spacing.xs : spacing.sm,
-          },
-        ]}
-      >
-        <PackageCheck size={16} color={colors.textPrimary} strokeWidth={2.3} />
-      </Pressable>
+      {hideOrders ? null : (
+        <Pressable
+          accessibilityRole="button"
+          onPress={onPressOrders}
+          style={({ pressed }) => [
+            styles.button,
+            {
+              flexDirection: getRowDirection(isRTL),
+              borderColor: colors.border,
+              backgroundColor: colors.surface,
+              opacity: pressed ? 0.8 : 1,
+              paddingHorizontal: compact ? spacing.xs : spacing.sm,
+            },
+          ]}
+        >
+          <PackageCheck size={16} color={colors.textPrimary} strokeWidth={2.3} />
+        </Pressable>
+      )}
 
-      <Pressable
-        accessibilityRole="button"
-        onPress={onPressCart}
-        style={({ pressed }) => [
-          styles.button,
-          {
-            flexDirection: getRowDirection(isRTL),
-            borderColor: colors.border,
-            backgroundColor: colors.surface,
-            opacity: pressed ? 0.8 : 1,
-            paddingHorizontal: compact ? spacing.xs : spacing.sm,
-          },
-        ]}
-      >
-        <ShoppingCart size={16} color={colors.textPrimary} strokeWidth={2.3} />
-        {cartCount > 0 ? (
-          <View
-            style={[
-              styles.badge,
-              isRTL ? styles.badgeRtl : styles.badgeLtr,
-              { backgroundColor: colors.accentOrange },
-            ]}
-          >
-            <Text variant="caption" weight="bold" color={colors.white}>
-              {cartCount > 99 ? '99+' : String(cartCount)}
-            </Text>
-          </View>
-        ) : null}
-      </Pressable>
+      {hideCart ? null : (
+        <Pressable
+          accessibilityRole="button"
+          onPress={onPressCart}
+          style={({ pressed }) => [
+            styles.button,
+            {
+              flexDirection: getRowDirection(isRTL),
+              borderColor: colors.border,
+              backgroundColor: colors.surface,
+              opacity: pressed ? 0.8 : 1,
+              paddingHorizontal: compact ? spacing.xs : spacing.sm,
+            },
+          ]}
+        >
+          <ShoppingCart size={16} color={colors.textPrimary} strokeWidth={2.3} />
+          {cartCount > 0 ? (
+            <View
+              style={[
+                styles.badge,
+                isRTL ? styles.badgeRtl : styles.badgeLtr,
+                { backgroundColor: colors.accentOrange },
+              ]}
+            >
+              <Text variant="caption" weight="bold" color={colors.white}>
+                {cartCount > 99 ? '99+' : String(cartCount)}
+              </Text>
+            </View>
+          ) : null}
+        </Pressable>
+      )}
     </View>
   );
 }

@@ -1,6 +1,8 @@
+import { toEnglishDigits } from '../../../utils/numbering';
+
 const cleanString = (value) => {
   if (value == null) return '';
-  return String(value).trim();
+  return toEnglishDigits(String(value).trim());
 };
 
 export { cleanString };
@@ -14,7 +16,7 @@ export const toArray = (value) => (Array.isArray(value) ? value : []);
 
 export const toNumber = (value) => {
   if (value == null || value === '') return null;
-  const numeric = Number(value);
+  const numeric = Number(toEnglishDigits(value));
   return Number.isFinite(numeric) ? numeric : null;
 };
 

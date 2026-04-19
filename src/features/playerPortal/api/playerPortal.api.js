@@ -1,28 +1,28 @@
+import { authApi } from '../../../services/auth';
+import { mapFreezeRowsFromOverview } from '../utils/playerPortal.freeze';
 import { assertPlayerPortalContext } from '../utils/playerPortal.guards';
 import { toArray, toNumber, toObject } from '../utils/playerPortal.normalizers';
-import { authApi } from '../../../services/auth';
+import { PLAYER_PORTAL_ENDPOINTS, PLAYER_PORTAL_PROXY_BASE_PATH } from './playerPortal.keys';
 import {
-  mapFreezeCancelResponse,
-  mapFreezeListResponse,
-  mapRenewalEligibilityResponse,
-  mapRenewalOptionsResponse,
   mapFeedbackPeriodsResponse,
   mapFeedbackPlayerSummaryResponse,
   mapFeedbackTypesResponse,
+  mapFreezeCancelResponse,
+  mapFreezeListResponse,
   mapNewsListResponse,
   mapOverviewResponse,
   mapPaymentFromOverviewById,
   mapPaymentsFromOverview,
-  mapProfileGetResponse,
   mapProfileFromOverview,
+  mapProfileGetResponse,
   mapProfileUpdateResponse,
+  mapRenewalEligibilityResponse,
   mapRenewalOptionsFromOverview,
+  mapRenewalOptionsResponse,
   mapUniformOrderCreateResponse,
   mapUniformOrdersResponse,
   mapUniformStoreResponse,
 } from './playerPortal.mapper';
-import { PLAYER_PORTAL_ENDPOINTS, PLAYER_PORTAL_PROXY_BASE_PATH } from './playerPortal.keys';
-import { mapFreezeRowsFromOverview } from '../utils/playerPortal.freeze';
 
 const DEFAULT_TIMEOUT_MS = 20000;
 
@@ -128,6 +128,18 @@ const decodeBufferText = (arrayBuffer) => {
       return '';
     }
   }
+};
+
+const startsWithPdfHeader = (arrayBuffer) => {
+  if (!(arrayBuffer instanceof ArrayBuffer) || arrayBuffer.byteLength < 5) return false;
+  const bytes = new Uint8Array(arrayBuffer, 0, 5);
+  return (
+    bytes[0] === 0x25 && // %
+    bytes[1] === 0x50 && // P
+    bytes[2] === 0x44 && // D
+    bytes[3] === 0x46 && // F
+    bytes[4] === 0x2d // -
+  );
 };
 
 const safeReadPayload = async (response, { expectBinary = false } = {}) => {
@@ -269,6 +281,7 @@ async function proxyRequest(endpoint, {
   method = 'POST',
   timeoutMs = DEFAULT_TIMEOUT_MS,
   includePlayerId = true,
+  injectContext = true,
   requirePlayerId = true,
   expectBinary = false,
   extraHeaders = {},
@@ -306,9 +319,11 @@ async function proxyRequest(endpoint, {
   };
 
   const upperMethod = cleanString(method).toUpperCase() || 'POST';
-  const bodyPayload = injectContextFields(payload, normalizedContext, {
-    includePlayerId,
-  });
+  const bodyPayload = injectContext
+    ? injectContextFields(payload, normalizedContext, {
+        includePlayerId,
+      })
+    : toObject(payload);
   const hasBody = upperMethod !== 'GET' && upperMethod !== 'HEAD';
 
   if (hasBody) {
@@ -753,21 +768,41 @@ export const playerPortalApi = {
 
   async printInvoice(context, payload = {}) {
     const safePayload = toObject(payload);
-    const language = cleanString(safePayload.language).toLowerCase() === 'ar' ? 'ar' : 'en';
+      const paymentId = toNumber(safePayload.id);
+      const language = cleanString(safePayload.language).toLowerCase() === 'ar' ? 'ar' : 'en';
+      const customerId = toNumber(context?.customerId || context?.academyId);
+      if (paymentId == null) {
+        return {
+        success: false,
+        error: createPortalError({
+          code: 'BAD_REQUEST',
+          status: 400,
+          message: 'Invoice payment id is required.',
+        }),
+        };
+      }
+
+      const requestPayload = {
+        id: paymentId,
+        language,
+        customer_id: customerId,
+      };
+    const playerName = cleanString(safePayload.player_name);
+    if (playerName) {
+      requestPayload.player_name = playerName;
+    }
+
     const result = await proxyRequest(PLAYER_PORTAL_ENDPOINTS.PRINT_INVOICE, {
       context,
-      payload: {
-        ...safePayload,
-        language,
-      },
-      includePlayerId: true,
+      payload: requestPayload,
+      includePlayerId: false,
+      injectContext: false,
       requirePlayerId: true,
       expectBinary: true,
       extraHeaders: {
         'Accept-Language': language,
       },
     });
-
     if (!result.success) return result;
     const responseData = toObject(result.data);
     const arrayBuffer = responseData.arrayBuffer;
@@ -778,6 +813,20 @@ export const playerPortalApi = {
           code: 'INVOICE_RESPONSE_INVALID',
           status: Number(result.meta?.status) || 502,
           message: inferMessageFromPayload(responseData, 'Invoice PDF is unavailable right now.'),
+          details: responseData,
+        }),
+      };
+    }
+
+    const normalizedContentType = cleanString(responseData.contentType).toLowerCase();
+    const looksLikePdf = normalizedContentType.includes('application/pdf') || startsWithPdfHeader(arrayBuffer);
+    if (!looksLikePdf) {
+      return {
+        success: false,
+        error: createPortalError({
+          code: 'INVOICE_RESPONSE_INVALID',
+          status: Number(result.meta?.status) || 502,
+          message: 'Invoice response is not a valid PDF document.',
           details: responseData,
         }),
       };

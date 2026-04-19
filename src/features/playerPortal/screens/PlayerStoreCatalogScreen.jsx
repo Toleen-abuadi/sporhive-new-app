@@ -38,7 +38,7 @@ function ProductCard({ product, onPress, locale }) {
   return (
     <Pressable
       accessibilityRole="button"
-      onPress={onPress}
+      onPress={(event) => onPress?.(event)}
       style={({ pressed }) => [
         styles.productCard,
         {
@@ -105,7 +105,8 @@ export function PlayerStoreCatalogScreen() {
   const showLoading = (isLoading || (!lastUpdatedAt && !error)) && products.length === 0;
   const hasCatalogItems = products.length > 0;
   const handleOpenProduct = useCallback(
-    (productId) => {
+    (productId, event) => {
+      event?.stopPropagation?.();
       const id = String(productId == null ? '' : productId).trim();
       if (!id) return;
       router.push(buildPlayerStoreProductRoute(id));
@@ -175,53 +176,6 @@ export function PlayerStoreCatalogScreen() {
               />
             </View>
 
-            <View style={[styles.shortcutRow, { flexDirection: getRowDirection(isRTL) }]}>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => router.push(ROUTES.PLAYER_STORE_ORDERS)}
-                style={({ pressed }) => [
-                  styles.shortcutCard,
-                  {
-                    flexDirection: getRowDirection(isRTL),
-                    borderColor: colors.border,
-                    backgroundColor: colors.surface,
-                    opacity: pressed ? 0.86 : 1,
-                  },
-                ]}
-              >
-                <PackageCheck size={16} color={colors.accentOrange} strokeWidth={2.3} />
-                <Text variant="bodySmall" weight="semibold">
-                  {t('playerPortal.store.actions.myOrders')}
-                </Text>
-              </Pressable>
-
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => router.push(ROUTES.PLAYER_STORE_CART)}
-                style={({ pressed }) => [
-                  styles.shortcutCard,
-                  {
-                    flexDirection: getRowDirection(isRTL),
-                    borderColor: colors.border,
-                    backgroundColor: colors.surface,
-                    opacity: pressed ? 0.86 : 1,
-                  },
-                ]}
-              >
-                <Text variant="bodySmall" weight="semibold">
-                  {t('playerPortal.store.labels.cartItems', {
-                    count: formatNumberLabel(cartSummary.totalItems, { locale, fallback: '0' }),
-                  })}
-                </Text>
-                <ChevronRight
-                  size={16}
-                  color={colors.textMuted}
-                  strokeWidth={2.3}
-                  style={isRTL ? styles.mirrorIcon : null}
-                />
-              </Pressable>
-            </View>
-
             {showLoading ? (
               <View style={[styles.grid, { flexDirection: getRowDirection(isRTL) }]}>
                 <View style={styles.gridItem}>
@@ -265,7 +219,7 @@ export function PlayerStoreCatalogScreen() {
                     <ProductCard
                       product={product}
                       locale={locale}
-                      onPress={() => handleOpenProduct(product.id)}
+                      onPress={(event) => handleOpenProduct(product.id, event)}
                     />
                   </View>
                 ))}

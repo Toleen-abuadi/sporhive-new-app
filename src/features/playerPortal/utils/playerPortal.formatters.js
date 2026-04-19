@@ -1,7 +1,12 @@
 import { toNumber } from './playerPortal.normalizers';
 import { translateApiEnumValue } from '../../../utils/apiValueLocalization';
+import { resolveNumericLocale, toEnglishDigits } from '../../../utils/numbering';
 
-const resolveLocale = (locale) => (locale = 'en-US');
+const resolveLocale = (locale) => {
+  const normalized = String(locale || '').toLowerCase();
+  const fallback = normalized.startsWith('ar') ? 'ar-JO' : 'en-US';
+  return resolveNumericLocale(locale, fallback);
+};
 
 export function formatDateLabel(value, { locale = 'en', fallback = '-' } = {}) {
   if (!value) return fallback;
@@ -9,11 +14,11 @@ export function formatDateLabel(value, { locale = 'en', fallback = '-' } = {}) {
   if (Number.isNaN(parsed.getTime())) return fallback;
 
   try {
-    return new Intl.DateTimeFormat(resolveLocale(locale), {
+    return toEnglishDigits(new Intl.DateTimeFormat(resolveLocale(locale), {
       year: 'numeric',
       month: 'numeric',
       day: 'numeric',
-    }).format(parsed);
+    }).format(parsed));
   } catch {
     return fallback;
   }
@@ -24,9 +29,9 @@ export function formatNumberLabel(value, { locale = 'en', fallback = '0' } = {})
   if (numeric == null) return fallback;
 
   try {
-    return new Intl.NumberFormat(resolveLocale(locale), {
+    return toEnglishDigits(new Intl.NumberFormat(resolveLocale(locale), {
       maximumFractionDigits: 0,
-    }).format(numeric);
+    }).format(numeric));
   } catch {
     return String(numeric);
   }
@@ -40,14 +45,17 @@ export function formatAmountLabel(value, { locale = 'en', fallback = '0', curren
     return formatNumberLabel(numeric, { locale, fallback });
   }
 
+  const currencyCode = String(currency || '').trim().toUpperCase() || 'JOD';
   try {
-    return new Intl.NumberFormat(resolveLocale(locale), {
+    return toEnglishDigits(new Intl.NumberFormat(resolveLocale(locale), {
       style: 'currency',
-      currency,
+      currency: currencyCode,
+      currencyDisplay: 'code',
       maximumFractionDigits: 2,
-    }).format(numeric);
+      minimumFractionDigits: 2,
+    }).format(numeric));
   } catch {
-    return `${numeric}`;
+    return `${numeric} ${currencyCode}`;
   }
 }
 

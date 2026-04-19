@@ -1,25 +1,36 @@
-import { useMemo, useState } from 'react';
-import { Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
-import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
-import { CalendarDays, ChevronDown } from 'lucide-react-native';
-import { useI18n } from '../../hooks/useI18n';
-import { useTheme } from '../../hooks/useTheme';
-import { getRowDirection } from '../../utils/rtl';
-import { withAlpha } from '../../theme/colors';
-import { borderRadius, spacing } from '../../theme/tokens';
-import { Text } from './Text';
+import DateTimePicker, {
+  DateTimePickerAndroid,
+} from "@react-native-community/datetimepicker";
+import { CalendarDays, ChevronDown } from "lucide-react-native";
+import { useMemo, useState } from "react";
+import { Modal, Platform, Pressable, StyleSheet, View } from "react-native";
+import { useI18n } from "../../hooks/useI18n";
+import { useTheme } from "../../hooks/useTheme";
+import { withAlpha } from "../../theme/colors";
+import { borderRadius, spacing } from "../../theme/tokens";
+import { resolveNumericLocale, toEnglishDigits } from "../../utils/numbering";
+import { getRowDirection } from "../../utils/rtl";
+import { Text } from "./Text";
 
 const normalizeDate = (value) => {
   if (!value) return null;
 
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    return new Date(value.getFullYear(), value.getMonth(), value.getDate(), 12, 0, 0, 0);
+    return new Date(
+      value.getFullYear(),
+      value.getMonth(),
+      value.getDate(),
+      12,
+      0,
+      0,
+      0,
+    );
   }
 
   const raw = String(value).trim().slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null;
 
-  const [year, month, day] = raw.split('-').map(Number);
+  const [year, month, day] = raw.split("-").map(Number);
   const parsed = new Date(year, month - 1, day, 12, 0, 0, 0);
   if (Number.isNaN(parsed.getTime())) return null;
   return parsed;
@@ -27,11 +38,11 @@ const normalizeDate = (value) => {
 
 const toISODate = (value) => {
   const date = normalizeDate(value);
-  if (!date) return '';
+  if (!date) return "";
 
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 };
 
@@ -49,14 +60,14 @@ const clampDate = (date, minimumDate, maximumDate) => {
 
 const formatDisplayDate = (value, locale) => {
   const date = normalizeDate(value);
-  if (!date) return '';
+  if (!date) return "";
 
   try {
-    return date.toLocaleDateString(locale === 'ar' ? 'ar-JO' : 'en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+    return toEnglishDigits(date.toLocaleDateString(resolveNumericLocale(locale, 'en-US'), {
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+    }));
   } catch {
     return toISODate(date);
   }
@@ -66,9 +77,9 @@ export function DatePickerField({
   label,
   value,
   onChange,
-  placeholder = '',
-  helperText = '',
-  error = '',
+  placeholder = "",
+  helperText = "",
+  error = "",
   minDate = null,
   maxDate = null,
   disabled = false,
@@ -77,15 +88,21 @@ export function DatePickerField({
   const { isRTL, locale, t } = useI18n();
 
   const [showIOSPicker, setShowIOSPicker] = useState(false);
-  const [draftDate, setDraftDate] = useState(() => normalizeDate(value) || new Date());
+  const [draftDate, setDraftDate] = useState(
+    () => normalizeDate(value) || new Date(),
+  );
 
   const minimumDate = useMemo(() => normalizeDate(minDate), [minDate]);
   const maximumDate = useMemo(() => normalizeDate(maxDate), [maxDate]);
   const resolvedDate = useMemo(
-    () => clampDate(value, minimumDate, maximumDate) || minimumDate || new Date(),
-    [maximumDate, minimumDate, value]
+    () =>
+      clampDate(value, minimumDate, maximumDate) || minimumDate || new Date(),
+    [maximumDate, minimumDate, value],
   );
-  const displayValue = useMemo(() => formatDisplayDate(value, locale), [locale, value]);
+  const displayValue = useMemo(
+    () => formatDisplayDate(value, locale),
+    [locale, value],
+  );
 
   const commitDate = (selectedDate) => {
     const bounded = clampDate(selectedDate, minimumDate, maximumDate);
@@ -96,30 +113,30 @@ export function DatePickerField({
   const openPicker = () => {
     if (disabled) return;
 
-    if (Platform.OS === 'android') {
+    if (Platform.OS === "android") {
       DateTimePickerAndroid.open({
         value: resolvedDate,
-        mode: 'date',
+        mode: "date",
         is24Hour: true,
         minimumDate: minimumDate || undefined,
         maximumDate: maximumDate || undefined,
         onChange: (event, selectedDate) => {
-          if (event?.type !== 'set' || !selectedDate) return;
+          if (event?.type !== "set" || !selectedDate) return;
           commitDate(selectedDate);
         },
       });
       return;
     }
 
-    if (Platform.OS === 'ios') {
+    if (Platform.OS === "ios") {
       setDraftDate(resolvedDate);
       setShowIOSPicker(true);
       return;
     }
 
     const promptValue = globalThis.prompt?.(
-      placeholder || t('common.actions.selectDate'),
-      toISODate(resolvedDate)
+      placeholder || t("common.actions.selectDate"),
+      toISODate(resolvedDate),
     );
     if (!promptValue) return;
     const parsed = normalizeDate(promptValue);
@@ -161,15 +178,21 @@ export function DatePickerField({
           },
         ]}
       >
-        <View style={[styles.valueWrap, { flexDirection: getRowDirection(isRTL) }]}>
-          <CalendarDays size={15} color={colors.accentOrange} strokeWidth={2.2} />
+        <View
+          style={[styles.valueWrap, { flexDirection: getRowDirection(isRTL) }]}
+        >
+          <CalendarDays
+            size={15}
+            color={colors.accentOrange}
+            strokeWidth={2.2}
+          />
           <Text
             variant="bodySmall"
             color={displayValue ? colors.textPrimary : colors.textMuted}
             style={styles.valueText}
             numberOfLines={1}
           >
-            {displayValue || placeholder || t('common.actions.selectDate')}
+            {displayValue || placeholder || t("common.actions.selectDate")}
           </Text>
         </View>
         <ChevronDown size={15} color={colors.textMuted} strokeWidth={2.2} />
@@ -185,9 +208,22 @@ export function DatePickerField({
         </Text>
       ) : null}
 
-      {Platform.OS === 'ios' ? (
-        <Modal visible={showIOSPicker} transparent animationType="fade" onRequestClose={closeIOSPicker}>
-          <View style={[styles.modalBackdrop, { backgroundColor: colors.overlay || withAlpha(colors.black, 0.45) }]}>
+      {Platform.OS === "ios" ? (
+        <Modal
+          visible={showIOSPicker}
+          transparent
+          animationType="fade"
+          onRequestClose={closeIOSPicker}
+        >
+          <View
+            style={[
+              styles.modalBackdrop,
+              {
+                backgroundColor:
+                  colors.overlay || withAlpha(colors.black, 0.45),
+              },
+            ]}
+          >
             <View
               style={[
                 styles.modalSheet,
@@ -206,17 +242,34 @@ export function DatePickerField({
                   },
                 ]}
               >
-                <Pressable accessibilityRole="button" onPress={closeIOSPicker} style={styles.modalAction}>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={closeIOSPicker}
+                  style={styles.modalAction}
+                >
                   <Text variant="bodySmall" color={colors.textSecondary}>
-                    {t('common.actions.cancel')}
+                    {t("common.actions.cancel")}
                   </Text>
                 </Pressable>
-                <Text variant="bodySmall" weight="semibold" style={styles.modalTitle} numberOfLines={1}>
-                  {label || t('common.actions.selectDate')}
+                <Text
+                  variant="bodySmall"
+                  weight="semibold"
+                  style={styles.modalTitle}
+                  numberOfLines={1}
+                >
+                  {label || t("common.actions.selectDate")}
                 </Text>
-                <Pressable accessibilityRole="button" onPress={confirmIOSPicker} style={styles.modalAction}>
-                  <Text variant="bodySmall" weight="semibold" color={colors.accentOrange}>
-                    {t('common.actions.done')}
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={confirmIOSPicker}
+                  style={styles.modalAction}
+                >
+                  <Text
+                    variant="bodySmall"
+                    weight="semibold"
+                    color={colors.accentOrange}
+                  >
+                    {t("common.actions.done")}
                   </Text>
                 </Pressable>
               </View>
@@ -250,13 +303,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.sm,
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: spacing.sm,
   },
   valueWrap: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
     gap: spacing.xs,
   },
   valueText: {
@@ -264,17 +317,17 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: spacing.lg,
   },
   modalSheet: {
     borderWidth: 1,
     borderRadius: borderRadius.xl,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   modalHeader: {
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -282,16 +335,16 @@ const styles = StyleSheet.create({
   modalAction: {
     minWidth: 56,
     minHeight: 34,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   modalTitle: {
     flex: 1,
-    textAlign: 'center',
+    textAlign: "center",
     paddingHorizontal: spacing.sm,
   },
   iosPicker: {
-    width: '100%',
+    width: "100%",
     height: 210,
   },
 });

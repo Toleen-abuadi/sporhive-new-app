@@ -17,6 +17,7 @@ import {
 } from '../utils/playerPortal.courseSchedule';
 import { getNextRenewalStartDate, toLocalISODate } from '../utils/playerPortal.renewalDates';
 import { toNumber, toObject } from '../utils/playerPortal.normalizers';
+import { normalizeNumericInput } from '../../../utils/numbering';
 import { usePlayerOverview } from './usePlayerOverview';
 import { usePlayerPortalSession } from './usePlayerPortalSession';
 import { usePortalQueryState } from './usePortalQueryState';
@@ -155,7 +156,7 @@ const filterCoursesAfterActiveSubscription = (courses, activeEndISO) => {
 };
 
 const clampSessions = (value, min, max) => {
-  const numeric = Number(value);
+  const numeric = Number(normalizeNumericInput(value));
   const safe = Number.isFinite(numeric) ? Math.trunc(numeric) : min;
   return Math.max(min, Math.min(max, safe));
 };
@@ -502,7 +503,7 @@ export function usePlayerRenewalFlow({ auto = true } = {}) {
       const minSessions = maxSessions > 0 ? 1 : 0;
       const editMode = lastEdited || LAST_EDITED.NONE;
 
-      const parsedSessions = Number.parseInt(String(numSessions ?? ''), 10);
+      const parsedSessions = Number.parseInt(normalizeNumericInput(numSessions), 10);
       const hasFiniteSessions = Number.isFinite(parsedSessions);
 
       const clampByRange = (value, fallback = minSessions) => {

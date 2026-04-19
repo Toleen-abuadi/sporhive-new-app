@@ -61,6 +61,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.xs,
   },
+  primaryCta: {
+    marginTop: spacing.sm,
+  },
   actionBtn: {
     paddingVertical: spacing.xs,
   },
@@ -328,7 +331,13 @@ export function LoginScreen() {
 
           <ErrorBanner message={submitError} />
 
-          <Button onPress={onSubmit} fullWidth loading={isLoading} disabled={ctaDisabled}>
+          <Button
+            onPress={onSubmit}
+            fullWidth
+            loading={isLoading}
+            disabled={ctaDisabled}
+            style={styles.primaryCta}
+          >
             {isPublicMode ? t('auth.actions.loginPublic') : t('auth.actions.loginPlayer')}
           </Button>
 

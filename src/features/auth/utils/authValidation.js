@@ -5,20 +5,42 @@ export const AUTH_PASSWORD_MIN_LENGTH = 8;
 export const AUTH_OTP_LENGTH = 6;
 
 export const trimText = (value) => String(value || '').trim();
+export const normalizeAlphabeticInput = (value) => {
+  return String(value || '')
+    // allow letters (arabic + english), spaces, hyphen, apostrophe
+    .replace(/[^\p{L}\s'-]/gu, '')
+    // remove extra spaces
+    .replace(/\s{2,}/g, ' ')
+    .trimStart();
+};
 export const normalizeOtpValue = (value) => digitsOnly(value).slice(0, AUTH_OTP_LENGTH);
 
 export const hasValidationErrors = (errors) => Object.keys(errors || {}).length > 0;
 
-const isPhonePayloadValid = (phonePayload) => {
+const E164_PHONE_REGEX = /^\+\d{8,16}$/;
+
+const validatePhonePayload = (phonePayload) => {
   if (!phonePayload || typeof phonePayload !== 'object') return false;
-  return Boolean(phonePayload.nationalNumber) && Boolean(phonePayload.e164) && Boolean(phonePayload.isValid);
+
+  const national = digitsOnly(phonePayload.nationalNumber || '');
+  const e164 = String(phonePayload.e164 || '').trim();
+  const minLength = Number(phonePayload.minLength) || 7;
+  const maxLength = Number(phonePayload.maxLength) || 15;
+  const lengthOk = national.length >= minLength && national.length <= maxLength;
+
+  if (!national || !e164) return false;
+  if (!E164_PHONE_REGEX.test(e164)) return false;
+  if (!lengthOk) return false;
+  if (!phonePayload.isValid) return false;
+
+  return true;
 };
 
 export function validatePublicLogin({ phonePayload, password, t }) {
   const errors = {};
   if (!phonePayload?.nationalNumber) {
     errors.phone = t('auth.errors.phoneRequired');
-  } else if (!isPhonePayloadValid(phonePayload)) {
+  } else if (!validatePhonePayload(phonePayload)) {
     errors.phone = t('auth.errors.phoneInvalid');
   }
 
@@ -51,12 +73,10 @@ export function validatePublicSignup({
   t,
 }) {
   const errors = {};
-  if (!trimText(firstName)) errors.firstName = t('auth.errors.firstNameRequired');
-  if (!trimText(lastName)) errors.lastName = t('auth.errors.lastNameRequired');
 
   if (!phonePayload?.nationalNumber) {
     errors.phone = t('auth.errors.phoneRequired');
-  } else if (!isPhonePayloadValid(phonePayload)) {
+  } else if (!validatePhonePayload(phonePayload)) {
     errors.phone = t('auth.errors.phoneInvalid');
   }
 
@@ -89,7 +109,7 @@ export function validateResetRequest({ mode, academyId, username, phonePayload, 
 
   if (!phonePayload?.nationalNumber) {
     errors.phone = t('auth.errors.phoneRequired');
-  } else if (!isPhonePayloadValid(phonePayload)) {
+  } else if (!validatePhonePayload(phonePayload)) {
     errors.phone = t('auth.errors.phoneInvalid');
   }
 

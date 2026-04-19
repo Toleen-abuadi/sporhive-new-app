@@ -1,3 +1,5 @@
+import { toEnglishDigits } from '../../../utils/numbering';
+
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 const DAY_NAME_TO_WEEKDAY = {
@@ -22,7 +24,7 @@ const DAY_NAME_TO_WEEKDAY = {
 
 const cleanString = (value) => {
   if (value == null) return '';
-  return String(value).trim();
+  return toEnglishDigits(String(value).trim());
 };
 
 export const isISODate = (value) => ISO_DATE_RE.test(cleanString(value));

@@ -42,7 +42,7 @@ export function AppScreen({
   const content = scroll ? (
     <ScrollView
       showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
+      keyboardShouldPersistTaps="always"
       keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
       contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={[

@@ -57,10 +57,11 @@ export function SlotPicker({
               variant="bodySmall"
               weight="semibold"
               color={selected ? colors.accentOrange : colors.textPrimary}
+              style={styles.ltrValue}
             >
               {formatPlaygroundTime(slot.startTime, locale)}
             </Text>
-            <Text variant="caption" color={colors.textMuted}>
+            <Text variant="caption" color={colors.textMuted} style={styles.ltrValue}>
               {formatPlaygroundTime(slot.endTime, locale)}
             </Text>
           </Pressable>
@@ -83,5 +84,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
     gap: 2,
+  },
+  ltrValue: {
+    writingDirection: 'ltr',
+    textAlign: 'left',
   },
 });

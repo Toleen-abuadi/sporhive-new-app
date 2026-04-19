@@ -76,6 +76,16 @@ export const createPhonePayload = (
   };
 };
 
+export const formatPhoneForInlineText = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+
+  const normalized = normalizeFullPhoneInput(raw);
+  if (!normalized || normalized === '+') return '';
+  // Bidi isolation keeps +country code order stable inside RTL sentences.
+  return `\u2066${normalized}\u2069`;
+};
+
 export const defaultPhonePayload = (countryCode = DEFAULT_PHONE_COUNTRY_CODE, options = PHONE_COUNTRIES) =>
   createPhonePayload({ countryCode, nationalNumber: '' }, options);
 
