@@ -9,8 +9,8 @@ import { borderRadius, spacing } from '../../../theme/tokens';
 import { getRowDirection } from '../../../utils/rtl';
 import {
   formatDistanceKm,
+  formatLabeledPrice,
   formatPlayersRange,
-  formatPlaygroundPrice,
 } from '../utils/playgrounds.formatters';
 import { VenueMetaRow } from './VenueMetaRow';
 
@@ -112,7 +112,7 @@ export function VenueCard({ venue, onPress, onBookPress, locale = 'en', copy }) 
                   weight="bold"
                   color={colors.accentOrange}
                 >
-                  {formatPlaygroundPrice(venue.price, { locale })}
+                  {formatLabeledPrice(venue.price, { locale })}
                 </Text>
               ) : (
                 <Text variant="caption" color={colors.textMuted}>

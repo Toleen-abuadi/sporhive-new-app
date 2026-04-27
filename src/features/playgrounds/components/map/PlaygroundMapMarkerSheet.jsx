@@ -8,8 +8,8 @@ import { borderRadius, spacing } from '../../../../theme/tokens';
 import { getRowDirection } from '../../../../utils/rtl';
 import {
   formatDistanceKm,
+  formatLabeledPrice,
   formatPlayersRange,
-  formatPlaygroundPrice,
 } from '../../utils/playgrounds.formatters';
 
 export function PlaygroundMapMarkerSheet({
@@ -103,8 +103,8 @@ export function PlaygroundMapMarkerSheet({
         <View style={styles.priceWrap}>
           {venue.price != null ? (
             <>
-              <Text variant="body" weight="bold" color={colors.accentOrange} style={styles.ltrValue}>
-                {formatPlaygroundPrice(venue.price, { locale })}
+              <Text variant="body" weight="bold" color={colors.accentOrange}>
+                {formatLabeledPrice(venue.price, { locale })}
               </Text>
               <Text variant="caption" color={colors.textMuted}>
                 {copy?.labels?.perSession}

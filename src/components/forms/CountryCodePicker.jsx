@@ -155,8 +155,10 @@ export function CountryCodePicker({
 
             <FlatList
               data={filtered}
+              style={styles.listBody}
               keyExtractor={(item) => `${item.iso2}-${item.dialCode}`}
-              keyboardShouldPersistTaps="always"
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
               contentContainerStyle={styles.list}
               ListEmptyComponent={
                 <View style={styles.emptyWrap}>
@@ -244,6 +246,9 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 44,
     paddingVertical: 0,
+  },
+  listBody: {
+    flex: 1,
   },
   list: {
     gap: spacing.sm,

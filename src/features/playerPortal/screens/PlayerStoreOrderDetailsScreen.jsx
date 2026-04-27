@@ -175,7 +175,6 @@ export function PlayerStoreOrderDetailsScreen() {
               <Text variant="caption" color={colors.textSecondary}>
                 {t('playerPortal.store.orders.labels.orderRef', { ref: orderGroup.ref })}
               </Text>
-              <PortalStatusBadge status={normalizedOrderStatus} label={statusLabel} domain="orderStatus" />
             </View>
 
             <View style={[styles.summaryRow, { flexDirection: getRowDirection(isRTL) }]}>
@@ -199,13 +198,6 @@ export function PlayerStoreOrderDetailsScreen() {
                 }),
               })}
             </Text>
-          </PortalSectionCard>
-
-          <PortalSectionCard
-            title={t('playerPortal.store.orderDetails.sections.timelineTitle')}
-            subtitle={t('playerPortal.store.orderDetails.sections.timelineSubtitle')}
-          >
-            <UniformStatusTimeline status={normalizedOrderStatus} t={t} />
           </PortalSectionCard>
 
           <PortalSectionCard

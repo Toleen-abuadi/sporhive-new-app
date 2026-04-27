@@ -15,6 +15,20 @@ const isolateLTR = (value) => {
   return `${LTR_ISOLATE_OPEN}${text}${LTR_ISOLATE_CLOSE}`;
 };
 
+const resolveCurrencyLabel = (currencyCode, locale) => {
+  if (currencyCode === 'JOD' && isArabicLocale(locale)) return '\u062F.\u0623';
+  return currencyCode;
+};
+
+const normalizeCurrencyCode = (currency) => {
+  const raw = cleanString(currency).toUpperCase();
+  if (!raw) return 'JOD';
+  if (['JOD', 'JD', '\u062F.\u0623', '\u062F.\u0627', '\u062F\u0623', '\u062F\u0627'].includes(raw)) {
+    return 'JOD';
+  }
+  return raw;
+};
+
 export function formatPlaygroundDate(value, locale = 'en') {
   const raw = cleanString(value);
   if (!raw) return '';
@@ -47,18 +61,23 @@ export function formatPlaygroundTime(value, locale = 'en') {
   const hhmm = toTimeHHMM(value);
   if (!hhmm) return '';
 
-  const parsed = new Date(`1970-01-01T${hhmm}:00`);
-  if (Number.isNaN(parsed.getTime())) return hhmm;
+  const match = hhmm.match(/^(\d{2}):(\d{2})$/);
+  if (!match) return hhmm;
 
-  try {
-    const formatted = toEnglishDigits(parsed.toLocaleTimeString(resolveLocale(locale), {
-      hour: 'numeric',
-      minute: '2-digit',
-    }));
-    return isArabicLocale(locale) ? isolateLTR(formatted) : formatted;
-  } catch {
-    return hhmm;
-  }
+  const hour24 = Number(match[1]);
+  const minute = Number(match[2]);
+
+  if (!Number.isInteger(hour24) || !Number.isInteger(minute)) return hhmm;
+  if (hour24 < 0 || hour24 > 23 || minute < 0 || minute > 59) return hhmm;
+
+  const hour12 = hour24 % 12 || 12;
+  const isAr = isArabicLocale(locale);
+  const meridiem = hour24 >= 12
+    ? (isAr ? '\u0645' : 'PM')
+    : (isAr ? '\u0635' : 'AM');
+
+  const formatted = `${toEnglishDigits(hour12)}:${String(minute).padStart(2, '0')} ${meridiem}`;
+  return isAr ? isolateLTR(formatted) : formatted;
 }
 
 export function formatPlaygroundTimeRange(startTime, endTime, locale = 'en') {
@@ -68,23 +87,47 @@ export function formatPlaygroundTimeRange(startTime, endTime, locale = 'en') {
   if (!end) return start;
   if (!start) return end;
 
-  const range = `${start} - ${end}`;
-  return isArabicLocale(locale) ? isolateLTR(range) : range;
+  return `${start} - ${end}`;
 }
 
 export function formatPlaygroundPrice(value, { locale = 'en', currency = 'JOD' } = {}) {
   const numeric = toNumber(value);
   if (numeric == null) return '';
+  const currencyCode = normalizeCurrencyCode(currency);
+
+  if (isArabicLocale(locale)) {
+    const amount = toEnglishDigits(numeric.toFixed(2));
+    const currencyLabel = resolveCurrencyLabel(currencyCode, locale);
+    return `${isolateLTR(amount)} ${currencyLabel}`;
+  }
 
   try {
     return toEnglishDigits(new Intl.NumberFormat(resolveLocale(locale), {
       style: 'currency',
-      currency,
+      currency: currencyCode,
+      minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(numeric));
   } catch {
-    return `${numeric.toFixed(2)} ${currency}`;
+    return `${toEnglishDigits(numeric.toFixed(2))} ${currencyCode}`;
   }
+}
+
+const resolvePriceLabel = (locale, labelType = 'price') => {
+  const isArabic = isArabicLocale(locale);
+  if (labelType === 'fees') return isArabic ? '\u0627\u0644\u0631\u0633\u0648\u0645' : 'Fees';
+  if (labelType === 'total') return isArabic ? '\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A' : 'Total';
+  return isArabic ? '\u0627\u0644\u0633\u0639\u0631' : 'Price';
+};
+
+export function formatLabeledPrice(
+  value,
+  { locale = 'en', currency = 'JOD', labelType = 'price', label = '' } = {}
+) {
+  const price = formatPlaygroundPrice(value, { locale, currency });
+  if (!price) return '';
+  const priceLabel = cleanString(label) || resolvePriceLabel(locale, labelType);
+  return `${priceLabel}: ${price}`;
 }
 
 export function formatPlayersRange(minPlayers, maxPlayers, locale = 'en') {
@@ -95,17 +138,19 @@ export function formatPlayersRange(minPlayers, maxPlayers, locale = 'en') {
   if (min == null && max == null) return '';
 
   if (min != null && max != null) {
-    const range = isolateLTR(`${min}-${max}`);
-    return isArabic ? `${range} \u0644\u0627\u0639\u0628\u064a\u0646` : `${min}-${max} players`;
+    const start = Math.min(min, max);
+    const end = Math.max(min, max);
+    const range = isolateLTR(`${start}-${end}`);
+    return isArabic ? range : `${start}-${end} players`;
   }
 
   if (min != null) {
     const from = isolateLTR(`${min}+`);
-    return isArabic ? `${from} \u0644\u0627\u0639\u0628\u064a\u0646` : `${min}+ players`;
+    return isArabic ? from : `${min}+ players`;
   }
 
   return isArabic
-    ? `\u062d\u062a\u0649 ${isolateLTR(String(max))} \u0644\u0627\u0639\u0628\u064a\u0646`
+    ? `\u062d\u062a\u0649 ${isolateLTR(String(max))}`
     : `Up to ${max} players`;
 }
 

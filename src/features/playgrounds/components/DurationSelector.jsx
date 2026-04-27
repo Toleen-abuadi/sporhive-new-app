@@ -4,7 +4,7 @@ import { useI18n } from '../../../hooks/useI18n';
 import { useTheme } from '../../../hooks/useTheme';
 import { borderRadius, spacing } from '../../../theme/tokens';
 import { getRowDirection } from '../../../utils/rtl';
-import { formatDurationMinutes, formatPlaygroundPrice } from '../utils/playgrounds.formatters';
+import { formatDurationMinutes, formatLabeledPrice } from '../utils/playgrounds.formatters';
 
 export function DurationSelector({
   durations = [],
@@ -54,7 +54,7 @@ export function DurationSelector({
 
             {duration.basePrice != null ? (
               <Text variant="caption" color={colors.textSecondary}>
-                {formatPlaygroundPrice(duration.basePrice, { locale })}
+                {formatLabeledPrice(duration.basePrice, { locale })}
               </Text>
             ) : null}
 

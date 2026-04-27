@@ -78,20 +78,22 @@ export function VenueGallery({
         }}
       />
 
-      <View style={[styles.dotsRow, { flexDirection: getRowDirection(isRTL) }]}>
-        {galleryItems.map((item, index) => (
-          <View
-            key={item.id}
-            style={[
-              styles.dot,
-              {
-                backgroundColor:
-                  index === activeIndex ? colors.accentOrange : colors.borderStrong,
-              },
-            ]}
-          />
-        ))}
-      </View>
+      {galleryItems.length > 1 ? (
+        <View style={[styles.dotsRow, { flexDirection: getRowDirection(isRTL) }]}>
+          {galleryItems.map((item, index) => (
+            <View
+              key={item.id}
+              style={[
+                styles.dot,
+                {
+                  backgroundColor:
+                    index === activeIndex ? colors.accentOrange : colors.borderStrong,
+                },
+              ]}
+            />
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -101,7 +103,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   image: {
-    height: 220,
+    height: 248,
     borderRadius: borderRadius.lg,
   },
   dotsRow: {
@@ -117,7 +119,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.pill,
   },
   empty: {
-    height: 180,
+    height: 210,
     borderWidth: 1,
     borderRadius: borderRadius.lg,
     alignItems: 'center',

@@ -25,8 +25,8 @@ import { getRowDirection } from '../../../utils/rtl';
 import { AUTH_LOGIN_MODES } from '../../../services/auth';
 import {
   formatDurationMinutes,
+  formatLabeledPrice,
   formatPlaygroundDate,
-  formatPlaygroundPrice,
   formatPlaygroundTimeRange,
   resolvePlaygroundsGuardMessage,
 } from '../utils';
@@ -257,11 +257,11 @@ function BookingCard({ booking, locale = 'en', copy, onCancel, onReschedule, onR
             variant="bodySmall"
             weight="semibold"
             color={colors.accentOrange}
-            style={styles.ltrValue}
           >
-            {`${copy.labels.paymentAmount}: ${formatPlaygroundPrice(booking.payment.amount, {
+            {formatLabeledPrice(booking.payment.amount, {
               locale,
-            })}`}
+              label: copy.labels.paymentAmount,
+            })}
           </Text>
         ) : null}
       </View>

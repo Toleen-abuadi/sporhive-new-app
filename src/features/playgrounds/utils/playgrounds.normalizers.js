@@ -62,15 +62,17 @@ export const toTimeHHMM = (value) => {
   const raw = cleanString(value);
   if (!raw) return '';
 
-  const short = raw.slice(0, 5);
-  if (/^\d{2}:\d{2}$/.test(short)) return short;
+  const direct = raw.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  const embedded = direct ? null : raw.match(/(?:^|[T\s])(\d{1,2}):(\d{2})(?::\d{2})?(?:$|\s|[Z+-])/);
+  const match = direct || embedded;
+  if (!match) return '';
 
-  const parsed = new Date(`1970-01-01T${raw}`);
-  if (Number.isNaN(parsed.getTime())) return '';
+  const hh = Number(match[1]);
+  const mm = Number(match[2]);
+  if (!Number.isInteger(hh) || !Number.isInteger(mm)) return '';
+  if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return '';
 
-  const hh = String(parsed.getHours()).padStart(2, '0');
-  const mm = String(parsed.getMinutes()).padStart(2, '0');
-  return `${hh}:${mm}`;
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
 };
 
 export const removeEmptyValues = (payload = {}) => {

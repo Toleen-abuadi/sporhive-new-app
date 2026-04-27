@@ -82,7 +82,7 @@ const resolveImageUrl = ({ slug, kind, direct, hasImage }, options = {}) => {
   }
 
   if (raw) {
-    return joinUrl(apiBaseUrl || apiOrigin, raw) || raw;
+    return joinUrl(apiOrigin || apiBaseUrl, raw) || raw;
   }
 
   if (hasImage && slug && typeof options.getAcademyImageUrl === 'function') {
@@ -97,6 +97,27 @@ export function mapAcademyDiscoveryRow(row, options = {}) {
   const slug = cleanString(item.slug);
   const logoMeta = toObject(item.logo_meta || item.logoMeta);
   const coverMeta = toObject(item.cover_meta || item.coverMeta);
+  const rawLogo = pickFirst(
+    item.logo_url,
+    item.logo,
+    item.logo_image,
+    item.logoUrl,
+    item.avatar,
+    item.avatar_url,
+    item.image_logo
+  );
+  const rawCover = pickFirst(
+    item.cover_url,
+    item.cover_image,
+    item.cover,
+    item.coverUrl,
+    item.hero_image,
+    item.heroImage,
+    item.banner,
+    item.banner_url,
+    item.image,
+    item.main_image
+  );
 
   const academy = {
     id: toStringId(item.id),
@@ -146,15 +167,7 @@ export function mapAcademyDiscoveryRow(row, options = {}) {
       {
         slug,
         kind: 'logo',
-        direct: pickFirst(
-          item.logo_url,
-          item.logo,
-          item.logo_image,
-          item.logoUrl,
-          item.avatar,
-          item.avatar_url,
-          item.image_logo
-        ),
+        direct: rawLogo,
         hasImage: toBoolean(logoMeta.has),
       },
       options
@@ -163,18 +176,7 @@ export function mapAcademyDiscoveryRow(row, options = {}) {
       {
         slug,
         kind: 'cover',
-        direct: pickFirst(
-          item.cover_url,
-          item.cover_image,
-          item.cover,
-          item.coverUrl,
-          item.hero_image,
-          item.heroImage,
-          item.banner,
-          item.banner_url,
-          item.image,
-          item.main_image
-        ),
+        direct: rawCover,
         hasImage: toBoolean(coverMeta.has),
       },
       options

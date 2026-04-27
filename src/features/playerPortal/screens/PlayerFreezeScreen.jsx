@@ -29,7 +29,7 @@ import {
   toISODate,
   validateFreezeRequest,
 } from '../utils/playerPortal.freeze';
-import { formatDateLabel, formatNumberLabel } from '../utils/playerPortal.formatters';
+import { formatAmountLabel, formatDateLabel, formatNumberLabel } from '../utils/playerPortal.formatters';
 import { resolvePortalGuardMessage } from '../utils/playerPortal.messages';
 
 const REQUEST_STEPS = Object.freeze({
@@ -57,6 +57,29 @@ const resolveFreezeSubmitErrorMessage = (error, t) => {
 
   if (overlapMatch) {
     return t('playerPortal.freeze.errors.overlap');
+  }
+
+  const pendingPaymentMatch =
+    code.includes('pending_payment') ||
+    message.includes('pending payment') ||
+    message.includes('awaiting payment') ||
+    message.includes('unpaid') ||
+    message.includes('دفعة') ||
+    message.includes('مدفوع');
+
+  if (pendingPaymentMatch) {
+    const amountMatch = String(error?.message || '').match(
+      /pending payment(?:\s+of)?\s+([0-9]+(?:[.,][0-9]+)*)\s*([A-Za-z]{3})?/i
+    );
+    if (amountMatch?.[1]) {
+      const amountLabel = formatAmountLabel(amountMatch[1], {
+        locale: String(error?.locale || ''),
+        currency: amountMatch[2] || 'JOD',
+        fallback: amountMatch[1],
+      });
+      return t('playerPortal.freeze.errors.pendingPaymentBlockedWithAmount', { amount: amountLabel });
+    }
+    return t('playerPortal.freeze.errors.pendingPaymentBlocked');
   }
 
   return '';
@@ -129,7 +152,7 @@ export function PlayerFreezeScreen() {
   const router = useRouter();
   const toast = useToast();
   const { t, locale, isRTL } = useI18n();
-  const isArabic = locale === 'ar';
+  const isArabic = String(locale || '').toLowerCase().startsWith('ar');
   const { colors } = useTheme();
   const overviewQuery = usePlayerOverview({ auto: true, enabled: true });
 
@@ -214,6 +237,9 @@ export function PlayerFreezeScreen() {
     }
   }, [policy.maxDays, policy.maxPerYear, t, validation.errors, validation.valid]);
 
+  const resolveLocalizedFreezeSubmitError = (error) =>
+    resolveFreezeSubmitErrorMessage({ ...error, locale }, t);
+
   const submitRequest = async () => {
     if (!validation.valid) {
       setSubmitError({ message: validationMessage });
@@ -229,7 +255,7 @@ export function PlayerFreezeScreen() {
 
     if (!result.success) {
       if (result.error?.code === 'FREEZE_REQUEST_IN_FLIGHT') return;
-      const localizedSubmitError = resolveFreezeSubmitErrorMessage(result.error, t);
+      const localizedSubmitError = resolveLocalizedFreezeSubmitError(result.error);
       const nextError = localizedSubmitError
         ? {
             ...(result.error || {}),
@@ -261,11 +287,11 @@ export function PlayerFreezeScreen() {
     const result = await cancelFreeze(freezeRow.id);
     if (!result.success) {
       if (result.error?.code === 'FREEZE_CANCEL_IN_FLIGHT') return;
-      toast.error(result.error?.message || t('playerPortal.freeze.messages.cancelFailed'));
+      toast.error((isArabic ? '' : result.error?.message) || t('playerPortal.freeze.messages.cancelFailed'));
       return;
     }
 
-    toast.success(result.data?.message || t('playerPortal.freeze.messages.cancelled'));
+    toast.success((isArabic ? '' : result.data?.message) || t('playerPortal.freeze.messages.cancelled'));
   };
 
   const showInitialLoading = isLoading && !error && items.length === 0;

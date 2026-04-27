@@ -26,6 +26,70 @@ const extractSubscriptionStatus = (normalized) => {
   return 'inactive';
 };
 
+const resolveGroupCourseId = (group) => {
+  const row = toObject(group);
+  const rawCourseId = row.course_id ?? row.courseId ?? row.course?.id ?? row.raw?.course_id ?? row.raw?.courseId ?? row.raw?.course?.id;
+  const parsed = toNumber(rawCourseId);
+  return parsed == null ? null : parsed;
+};
+
+const normalizeAvailableGroupForRenewal = (group) => {
+  const row = toObject(group);
+  const raw = toObject(row.raw);
+  const id = toNumber(row.id ?? row.group_id ?? row.value ?? raw.id ?? raw.group_id);
+  const courseId = resolveGroupCourseId(row);
+  const name = cleanString(
+    row.name ||
+      row.group_name ||
+      row.label ||
+      raw.name ||
+      raw.group_name ||
+      raw.label
+  );
+
+  return {
+    id,
+    courseId,
+    name,
+    schedule: toArray(row.schedule || row.group_schedule || row.training_days || raw.schedule || raw.group_schedule || raw.training_days),
+    raw: Object.keys(raw).length > 0 ? raw : row,
+  };
+};
+
+const dedupeAvailableGroups = (groups = []) => {
+  const seen = new Set();
+  return groups.filter((group) => {
+    const id = toNumber(group?.id);
+    const courseId = group?.courseId == null ? null : toNumber(group.courseId);
+    const name = cleanString(group?.name).toLowerCase();
+    const key = id != null ? `id:${id}` : `name:${name}|course:${courseId == null ? 'null' : courseId}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+const collectAvailableGroupsForRenewal = (normalized) => {
+  const root = toObject(normalized?.raw);
+  const rootData = toObject(root.data);
+  const rootPlayerData = toObject(root.player_data);
+  const dataPlayerData = toObject(rootData.player_data);
+  const playerData = toObject(normalized?.playerDataRaw);
+
+  const merged = [
+    ...toArray(normalized?.registrationInfo?.availableGroups),
+    ...toArray(playerData.available_groups),
+    ...toArray(rootPlayerData.available_groups),
+    ...toArray(dataPlayerData.available_groups),
+    ...toArray(root.available_groups),
+    ...toArray(rootData.available_groups),
+  ]
+    .map(normalizeAvailableGroupForRenewal)
+    .filter((group) => group.id != null || group.name);
+
+  return dedupeAvailableGroups(merged);
+};
+
 export function mapOverviewResponse(payload) {
   const normalized = normalizeOverviewData(payload);
   const englishName = joinName(
@@ -75,7 +139,7 @@ export function mapOverviewResponse(payload) {
       courseName: normalized.registrationInfo.course.name,
       groupName: normalized.registrationInfo.group.name,
       availableCourses: normalized.registrationInfo.availableCourses,
-      availableGroups: normalized.registrationInfo.availableGroups,
+      availableGroups: collectAvailableGroupsForRenewal(normalized),
     },
     credits: {
       ...normalized.credits,
@@ -529,7 +593,8 @@ const mapUniformOrderRow = (order) => {
   const product = toObject(row.product);
 
   const productNameEn = cleanString(
-    row.uniform_type_en ||
+    row.uniform_en ||
+      row.uniform_type_en ||
       row.product_name_en ||
       product.name_en ||
       product.name ||
@@ -538,7 +603,8 @@ const mapUniformOrderRow = (order) => {
       row.name
   );
   const productNameAr = cleanString(
-    row.uniform_type_ar ||
+    row.uniform_ar ||
+      row.uniform_type_ar ||
       row.product_name_ar ||
       product.name_ar ||
       product.label_ar

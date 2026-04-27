@@ -74,9 +74,9 @@ export const getUniformSizeLabel = (size, t) => {
 export const getUniformProductName = (product, locale = 'en') => {
   const item = product || {};
   if (String(locale).toLowerCase().startsWith('ar')) {
-    return cleanString(item.nameAr || item.nameEn || item.productName);
+    return cleanString(item.nameAr || item.productNameAr || item.nameEn || item.productNameEn || item.productName);
   }
-  return cleanString(item.nameEn || item.nameAr || item.productName);
+  return cleanString(item.nameEn || item.productNameEn || item.nameAr || item.productNameAr || item.productName);
 };
 
 export const buildUniformOrderPayload = ({

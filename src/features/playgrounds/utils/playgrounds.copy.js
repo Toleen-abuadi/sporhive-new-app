@@ -1,4 +1,4 @@
-const EN = {
+﻿const EN = {
   title: 'Playgrounds',
   subtitle: 'Discover venues, choose your slot, and book in a few taps',
   searchHint: 'Browse by activity, date, players, and location',
@@ -229,7 +229,7 @@ const AR = {
   tabs: {
     all: 'الكل',
     offers: 'العروض',
-    featured: 'مميزة',
+    featured: 'مميز',
     premium: 'بريميوم',
     pro: 'برو',
   },
@@ -446,6 +446,56 @@ const AR = {
   },
 };
 
+const VENUE_DETAILS_COPY = {
+  en: {
+    quickStats: 'Quick Snapshot',
+    about: 'About Venue',
+    specs: 'Venue Details',
+    durations: 'Duration Options',
+    highlights: 'Academy Highlights',
+    amenities: 'Amenities & Features',
+    location: 'Location',
+    notes: 'Notes & Policies',
+    readMore: 'Read more',
+    readLess: 'Show less',
+    paymentMethods: 'Payment Methods',
+    secureBooking: 'Secure booking',
+    secureBookingHint: 'Bookings are processed safely through SporHive and the academy.',
+    noDescription: 'No additional venue description is available right now.',
+    activity: 'Activity',
+    venueType: 'Venue type',
+    pitchSize: 'Pitch size',
+    areaSize: 'Area size',
+    tier: 'Marketplace tier',
+    coordinates: 'Coordinates',
+    noDurations: 'No duration options available yet.',
+  },
+  ar: {
+    quickStats: '\u0645\u0644\u062e\u0635 \u0633\u0631\u064a\u0639',
+    about: '\u0639\u0646 \u0627\u0644\u0645\u0644\u0639\u0628',
+    specs: '\u062a\u0641\u0627\u0635\u064a\u0644 \u0627\u0644\u0645\u0644\u0639\u0628',
+    durations: '\u062e\u064a\u0627\u0631\u0627\u062a \u0627\u0644\u0645\u062f\u0629',
+    highlights: '\u0645\u0645\u064a\u0632\u0627\u062a \u0627\u0644\u0623\u0643\u0627\u062f\u064a\u0645\u064a\u0629',
+    amenities: '\u0627\u0644\u062e\u062f\u0645\u0627\u062a \u0648\u0627\u0644\u0645\u0631\u0627\u0641\u0642',
+    location: '\u0627\u0644\u0645\u0648\u0642\u0639',
+    notes: '\u0645\u0644\u0627\u062d\u0638\u0627\u062a \u0648\u0633\u064a\u0627\u0633\u0627\u062a',
+    readMore: '\u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0645\u0632\u064a\u062f',
+    readLess: '\u0625\u062e\u0641\u0627\u0621',
+    paymentMethods: '\u0637\u0631\u0642 \u0627\u0644\u062f\u0641\u0639',
+    secureBooking: '\u062d\u062c\u0632 \u0622\u0645\u0646',
+    secureBookingHint:
+      '\u064a\u062a\u0645 \u062a\u0623\u0643\u064a\u062f \u0627\u0644\u062d\u062c\u0632 \u0628\u0623\u0645\u0627\u0646 \u0639\u0628\u0631 SporHive \u0648\u0627\u0644\u0623\u0643\u0627\u062f\u064a\u0645\u064a\u0629.',
+    noDescription: '\u0644\u0627 \u064a\u0648\u062c\u062f \u0648\u0635\u0641 \u0625\u0636\u0627\u0641\u064a \u062d\u0627\u0644\u064a\u0627\u064b.',
+    activity: '\u0627\u0644\u0646\u0634\u0627\u0637',
+    venueType: '\u0646\u0648\u0639 \u0627\u0644\u0645\u0644\u0639\u0628',
+    pitchSize: '\u0645\u0642\u0627\u0633 \u0627\u0644\u0645\u0644\u0639\u0628',
+    areaSize: '\u0627\u0644\u0645\u0633\u0627\u062d\u0629',
+    tier: '\u0641\u0626\u0629 \u0627\u0644\u0639\u0631\u0636',
+    coordinates: '\u0627\u0644\u0625\u062d\u062f\u0627\u062b\u064a\u0627\u062a',
+    noDurations: '\u0644\u0627 \u062a\u0648\u062c\u062f \u0645\u062f\u062f \u0645\u062a\u0627\u062d\u0629 \u062d\u0627\u0644\u064a\u0627\u064b.',
+  },
+};
+
 const dictionaries = {
   en: EN,
   ar: AR,
@@ -561,6 +611,10 @@ export function getPlaygroundsCopy(locale = 'en') {
   return locale === 'ar' ? dictionaries.ar : dictionaries.en;
 }
 
+export function getPlaygroundsVenueDetailsCopy(locale = 'en') {
+  return locale === 'ar' ? VENUE_DETAILS_COPY.ar : VENUE_DETAILS_COPY.en;
+}
+
 export function tPlaygrounds(locale = 'en', key, params = {}) {
   const dict = getPlaygroundsCopy(locale);
   const fallback = getPlaygroundsCopy('en');
@@ -615,3 +669,4 @@ export function resolvePlaygroundsErrorMessage(error, locale = 'en', fallbackMes
 
   return candidates[0] || explicitFallback || copy.errors.actionFailed;
 }
+

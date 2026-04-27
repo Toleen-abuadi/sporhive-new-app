@@ -9,7 +9,7 @@ import { borderRadius, spacing } from '../../../../theme/tokens';
 import { getRowDirection } from '../../../../utils/rtl';
 import {
   formatDistanceKm,
-  formatPlaygroundPrice,
+  formatLabeledPrice,
 } from '../../utils/playgrounds.formatters';
 
 const CARD_WIDTH = 276;
@@ -79,8 +79,8 @@ function CarouselCard({
           <View style={styles.priceWrap}>
             {item.price != null ? (
               <>
-                <Text variant="caption" weight="semibold" color={colors.accentOrange} style={styles.ltrValue}>
-                  {formatPlaygroundPrice(item.price, { locale })}
+                <Text variant="caption" weight="semibold" color={colors.accentOrange}>
+                  {formatLabeledPrice(item.price, { locale })}
                 </Text>
                 <Text variant="caption" color={colors.textMuted}>
                   {copy?.labels?.perSession}

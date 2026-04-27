@@ -158,7 +158,8 @@ export function AcademyPicker({
               <FlatList
                 data={filteredAcademies}
                 keyExtractor={(item) => String(item.id)}
-                keyboardShouldPersistTaps="always"
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
                 contentContainerStyle={styles.list}
                 ListEmptyComponent={
                   <View style={styles.loading}>

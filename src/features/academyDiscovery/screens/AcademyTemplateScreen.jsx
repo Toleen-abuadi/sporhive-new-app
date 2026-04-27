@@ -303,15 +303,6 @@ export function AcademyTemplateScreen() {
                 {canJoin ? copy.actions.joinNow : contactPrimary.label}
               </Button>
 
-              {mapHref && !canJoin ? (
-                <Button
-                  fullWidth
-                  variant="secondary"
-                  onPress={() => openExternalUrl(mapHref)}
-                >
-                  {copy.actions.getDirections}
-                </Button>
-              ) : null}
             </View>
           </>
         ) : null}

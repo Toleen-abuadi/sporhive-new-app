@@ -217,6 +217,15 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2,
   },
+  titleWrapRtl: {
+    alignItems: 'flex-end',
+  },
+  titleText: {
+    width: '100%',
+  },
+  sportText: {
+    width: '100%',
+  },
   headActions: {
     alignItems: 'center',
     gap: spacing.xs,

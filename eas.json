@@ -19,7 +19,7 @@
       },
       "env": {
         "EXPO_PUBLIC_ENV_NAME": "preview",
-        "EXPO_PUBLIC_API_BASE_URL": "https://backend.sporhive.com/api/v1"
+        "EXPO_PUBLIC_API_BASE_URL": "https://sporhive-admin-system-backend-testing.up.railway.app/api/v1"
       }
     },
     "production": {

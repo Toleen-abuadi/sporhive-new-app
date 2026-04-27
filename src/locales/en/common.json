@@ -805,6 +805,8 @@
         "tooLong": "Freeze duration exceeds the allowed {{days}} days.",
         "yearLimit": "You reached the yearly freeze limit ({{count}}).",
         "overlap": "Selected dates overlap with an existing freeze.",
+        "pendingPaymentBlocked": "You have a pending payment. Please complete it to proceed.",
+        "pendingPaymentBlockedWithAmount": "You have a pending payment of {{amount}}. Please complete it to proceed.",
         "unknown": "Freeze request is invalid.",
         "submitTitle": "Unable to submit freeze request",
         "submitFallback": "Please review request details and retry.",
@@ -878,6 +880,8 @@
         "loadFallback": "Retry to load eligibility and options.",
         "pendingRequest": "A pending renewal request exists. You cannot submit another yet.",
         "serverBlocked": "Renewal request is currently blocked.",
+        "pendingPaymentBlocked": "You have a pending payment. Please complete it to proceed.",
+        "pendingPaymentBlockedWithAmount": "You have a pending payment of {{amount}}. Please complete it to proceed.",
         "overlapCourse": "Only courses starting after {{date}} are allowed.",
         "submitTitle": "Unable to submit renewal request",
         "submitFallback": "Please review selections and retry."

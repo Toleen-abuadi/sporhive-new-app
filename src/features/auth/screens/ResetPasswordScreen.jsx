@@ -87,12 +87,13 @@ const extractRetryAfterSeconds = (source) => {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
   },
   content: {
     width: '100%',
     maxWidth: 560,
     alignSelf: 'center',
+    paddingBottom: spacing['2xl'],
   },
   card: {
     gap: spacing.md,

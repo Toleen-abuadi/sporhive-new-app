@@ -25,6 +25,7 @@ import {
 import { usePlayerRenewalFlow } from '../hooks';
 import { clampISODate } from '../utils/playerPortal.courseSchedule';
 import {
+  formatAmountLabel,
   formatDateLabel,
   formatNumberLabel,
   formatRegistrationTypeLabel,
@@ -50,6 +51,33 @@ const normalizeStepTitle = (step, t) => {
     default:
       return t('playerPortal.renewal.steps.reviewTitle');
   }
+};
+
+const resolvePendingPaymentBlockMessage = (rawMessage, { t, locale, fallbackKey }) => {
+  const message = String(rawMessage || '').trim();
+  const normalized = message.toLowerCase();
+  const isPendingPaymentMessage =
+    normalized.includes('pending payment') ||
+    normalized.includes('awaiting payment') ||
+    normalized.includes('unpaid') ||
+    normalized.includes('دفعة') ||
+    normalized.includes('مدفوع');
+
+  if (!isPendingPaymentMessage) return '';
+
+  const amountMatch = message.match(
+    /pending payment(?:\s+of)?\s+([0-9]+(?:[.,][0-9]+)*)\s*([A-Za-z]{3})?/i
+  );
+  if (amountMatch?.[1]) {
+    const amountLabel = formatAmountLabel(amountMatch[1], {
+      locale,
+      currency: amountMatch[2] || 'JOD',
+      fallback: amountMatch[1],
+    });
+    return t(`${fallbackKey}WithAmount`, { amount: amountLabel });
+  }
+
+  return t(fallbackKey);
 };
 
 function SelectableCard({ title, description, icon, selected, onPress, colors, isRTL }) {
@@ -90,7 +118,7 @@ export function PlayerRenewalScreen() {
 
   const flow = usePlayerRenewalFlow({ auto: true });
   const hasPendingRenewalRequest = Boolean(flow.eligibility?.hasPendingRequest);
-  const isArabic = locale === 'ar';
+  const isArabic = String(locale || '').toLowerCase().startsWith('ar');
 
   const currentRegistration = flow.currentRegistration;
   const stepTitle = normalizeStepTitle(flow.step, t);
@@ -102,8 +130,14 @@ export function PlayerRenewalScreen() {
   }, [flow.anchorISO, flow.hasCourseOverlapSelection, locale, t]);
   const serverBlockedMessage = useMemo(() => {
     if (!flow.hasServerBlockingCondition) return '';
-    return flow.blockingReason || t('playerPortal.renewal.errors.serverBlocked');
-  }, [flow.blockingReason, flow.hasServerBlockingCondition, t]);
+    const pendingPaymentMessage = resolvePendingPaymentBlockMessage(flow.blockingReason, {
+      t,
+      locale,
+      fallbackKey: 'playerPortal.renewal.errors.pendingPaymentBlocked',
+    });
+    if (pendingPaymentMessage) return pendingPaymentMessage;
+    return (isArabic ? '' : flow.blockingReason) || t('playerPortal.renewal.errors.serverBlocked');
+  }, [flow.blockingReason, flow.hasServerBlockingCondition, isArabic, locale, t]);
   const startBoundsHelperText = useMemo(() => {
     const min = formatDateLabel(flow.bounds.startMin, { locale, fallback: '-' });
     const max = formatDateLabel(flow.bounds.startMax, { locale, fallback: '-' });
@@ -161,7 +195,13 @@ export function PlayerRenewalScreen() {
         return;
       }
       toast.error(
-        (isArabic ? '' : result.error?.message) || t('playerPortal.renewal.messages.submitFailed')
+        resolvePendingPaymentBlockMessage(result.error?.message, {
+          t,
+          locale,
+          fallbackKey: 'playerPortal.renewal.errors.pendingPaymentBlocked',
+        }) ||
+          (isArabic ? '' : result.error?.message) ||
+          t('playerPortal.renewal.messages.submitFailed')
       );
       return;
     }

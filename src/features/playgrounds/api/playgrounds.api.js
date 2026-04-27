@@ -60,7 +60,29 @@ const resolveApiBaseUrl = () => {
   return configuredBase;
 };
 
+const resolveApiOrigin = (apiBaseUrl = '') => {
+  const raw = cleanString(apiBaseUrl);
+  if (!raw) return '';
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return '';
+  }
+};
+
+const isRelativeMediaPath = (value) => {
+  const raw = cleanString(value).toLowerCase();
+  if (!raw) return false;
+  const normalized = raw.replace(/^\/+/, '');
+  return (
+    normalized.startsWith('media/') ||
+    normalized.startsWith('uploads/') ||
+    normalized.startsWith('playgrounds/')
+  );
+};
+
 const API_BASE_URL = resolveApiBaseUrl();
+const API_ORIGIN = resolveApiOrigin(API_BASE_URL);
 const PLAYGROUNDS_BASE_PATH = resolvePlaygroundsBasePath(API_BASE_URL);
 const PLAYGROUNDS_ENDPOINTS = buildPlaygroundsEndpoints(PLAYGROUNDS_BASE_PATH);
 
@@ -366,17 +388,32 @@ export const playgroundsApi = {
   getVenueImageUrl(imageIdOrUrl) {
     const raw = cleanString(imageIdOrUrl);
     if (!raw) return '';
-    
+
     if (raw.startsWith('http') || raw.startsWith('data:image')) {
       return raw;
     }
-    console.warn(`[playgroundsApi] Received unrecognized image identifier "${raw}". Attempting to resolve as image ID, but consider updating the backend to return full URLs.`);
+
+    if (raw.startsWith('/api/')) {
+      return API_ORIGIN ? `${API_ORIGIN}${raw}` : '';
+    }
+
+    if (raw.startsWith('/public/')) {
+      return API_BASE_URL ? `${API_BASE_URL}${raw}` : '';
+    }
+
     if (raw.startsWith('/')) {
-      if (!API_BASE_URL) return '';
-      return `${API_BASE_URL}${raw}`;
+      const base = API_ORIGIN || API_BASE_URL;
+      return base ? `${base}${raw}` : '';
+    }
+
+    if (isRelativeMediaPath(raw)) {
+      if (!API_ORIGIN && !API_BASE_URL) return '';
+      const base = API_ORIGIN || API_BASE_URL;
+      return `${base}/${raw.replace(/^\/+/, '')}`;
     }
 
     if (!API_BASE_URL) return '';
+    console.warn(`[playgroundsApi] Received unrecognized image identifier "${raw}". Attempting to resolve as image ID, but consider updating the backend to return full URLs.`);
     return `${API_BASE_URL}${PLAYGROUNDS_ENDPOINTS.PUBLIC_VENUE_IMAGE(raw)}`;
   },
 

@@ -61,7 +61,7 @@ export function KeyboardAwareModalSheet({
     <View style={styles.backdrop}>
       <KeyboardAvoidingView
         style={styles.keyboardWrap}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={keyboardVerticalOffset}
       >
         <View
@@ -89,7 +89,8 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   keyboardWrap: {
-    width: '100%',
+    flex: 1,
+    justifyContent: 'flex-end',
   },
   sheet: {
     borderTopLeftRadius: borderRadius.xl,

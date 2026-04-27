@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   },
   ltrValue: {
     writingDirection: 'ltr',
-    textAlign: 'left',
+    textAlign: 'auto',
   },
   iconWrap: {
     alignItems: 'center',

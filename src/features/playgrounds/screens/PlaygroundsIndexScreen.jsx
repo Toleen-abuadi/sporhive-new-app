@@ -1,10 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  RefreshControl,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import { RefreshControl, StyleSheet, View } from 'react-native';
 import Animated, {
   FadeIn,
   FadeOut,
@@ -13,11 +8,10 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronDown, Clock3, MapPin, SlidersHorizontal, Sparkles, Users } from 'lucide-react-native';
+import { ChevronDown, MapPin, SlidersHorizontal, Users } from 'lucide-react-native';
 import { AppScreen } from '../../../components/ui/AppScreen';
 import { Button } from '../../../components/ui/Button';
 import { Chip } from '../../../components/ui/Chip';
-import { DatePickerField } from '../../../components/ui/DatePickerField';
 import { LanguageSwitch } from '../../../components/ui/LanguageSwitch';
 import { ScreenHeader } from '../../../components/ui/ScreenHeader';
 import { SectionLoader } from '../../../components/ui/Loader';
@@ -34,20 +28,14 @@ import { useI18n } from '../../../hooks/useI18n';
 import { useTheme } from '../../../hooks/useTheme';
 import { spacing } from '../../../theme/tokens';
 import { getRowDirection } from '../../../utils/rtl';
-import { normalizeNumericInput } from '../../../utils/numbering';
-import { formatPlaygroundDate } from '../utils/playgrounds.formatters';
-import { toIsoDate } from '../utils/playgrounds.normalizers';
 import { getPlaygroundsCopy } from '../utils/playgrounds.copy';
 import {
   buildPlaygroundsDiscoveryRouteParams,
   buildPlaygroundsFiltersFromState,
-  countActivePlaygroundsDiscoveryFilters,
-  hasActivePlaygroundsDiscoveryFilters,
   parsePlaygroundsDiscoveryParams,
-  PLAYGROUNDS_SORT_CONFIG,
-  PLAYGROUNDS_SORT_LABEL_KEY,
-  resolveVenueTier,
 } from '../utils/playgrounds.discovery';
+import { resolveActivityType } from '../utils/playgrounds.options';
+import { ACTIVITY_TYPE_OPTIONS, VENUE_DURATION_OPTIONS } from '../utils/constants';
 import { useActivities, useVenues } from '../hooks';
 import {
   ActivityChips,
@@ -58,47 +46,6 @@ import {
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 
-const TAB_CONFIG = ['all', 'offers', 'featured', 'premium', 'pro'];
-const MAX_PLAYERS_FILTER = 50;
-const SPORT_CATALOG = Object.freeze([
-  { key: 'football', en: 'Football', ar: 'كرة القدم' },
-  { key: 'basketball', en: 'Basketball', ar: 'كرة السلة' },
-  { key: 'tennis', en: 'Tennis', ar: 'التنس' },
-  { key: 'swimming', en: 'Swimming', ar: 'السباحة' },
-  { key: 'gym', en: 'Gym', ar: 'الجيم' },
-  { key: 'padel', en: 'Padel', ar: 'البادل' },
-  { key: 'volleyball', en: 'Volleyball', ar: 'الكرة الطائرة' },
-  { key: 'badminton', en: 'Badminton', ar: 'الريشة الطائرة' },
-  { key: 'table_tennis', en: 'Table Tennis', ar: 'تنس الطاولة' },
-  { key: 'handball', en: 'Handball', ar: 'كرة اليد' },
-]);
-const DURATION_OPTIONS = Object.freeze([
-  { id: '30', minutes: 30 },
-  { id: '60', minutes: 60 },
-  { id: '90', minutes: 90 },
-  { id: '120', minutes: 120 },
-]);
-const TAG_OPTIONS = Object.freeze([
-  { key: 'indoor', en: 'Indoor', ar: 'داخلي' },
-  { key: 'outdoor', en: 'Outdoor', ar: 'خارجي' },
-  { key: 'parking', en: 'Parking', ar: 'مواقف' },
-  { key: 'showers', en: 'Showers', ar: 'غرف تبديل/دش' },
-  { key: 'cafeteria', en: 'Cafeteria', ar: 'كافتيريا' },
-  { key: 'kids_friendly', en: 'Kids Friendly', ar: 'مناسب للأطفال' },
-  { key: 'ladies_only', en: 'Ladies Only', ar: 'للسيدات فقط' },
-  { key: 'ac', en: 'AC', ar: 'تكييف' },
-  { key: 'night_lighting', en: 'Night Lighting', ar: 'إضاءة ليلية' },
-  { key: 'coach_available', en: 'Coach Available', ar: 'مدرب متاح' },
-]);
-
-const normalizePlayersInput = (value) => {
-  const digits = normalizeNumericInput(value).replace(/[^\d]/g, '');
-  if (!digits) return '';
-  const numeric = Number(digits);
-  if (!Number.isFinite(numeric)) return '';
-  return String(Math.min(MAX_PLAYERS_FILTER, Math.max(1, Math.floor(numeric))));
-};
-
 const normalizeKey = (value) =>
   String(value || '')
     .trim()
@@ -106,27 +53,136 @@ const normalizeKey = (value) =>
     .replace(/\s+/g, '_')
     .replace(/-/g, '_');
 
-const resolveSportKeyForActivity = (item) => {
-  const candidates = [
-    item?.key,
-    item?.slug,
-    item?.nameEn,
-    item?.nameAr,
-    item?.name,
-  ].map(normalizeKey);
+const toComparableText = (value) => normalizeKey(value).replace(/_/g, ' ');
 
-  const byAlias = (key) => {
-    if (key === 'tabletennis' || key === 'pingpong' || key === 'ping_pong') return 'table_tennis';
-    if (key === 'volley' || key === 'vollyball') return 'volleyball';
-    return key;
-  };
+const normalizeLocation = (value) => String(value || '').trim();
 
-  for (const raw of candidates) {
-    if (!raw) continue;
-    const key = byAlias(raw);
-    if (SPORT_CATALOG.some((sport) => sport.key === key)) {
-      return key;
+const isLikelyInternalId = (value) => {
+  const text = String(value || '').trim();
+  if (!text) return false;
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(text)) {
+    return true;
+  }
+  if (/^[0-9A-F]{24,}$/i.test(text)) return true;
+  return false;
+};
+
+const isJunkValue = (value) => {
+  const text = String(value || '').trim().toLowerCase();
+  if (!text) return true;
+  if (text === 'none' || text === 'null' || text === 'undefined') return true;
+  if (text === 'none none') return true;
+  return false;
+};
+
+const toSafeDisplayText = (value) => {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  if (isJunkValue(text) || isLikelyInternalId(text)) return '';
+  return text;
+};
+
+const normalizeCourseId = (value) => {
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) return String(Math.trunc(numeric));
+  return String(value || '').trim();
+};
+
+const extractVenueDurationMinutes = (venue) => {
+  const source = venue?.raw || {};
+  const directCandidates = [
+    source.duration_minutes,
+    source.durationMinutes,
+    source.duration,
+  ];
+  const listCandidates = Array.isArray(source.durations) ? source.durations : [];
+  const minutesSet = new Set();
+
+  directCandidates.forEach((candidate) => {
+    const numeric = Number(candidate);
+    if (Number.isFinite(numeric) && numeric > 0) {
+      minutesSet.add(Math.round(numeric));
     }
+  });
+
+  listCandidates.forEach((duration) => {
+    const numeric = Number(duration?.minutes ?? duration?.duration_minutes);
+    if (Number.isFinite(numeric) && numeric > 0) {
+      minutesSet.add(Math.round(numeric));
+    }
+  });
+
+  return [...minutesSet];
+};
+
+const hasRangeOverlap = (venueMin, venueMax, bucketMin, bucketMax) => {
+  const maxBucket = bucketMax == null ? Number.POSITIVE_INFINITY : bucketMax;
+  return venueMin <= maxBucket && venueMax >= bucketMin;
+};
+
+const buildPlayersBuckets = (venues, locale, selectedBucketId = '') => {
+  const baseBuckets = [
+    { id: '1-2', min: 1, max: 2 },
+    { id: '3-6', min: 3, max: 6 },
+    { id: '7-10', min: 7, max: 10 },
+    { id: '11+', min: 11, max: null },
+  ];
+
+  const normalizedRanges = (venues || [])
+    .map((venue) => {
+      const minRaw = Number(venue?.minPlayers);
+      const maxRaw = Number(venue?.maxPlayers);
+      if (!Number.isFinite(minRaw) || !Number.isFinite(maxRaw)) return null;
+      const min = Math.max(1, Math.floor(minRaw));
+      const max = Math.max(min, Math.floor(maxRaw));
+      return { min, max };
+    })
+    .filter(Boolean);
+
+  const visibleBuckets = baseBuckets.filter((bucket) =>
+    normalizedRanges.some((range) => hasRangeOverlap(range.min, range.max, bucket.min, bucket.max))
+  );
+
+  if (selectedBucketId && !visibleBuckets.some((item) => item.id === selectedBucketId)) {
+    const selected = baseBuckets.find((item) => item.id === selectedBucketId);
+    if (selected) visibleBuckets.push(selected);
+  }
+
+  const anyLabel = locale === 'ar' ? 'أي عدد' : 'Any players';
+  return [
+    { id: '', min: null, max: null, label: anyLabel },
+    ...visibleBuckets.map((bucket) => ({
+      ...bucket,
+      label: bucket.max == null ? `${bucket.min}+` : `${bucket.min}-${bucket.max}`,
+    })),
+  ];
+};
+
+const pickActivityLabel = ({ locale, activityItem, fallback }) => {
+  if (activityItem) {
+    const localized = locale === 'ar' ? activityItem?.nameAr || activityItem?.nameEn : activityItem?.nameEn || activityItem?.nameAr;
+    const safeLocalized = toSafeDisplayText(localized);
+    if (safeLocalized) return safeLocalized;
+  }
+  const fallbackLabel = toSafeDisplayText(fallback?.label);
+  if (fallbackLabel) return fallbackLabel;
+  return '';
+};
+
+const getVenueFilterLocationLabel = (venue) => {
+  const raw = venue?.raw || {};
+  const candidates = [
+    venue?.location,
+    venue?.academyProfile?.locationText,
+    raw?.academy_profile?.location_text,
+    raw?.base_location,
+    raw?.city,
+    raw?.address,
+  ];
+
+  for (let index = 0; index < candidates.length; index += 1) {
+    const safe = toSafeDisplayText(normalizeLocation(candidates[index]));
+    if (safe) return safe;
   }
 
   return '';
@@ -144,63 +200,49 @@ export function PlaygroundsIndexScreen() {
       parsePlaygroundsDiscoveryParams({
         tab: params?.tab,
         activityId: params?.activityId,
-        date: params?.date,
         players: params?.players,
-        sortBy: params?.sortBy,
         location: params?.location,
-        hasSpecialOffer: params?.hasSpecialOffer,
         durationId: params?.durationId,
-        tags: params?.tags,
       }),
-    [
-      params?.activityId,
-      params?.date,
-      params?.durationId,
-      params?.hasSpecialOffer,
-      params?.location,
-      params?.players,
-      params?.sortBy,
-      params?.tags,
-      params?.tab,
-    ]
+    [params?.activityId, params?.durationId, params?.location, params?.players, params?.tab]
+  );
+
+  const routeScopedState = useMemo(
+    () => ({
+      tab: 'all',
+      selectedActivityId: routeDiscoveryState.selectedActivityId,
+      selectedDate: '',
+      selectedPlayers: null,
+      sortBy: 'recommended',
+      selectedLocation: routeDiscoveryState.selectedLocation,
+      hasSpecialOffer: false,
+      selectedDurationId: routeDiscoveryState.selectedDurationId || '',
+      selectedTags: [],
+      selectedPlayersBucketId: '',
+    }),
+    [routeDiscoveryState.selectedActivityId, routeDiscoveryState.selectedDurationId, routeDiscoveryState.selectedLocation]
   );
 
   const routeDiscoverySignature = useMemo(
-    () => JSON.stringify(routeDiscoveryState),
-    [routeDiscoveryState]
+    () => JSON.stringify(routeScopedState),
+    [routeScopedState]
   );
 
   const [filtersExpanded, setFiltersExpanded] = useState(false);
-  const [tab, setTab] = useState(routeDiscoveryState.tab);
-  const [selectedActivityId, setSelectedActivityId] = useState(routeDiscoveryState.selectedActivityId);
-  const [selectedDate, setSelectedDate] = useState(routeDiscoveryState.selectedDate);
-  const [selectedPlayers, setSelectedPlayers] = useState(routeDiscoveryState.selectedPlayers);
-  const [sortBy, setSortBy] = useState(routeDiscoveryState.sortBy);
-  const [selectedLocation, setSelectedLocation] = useState(routeDiscoveryState.selectedLocation);
-  const [hasSpecialOffer, setHasSpecialOffer] = useState(Boolean(routeDiscoveryState.hasSpecialOffer));
-  const [selectedDurationId, setSelectedDurationId] = useState(routeDiscoveryState.selectedDurationId);
-  const [selectedTags, setSelectedTags] = useState(routeDiscoveryState.selectedTags || []);
-  const [appliedState, setAppliedState] = useState(routeDiscoveryState);
-  const [playersInput, setPlayersInput] = useState(
-    routeDiscoveryState.selectedPlayers == null ? '' : String(routeDiscoveryState.selectedPlayers)
-  );
+  const [selectedActivityId, setSelectedActivityId] = useState(routeScopedState.selectedActivityId);
+  const [selectedLocation, setSelectedLocation] = useState(routeScopedState.selectedLocation);
+  const [selectedDurationId, setSelectedDurationId] = useState(routeScopedState.selectedDurationId);
+  const [selectedPlayersBucketId, setSelectedPlayersBucketId] = useState(routeScopedState.selectedPlayersBucketId);
+  const [appliedState, setAppliedState] = useState(routeScopedState);
   const [filtersUniverseVenues, setFiltersUniverseVenues] = useState([]);
 
   useEffect(() => {
-    setTab(routeDiscoveryState.tab);
-    setSelectedActivityId(routeDiscoveryState.selectedActivityId);
-    setSelectedDate(routeDiscoveryState.selectedDate);
-    setSelectedPlayers(routeDiscoveryState.selectedPlayers);
-    setSortBy(routeDiscoveryState.sortBy);
-    setSelectedLocation(routeDiscoveryState.selectedLocation);
-    setHasSpecialOffer(Boolean(routeDiscoveryState.hasSpecialOffer));
-    setSelectedDurationId(routeDiscoveryState.selectedDurationId || '');
-    setSelectedTags(routeDiscoveryState.selectedTags || []);
-    setAppliedState(routeDiscoveryState);
-    setPlayersInput(
-      routeDiscoveryState.selectedPlayers == null ? '' : String(routeDiscoveryState.selectedPlayers)
-    );
-  }, [routeDiscoverySignature, routeDiscoveryState]);
+    setSelectedActivityId(routeScopedState.selectedActivityId);
+    setSelectedLocation(routeScopedState.selectedLocation);
+    setSelectedDurationId(routeScopedState.selectedDurationId || '');
+    setSelectedPlayersBucketId(routeScopedState.selectedPlayersBucketId || '');
+    setAppliedState(routeScopedState);
+  }, [routeDiscoverySignature, routeScopedState]);
 
   const chevronAnimatedStyle = useAnimatedStyle(() => ({
     transform: [
@@ -216,46 +258,54 @@ export function PlaygroundsIndexScreen() {
 
   const discoveryState = useMemo(
     () => ({
-      tab,
+      ...routeScopedState,
       selectedActivityId,
-      selectedDate,
-      selectedPlayers,
-      sortBy,
       selectedLocation,
-      hasSpecialOffer,
       selectedDurationId,
-      selectedTags,
+      selectedPlayersBucketId,
     }),
-    [
-      hasSpecialOffer,
-      selectedActivityId,
-      selectedDate,
-      selectedDurationId,
-      selectedLocation,
-      selectedPlayers,
-      selectedTags,
-      sortBy,
-      tab,
-    ]
+    [routeScopedState, selectedActivityId, selectedDurationId, selectedLocation, selectedPlayersBucketId]
   );
 
   const hasActiveRefinements = useMemo(
-    () => hasActivePlaygroundsDiscoveryFilters(appliedState),
+    () =>
+      Boolean(
+        appliedState.selectedActivityId ||
+          appliedState.selectedLocation ||
+          appliedState.selectedDurationId ||
+          appliedState.selectedPlayersBucketId
+      ),
     [appliedState]
   );
 
   const activeFiltersCount = useMemo(
-    () => countActivePlaygroundsDiscoveryFilters(discoveryState),
+    () =>
+      [
+        Boolean(discoveryState.selectedActivityId),
+        Boolean(discoveryState.selectedLocation),
+        Boolean(discoveryState.selectedDurationId),
+        Boolean(discoveryState.selectedPlayersBucketId),
+      ].filter(Boolean).length,
     [discoveryState]
   );
 
-  const filters = useMemo(
-    () => buildPlaygroundsFiltersFromState(appliedState),
+  const apiFilters = useMemo(
+    () =>
+      buildPlaygroundsFiltersFromState({
+        ...appliedState,
+        tab: 'all',
+        selectedDate: '',
+        selectedPlayers: null,
+        hasSpecialOffer: false,
+        selectedTags: [],
+        sortBy: 'recommended',
+        selectedDurationId: '',
+      }),
     [appliedState]
   );
 
   const venuesQuery = useVenues({
-    filters,
+    filters: apiFilters,
     auto: true,
     fetchMap: true,
   });
@@ -264,7 +314,6 @@ export function PlaygroundsIndexScreen() {
     if (hasActiveRefinements) return;
     if (venuesQuery.venuesError) return;
     if (!venuesQuery.venues.length) return;
-
     setFiltersUniverseVenues(venuesQuery.venues);
   }, [hasActiveRefinements, venuesQuery.venues, venuesQuery.venuesError]);
 
@@ -273,141 +322,202 @@ export function PlaygroundsIndexScreen() {
     [filtersUniverseVenues, venuesQuery.venues]
   );
 
-  const allActivityItems = useMemo(() => {
-    const apiItems = activitiesQuery.items || [];
-    const bySportKey = new Map();
-
-    apiItems.forEach((item) => {
-      const sportKey = resolveSportKeyForActivity(item);
-      if (!sportKey) return;
-      if (!bySportKey.has(sportKey)) {
-        bySportKey.set(sportKey, item);
-      }
+  const activityLookupById = useMemo(() => {
+    const map = new Map();
+    (activitiesQuery.items || []).forEach((item) => {
+      const id = normalizeCourseId(item?.id);
+      if (id) map.set(id, item);
     });
+    return map;
+  }, [activitiesQuery.items]);
 
-    const merged = SPORT_CATALOG.map((sport) => {
-      const apiMatch = bySportKey.get(sport.key);
-      if (apiMatch) {
-        return {
-          ...apiMatch,
-          id: String(apiMatch.id),
-          label: locale === 'ar' ? apiMatch.nameAr || sport.ar : apiMatch.nameEn || sport.en,
-        };
-      }
+  const allSportsLabel = useMemo(() => {
+    const allOption = ACTIVITY_TYPE_OPTIONS.find((item) => !item.id || item.key === 'all');
+    return locale === 'ar' ? allOption?.nameAr || copy.tabs.all : allOption?.nameEn || copy.tabs.all;
+  }, [copy.tabs.all, locale]);
 
-      return {
-        id: `sport:${sport.key}`,
-        key: sport.key,
-        nameEn: sport.en,
-        nameAr: sport.ar,
-        label: locale === 'ar' ? sport.ar : sport.en,
-      };
-    });
+  const activityOptions = useMemo(() => {
+    const map = new Map();
 
-    apiItems.forEach((item) => {
-      const id = String(item.id || '');
+    (optionsSourceVenues || []).forEach((venue) => {
+      const id = normalizeCourseId(venue?.activityId);
       if (!id) return;
-      if (merged.some((entry) => String(entry.id) === id)) return;
-      merged.push({
-        ...item,
-        id,
-        label: locale === 'ar' ? item.nameAr || item.nameEn : item.nameEn || item.nameAr,
-      });
+      if (map.has(id)) return;
+
+      const raw = venue?.raw || {};
+      const activityFallback = resolveActivityType(
+        raw.activity_key ||
+          raw.activity_name_en ||
+          raw.activity_name_ar ||
+          raw.activity_name ||
+          raw.activity?.name_en ||
+          raw.activity?.name_ar ||
+          raw.activity?.name ||
+          id,
+        locale
+      );
+
+      const item = activityLookupById.get(id);
+      const label = pickActivityLabel({ locale, activityItem: item, fallback: activityFallback });
+      if (!label) return;
+      map.set(id, { id, label });
     });
 
-    return merged;
-  }, [activitiesQuery.items, locale]);
+    const items = [...map.values()].sort((left, right) =>
+      left.label.localeCompare(right.label, locale === 'ar' ? 'ar' : 'en')
+    );
 
-  const availableTabs = useMemo(() => {
-    const items = ['all'];
-    if (!optionsSourceVenues.length) return items;
+    if (selectedActivityId && !map.has(selectedActivityId)) {
+      const fallbackLabel = activityLookupById.get(selectedActivityId)
+        ? pickActivityLabel({ locale, activityItem: activityLookupById.get(selectedActivityId), fallback: null })
+        : resolveActivityType(selectedActivityId, locale)?.label;
+      if (fallbackLabel) {
+        items.push({ id: selectedActivityId, label: fallbackLabel });
+      }
+    }
 
-    const hasOffers = optionsSourceVenues.some((venue) => Boolean(venue?.hasSpecialOffer));
-    const hasFeatured = optionsSourceVenues.some((venue) => resolveVenueTier(venue) === 'featured');
-    const hasPremium = optionsSourceVenues.some((venue) => resolveVenueTier(venue) === 'premium');
-    const hasPro = optionsSourceVenues.some((venue) => resolveVenueTier(venue) === 'pro');
+    return items;
+  }, [activityLookupById, locale, optionsSourceVenues, selectedActivityId]);
 
-    if (hasOffers) items.push('offers');
-    if (hasFeatured) items.push('featured');
-    if (hasPremium) items.push('premium');
-    if (hasPro) items.push('pro');
+  const locationOptions = useMemo(() => {
+    const map = new Map();
+    (optionsSourceVenues || []).forEach((venue) => {
+      const location = getVenueFilterLocationLabel(venue);
+      if (!location) return;
+      const key = normalizeKey(location);
+      if (!key || map.has(key)) return;
+      map.set(key, location);
+    });
 
-    return TAB_CONFIG.filter((item) => items.includes(item));
-  }, [optionsSourceVenues]);
+    const locations = [...map.values()].sort((left, right) =>
+      left.localeCompare(right, locale === 'ar' ? 'ar' : 'en')
+    );
 
-  useEffect(() => {
-    if (availableTabs.includes(tab)) return;
-    setTab('all');
-  }, [availableTabs, tab]);
+    if (selectedLocation) {
+      const safeSelected = toSafeDisplayText(selectedLocation);
+      const key = normalizeKey(safeSelected);
+      if (safeSelected && key && !map.has(key)) {
+        locations.push(safeSelected);
+      }
+    }
+
+    return locations;
+  }, [locale, optionsSourceVenues, selectedLocation]);
+
+  const playersBucketOptions = useMemo(
+    () => buildPlayersBuckets(optionsSourceVenues, locale, selectedPlayersBucketId),
+    [locale, optionsSourceVenues, selectedPlayersBucketId]
+  );
+
+  const durationOptions = useMemo(() => {
+    const durationsInData = new Set();
+
+    (optionsSourceVenues || []).forEach((venue) => {
+      extractVenueDurationMinutes(venue).forEach((minutes) => durationsInData.add(minutes));
+    });
+
+    const known = VENUE_DURATION_OPTIONS.filter((item) => item.minutes != null);
+    const dynamic = known
+      .filter((item) => durationsInData.has(item.minutes))
+      .map((item) => ({
+        id: String(item.id),
+        minutes: item.minutes,
+        label: locale === 'ar' ? item.labelAr : item.labelEn,
+      }));
+
+    if (selectedDurationId && !dynamic.some((item) => item.id === selectedDurationId)) {
+      const fallback = known.find((item) => String(item.id) === selectedDurationId);
+      if (fallback) {
+        dynamic.push({
+          id: String(fallback.id),
+          minutes: fallback.minutes,
+          label: locale === 'ar' ? fallback.labelAr : fallback.labelEn,
+        });
+      }
+    }
+
+    dynamic.sort((left, right) => left.minutes - right.minutes);
+    return dynamic;
+  }, [locale, optionsSourceVenues, selectedDurationId]);
 
   const activeFilterLabels = useMemo(() => {
     const labels = [];
-    const {
-      tab: activeTab,
-      selectedActivityId: activeActivityId,
-      selectedDate: activeDate,
-      selectedPlayers: activePlayers,
-      selectedLocation: activeLocation,
-      hasSpecialOffer: activeSpecialOffer,
-      selectedDurationId: activeDurationId,
-      selectedTags: activeTags,
-    } = appliedState;
-
-    if (activeTab !== 'all' && copy?.tabs?.[activeTab]) {
-      labels.push(copy.tabs[activeTab]);
-    }
-
-    if (activeActivityId) {
-      const activity = allActivityItems.find((item) => String(item.id) === activeActivityId);
-      labels.push(activity?.label || activeActivityId);
-    }
-
-    if (activeDate) {
-      labels.push(
-        `${copy.labels.date}: ${formatPlaygroundDate(activeDate, locale) || activeDate}`
-      );
-    }
-
-    if (activePlayers != null) {
-      labels.push(`${copy.labels.players}: ${activePlayers}`);
-    }
-
-    if (activeLocation) {
-      labels.push(activeLocation);
-    }
-
-    if (activeSpecialOffer) {
-      labels.push(copy.labels.specialOffer);
-    }
-
-    if (activeDurationId) {
-      const duration = DURATION_OPTIONS.find((item) => item.id === String(activeDurationId));
-      if (duration) {
-        labels.push(`${copy.labels.chooseDuration}: ${duration.minutes}`);
+    if (appliedState.selectedActivityId) {
+      const activity = activityOptions.find((item) => item.id === appliedState.selectedActivityId);
+      if (activity?.label) {
+        labels.push(activity.label);
       }
     }
 
-    if (Array.isArray(activeTags) && activeTags.length) {
-      activeTags.forEach((tagKey) => {
-        const tag = TAG_OPTIONS.find((item) => item.key === tagKey);
-        labels.push(locale === 'ar' ? tag?.ar || tagKey : tag?.en || tagKey);
-      });
+    if (appliedState.selectedLocation && locationOptions.includes(appliedState.selectedLocation)) {
+      labels.push(appliedState.selectedLocation);
+    }
+
+    if (appliedState.selectedPlayersBucketId) {
+      const players = playersBucketOptions.find((item) => item.id === appliedState.selectedPlayersBucketId);
+      if (players?.label) labels.push(`${copy.labels.players}: ${players.label}`);
+    }
+
+    if (appliedState.selectedDurationId) {
+      const duration = durationOptions.find((item) => item.id === appliedState.selectedDurationId);
+      if (duration?.label) labels.push(`${copy.labels.chooseDuration}: ${duration.label}`);
     }
 
     return labels;
-  }, [
-    appliedState,
-    allActivityItems,
-    copy.labels.date,
-    copy.labels.chooseDuration,
-    copy.labels.players,
-    copy.labels.specialOffer,
-    copy.tabs,
-    locale,
-  ]);
+  }, [activityOptions, appliedState, copy.labels.chooseDuration, copy.labels.players, durationOptions, locationOptions, playersBucketOptions]);
+
+  const filteredVenues = useMemo(() => {
+    const selectedPlayersBucket = playersBucketOptions.find((item) => item.id === appliedState.selectedPlayersBucketId) || null;
+    const selectedDuration = durationOptions.find((item) => item.id === appliedState.selectedDurationId) || null;
+    const locationQuery = toComparableText(appliedState.selectedLocation);
+
+    return (venuesQuery.venues || []).filter((venue) => {
+      if (appliedState.selectedActivityId && normalizeCourseId(venue?.activityId) !== appliedState.selectedActivityId) {
+        return false;
+      }
+
+      if (locationQuery) {
+        const venueLocation = toComparableText(getVenueFilterLocationLabel(venue));
+        if (!venueLocation || venueLocation !== locationQuery) {
+          return false;
+        }
+      }
+
+      if (selectedPlayersBucket && selectedPlayersBucket.min != null) {
+        const minRaw = Number(venue?.minPlayers);
+        const maxRaw = Number(venue?.maxPlayers);
+        if (!Number.isFinite(minRaw) || !Number.isFinite(maxRaw)) {
+          return false;
+        }
+        const venueMin = Math.max(1, Math.floor(minRaw));
+        const venueMax = Math.max(venueMin, Math.floor(maxRaw));
+        if (!hasRangeOverlap(venueMin, venueMax, selectedPlayersBucket.min, selectedPlayersBucket.max)) {
+          return false;
+        }
+      }
+
+      if (selectedDuration) {
+        const minutes = extractVenueDurationMinutes(venue);
+        if (!minutes.includes(selectedDuration.minutes)) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [appliedState, durationOptions, playersBucketOptions, venuesQuery.venues]);
 
   const mapRouteParams = useMemo(
-    () => buildPlaygroundsDiscoveryRouteParams(appliedState),
+    () =>
+      buildPlaygroundsDiscoveryRouteParams({
+        ...appliedState,
+        tab: 'all',
+        selectedDate: '',
+        selectedPlayers: null,
+        hasSpecialOffer: false,
+        selectedTags: [],
+        sortBy: 'recommended',
+      }),
     [appliedState]
   );
 
@@ -427,32 +537,34 @@ export function PlaygroundsIndexScreen() {
 
   const applyFilters = () => {
     setAppliedState(discoveryState);
-    router.replace(buildPlaygroundsHomeRoute(buildPlaygroundsDiscoveryRouteParams(discoveryState)));
+    router.replace(
+      buildPlaygroundsHomeRoute(
+        buildPlaygroundsDiscoveryRouteParams({
+          ...discoveryState,
+          tab: 'all',
+          selectedDate: '',
+          selectedPlayers: null,
+          hasSpecialOffer: false,
+          selectedTags: [],
+          sortBy: 'recommended',
+        })
+      )
+    );
   };
 
   const resetFilters = () => {
-    setTab('all');
-    setSelectedActivityId('');
-    setSelectedDate('');
-    setSelectedPlayers(null);
-    setPlayersInput('');
-    setSortBy('recommended');
-    setSelectedLocation('');
-    setHasSpecialOffer(false);
-    setSelectedDurationId('');
-    setSelectedTags([]);
-
     const resetState = {
-      tab: 'all',
+      ...routeScopedState,
       selectedActivityId: '',
-      selectedDate: '',
-      selectedPlayers: null,
-      sortBy: 'recommended',
       selectedLocation: '',
-      hasSpecialOffer: false,
       selectedDurationId: '',
-      selectedTags: [],
+      selectedPlayersBucketId: '',
     };
+
+    setSelectedActivityId('');
+    setSelectedLocation('');
+    setSelectedDurationId('');
+    setSelectedPlayersBucketId('');
     setAppliedState(resetState);
     router.replace(buildPlaygroundsHomeRoute(buildPlaygroundsDiscoveryRouteParams(resetState)));
   };
@@ -482,11 +594,7 @@ export function PlaygroundsIndexScreen() {
           <Button size="sm" variant="secondary" onPress={() => router.push(ROUTES.PLAYGROUNDS_MY_BOOKINGS)}>
             {copy.actions.myBookings}
           </Button>
-          <Button
-            size="sm"
-            variant="secondary"
-            onPress={() => router.push(buildPlaygroundsMapRoute(mapRouteParams))}
-          >
+          <Button size="sm" variant="secondary" onPress={() => router.push(buildPlaygroundsMapRoute(mapRouteParams))}>
             {copy.actions.mapMode}
           </Button>
         </View>
@@ -551,136 +659,69 @@ export function PlaygroundsIndexScreen() {
             </Text>
 
             <ActivityChips
-              items={allActivityItems}
+              items={activityOptions}
               selectedId={selectedActivityId}
               onSelect={setSelectedActivityId}
-              allLabel={copy.tabs.all}
+              allLabel={allSportsLabel}
               loadingLabel={copy.labels.loadingActivities}
               isLoading={activitiesQuery.isLoading}
               getLabel={(item) => item.label}
             />
 
-            {availableTabs.length > 1 ? (
-              <View style={[styles.tabsRow, { flexDirection: getRowDirection(isRTL) }]}>
-                {availableTabs.map((tabKey) => (
-                  <Chip
-                    key={tabKey}
-                    label={copy.tabs[tabKey]}
-                    selected={tab === tabKey}
-                    onPress={() => setTab(tabKey)}
-                  />
-                ))}
-              </View>
-            ) : null}
-
-            <View style={styles.dateFilterWrap}>
-              <DatePickerField
-                label={copy.labels.date}
-                value={selectedDate}
-                onChange={setSelectedDate}
-                minDate={toIsoDate(new Date())}
-                placeholder={copy.labels.anyDate}
-              />
-
-              {selectedDate ? (
-                <Button size="sm" variant="ghost" onPress={() => setSelectedDate('')}>
-                  {copy.actions.clear}
-                </Button>
-              ) : null}
-            </View>
-
-            <View style={styles.playersWrap}>
-              <Text variant="caption" color={colors.textSecondary}>
-                {copy.labels.players}
-              </Text>
-              <View
-                style={[
-                  styles.inputWrap,
-                  {
-                    borderColor: colors.border,
-                    backgroundColor: colors.surface,
-                    flexDirection: getRowDirection(isRTL),
-                  },
-                ]}
-              >
-                <Users size={15} color={colors.textMuted} strokeWidth={2.2} />
-                <TextInput
-                  value={playersInput}
-                  onChangeText={(value) => {
-                    const normalized = normalizePlayersInput(value);
-                    setPlayersInput(normalized);
-                    setSelectedPlayers(normalized ? Number(normalized) : null);
-                  }}
-                  keyboardType="number-pad"
-                  placeholder={`${copy.labels.players} (1-${MAX_PLAYERS_FILTER})`}
-                  placeholderTextColor={colors.textMuted}
-                  style={[
-                    styles.inputField,
-                    {
-                      color: colors.textPrimary,
-                      textAlign: isRTL ? 'right' : 'left',
-                    },
-                  ]}
-                />
-              </View>
-            </View>
-
-            <View style={styles.locationWrap}>
+            <View style={styles.groupWrap}>
               <Text variant="caption" color={colors.textSecondary}>
                 {copy.labels.location}
               </Text>
-              <View
-                style={[
-                  styles.inputWrap,
-                  {
-                    borderColor: colors.border,
-                    backgroundColor: colors.surface,
-                    flexDirection: getRowDirection(isRTL),
-                  },
-                ]}
-              >
-                <MapPin size={15} color={colors.textMuted} strokeWidth={2.2} />
-                <TextInput
-                  value={selectedLocation}
-                  onChangeText={setSelectedLocation}
-                  placeholder={copy.labels.locationPlaceholder}
-                  placeholderTextColor={colors.textMuted}
-                  style={[
-                    styles.inputField,
-                    {
-                      color: colors.textPrimary,
-                      textAlign: isRTL ? 'right' : 'left',
-                    },
-                  ]}
+              <View style={[styles.chipsWrap, { flexDirection: getRowDirection(isRTL) }]}>
+                <Chip
+                  label={copy.tabs.all}
+                  selected={!selectedLocation}
+                  onPress={() => setSelectedLocation('')}
                 />
+                {locationOptions.map((location) => (
+                  <Chip
+                    key={location}
+                    label={location}
+                    selected={selectedLocation === location}
+                    leftIcon={<MapPin size={13} color={selectedLocation === location ? colors.accentOrange : colors.textMuted} strokeWidth={2.2} />}
+                    onPress={() => setSelectedLocation((prev) => (prev === location ? '' : location))}
+                  />
+                ))}
               </View>
             </View>
 
-            <View style={styles.specialOfferWrap}>
-              <Chip
-                selected={Boolean(hasSpecialOffer)}
-                onPress={() => setHasSpecialOffer((prev) => !prev)}
-                label={copy.labels.specialOffer}
-                leftIcon={<Sparkles size={14} color={hasSpecialOffer ? colors.accentOrange : colors.textMuted} strokeWidth={2.2} />}
-              />
+            <View style={styles.groupWrap}>
+              <Text variant="caption" color={colors.textSecondary}>
+                {copy.labels.players}
+              </Text>
+              <View style={[styles.chipsWrap, { flexDirection: getRowDirection(isRTL) }]}>
+                {playersBucketOptions.map((bucket) => (
+                  <Chip
+                    key={bucket.id || 'all'}
+                    label={bucket.id ? bucket.label : (locale === 'ar' ? 'أي عدد' : 'Any players')}
+                    selected={selectedPlayersBucketId === bucket.id}
+                    leftIcon={<Users size={13} color={selectedPlayersBucketId === bucket.id ? colors.accentOrange : colors.textMuted} strokeWidth={2.2} />}
+                    onPress={() => setSelectedPlayersBucketId(bucket.id)}
+                  />
+                ))}
+              </View>
             </View>
 
-            <View style={styles.sortWrap}>
+            <View style={styles.groupWrap}>
               <Text variant="caption" color={colors.textSecondary}>
                 {copy.labels.chooseDuration}
               </Text>
-              <View style={[styles.playersRow, { flexDirection: getRowDirection(isRTL) }]}>
+              <View style={[styles.chipsWrap, { flexDirection: getRowDirection(isRTL) }]}>
                 <Chip
                   label={copy.tabs.all}
                   selected={!selectedDurationId}
                   onPress={() => setSelectedDurationId('')}
                 />
-                {DURATION_OPTIONS.map((duration) => (
+                {durationOptions.map((duration) => (
                   <Chip
                     key={duration.id}
-                    label={`${duration.minutes}`}
+                    label={duration.label}
                     selected={selectedDurationId === duration.id}
-                    leftIcon={<Clock3 size={13} color={selectedDurationId === duration.id ? colors.accentOrange : colors.textMuted} strokeWidth={2.2} />}
                     onPress={() =>
                       setSelectedDurationId((prev) => (prev === duration.id ? '' : duration.id))
                     }
@@ -689,61 +730,11 @@ export function PlaygroundsIndexScreen() {
               </View>
             </View>
 
-            <View style={styles.sortWrap}>
-              <Text variant="caption" color={colors.textSecondary}>
-                {copy.labels.tags}
-              </Text>
-              <View style={[styles.playersRow, { flexDirection: getRowDirection(isRTL) }]}>
-                {TAG_OPTIONS.map((tag) => {
-                  const isSelected = selectedTags.includes(tag.key);
-                  return (
-                    <Chip
-                      key={tag.key}
-                      label={locale === 'ar' ? tag.ar : tag.en}
-                      selected={isSelected}
-                      onPress={() =>
-                        setSelectedTags((prev) =>
-                          prev.includes(tag.key)
-                            ? prev.filter((item) => item !== tag.key)
-                            : [...prev, tag.key]
-                        )
-                      }
-                    />
-                  );
-                })}
-              </View>
-            </View>
-
-            <View style={styles.sortWrap}>
-              <Text variant="caption" color={colors.textSecondary}>
-                {copy.labels.filters}
-              </Text>
-
-              <View style={[styles.playersRow, { flexDirection: getRowDirection(isRTL) }]}>
-                {PLAYGROUNDS_SORT_CONFIG.map((sortKey) => (
-                  <Chip
-                    key={sortKey}
-                    label={copy.sort[PLAYGROUNDS_SORT_LABEL_KEY[sortKey]]}
-                    selected={sortBy === sortKey}
-                    onPress={() => setSortBy(sortKey)}
-                  />
-                ))}
-              </View>
-            </View>
-
             <View style={[styles.filterActionsRow, { flexDirection: getRowDirection(isRTL) }]}>
-              <Button
-                size="sm"
-                variant="secondary"
-                onPress={resetFilters}
-              >
+              <Button size="sm" variant="secondary" onPress={resetFilters}>
                 {copy.actions.clearFilters}
               </Button>
-              <Button
-                size="sm"
-                onPress={applyFilters}
-                disabled={!canApplyFilters}
-              >
+              <Button size="sm" onPress={applyFilters} disabled={!canApplyFilters}>
                 {copy.actions.search}
               </Button>
             </View>
@@ -769,7 +760,7 @@ export function PlaygroundsIndexScreen() {
         />
       ) : null}
 
-      {!isInitialLoading && !venuesQuery.venuesError && !venuesQuery.venues.length ? (
+      {!isInitialLoading && !venuesQuery.venuesError && !filteredVenues.length ? (
         <EmptyPlaygroundsState
           title={
             hasActiveRefinements
@@ -784,12 +775,9 @@ export function PlaygroundsIndexScreen() {
         />
       ) : null}
 
-      {!isInitialLoading && venuesQuery.venues.length ? (
-        <AnimatedView
-          layout={LinearTransition.duration(220)}
-          style={styles.listWrap}
-        >
-          {venuesQuery.venues.map((venue) => (
+      {!isInitialLoading && filteredVenues.length ? (
+        <AnimatedView layout={LinearTransition.duration(220)} style={styles.listWrap}>
+          {filteredVenues.map((venue) => (
             <VenueCard
               key={venue.id}
               venue={venue}
@@ -849,56 +837,17 @@ const styles = StyleSheet.create({
   filtersCard: {
     gap: spacing.sm,
   },
-  tabsRow: {
+  groupWrap: {
+    gap: spacing.xs,
+  },
+  chipsWrap: {
     flexWrap: 'wrap',
     gap: spacing.sm,
-  },
-  dateFilterWrap: {
-    gap: spacing.xs,
-  },
-  playersWrap: {
-    gap: spacing.xs,
-  },
-  playersRow: {
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  inputWrap: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: spacing.sm,
-    minHeight: 42,
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  inputField: {
-    flex: 1,
-    fontSize: 14,
-    paddingVertical: spacing.xs,
-  },
-  locationWrap: {
-    gap: spacing.xs,
-  },
-  specialOfferWrap: {
-    gap: spacing.xs,
-  },
-  sortWrap: {
-    gap: spacing.xs,
   },
   filterActionsRow: {
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: spacing.sm,
-  },
-  mapCard: {
-    gap: spacing.xs,
-  },
-  mapActionsRow: {
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-    flexWrap: 'wrap',
   },
   listWrap: {
     gap: spacing.sm,

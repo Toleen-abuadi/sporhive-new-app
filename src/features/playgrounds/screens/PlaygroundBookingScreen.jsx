@@ -31,8 +31,8 @@ import { borderRadius, spacing } from "../../../theme/tokens";
 import { getRowDirection } from "../../../utils/rtl";
 import {
   formatDurationMinutes,
+  formatLabeledPrice,
   formatPlaygroundDate,
-  formatPlaygroundPrice,
   formatPlaygroundTimeRange,
   resolvePaymentType,
   toIsoDate,
@@ -598,9 +598,8 @@ export function PlaygroundBookingScreen() {
     {
       label: copy.labels.price,
       value: !isUpdateMode
-        ? formatPlaygroundPrice(selectedDuration?.basePrice, { locale })
+        ? formatLabeledPrice(selectedDuration?.basePrice, { locale, label: copy.labels.price })
         : copy.labels.notAvailable,
-      forceLTR: true,
       icon: ReceiptText,
     },
   ];

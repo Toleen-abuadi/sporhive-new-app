@@ -66,8 +66,25 @@ const toIdString = (value) => {
 
 const sameId = (left, right) => toIdString(left) === toIdString(right);
 
-const getGroupCourseId = (group) => {
-  return toNumber(group?.course_id || group?.courseId || group?.course?.id);
+const normalizeGroupCourseId = (group) => {
+  const rawCourseId = group?.course_id ?? group?.courseId ?? group?.course?.id ?? null;
+  const parsed = toNumber(rawCourseId);
+  return parsed == null ? null : parsed;
+};
+
+const getGroupCourseId = (group) => normalizeGroupCourseId(group);
+
+const dedupeGroups = (groups = []) => {
+  const seen = new Set();
+  return groups.filter((group) => {
+    const id = toIdString(group?.id || group?.value);
+    const courseId = toIdString(group?.course_id || group?.courseId || group?.course?.id);
+    const name = String(group?.label || group?.name || group?.group_name || '').trim();
+    const key = `${id}|${courseId}|${name}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 };
 
 const pickCurrentRegistration = (overview, optionsData) => {
@@ -123,7 +140,7 @@ const normalizeGroupOption = (group) => {
     id,
     value: toIdString(row.value || id),
     label: String(row.label || row.name || row.group_name || `#${id || ''}`),
-    course_id: getGroupCourseId(row),
+    course_id: normalizeGroupCourseId(row),
     schedule: Array.isArray(row.schedule) ? row.schedule : [],
     raw: row,
   };
@@ -229,11 +246,26 @@ export function usePlayerRenewalFlow({ auto = true } = {}) {
 
   const rawGroupOptions = useMemo(() => {
     if ((optionsQuery.data?.groups || []).length > 0) {
-      return optionsQuery.data.groups.map(normalizeGroupOption);
+      return dedupeGroups(optionsQuery.data.groups.map(normalizeGroupOption));
     }
 
-    return (overviewQuery.overview?.subscription?.availableGroups || []).map(normalizeGroupOption);
+    return dedupeGroups((overviewQuery.overview?.subscription?.availableGroups || []).map(normalizeGroupOption));
   }, [optionsQuery.data?.groups, overviewQuery.overview?.subscription?.availableGroups]);
+
+  const strictSubscriptionGroups = useMemo(
+    () => rawGroupOptions.filter((group) => group.course_id === null),
+    [rawGroupOptions]
+  );
+
+  const subscriptionGroups = useMemo(() => {
+    if (strictSubscriptionGroups.length > 0) return strictSubscriptionGroups;
+    return rawGroupOptions;
+  }, [rawGroupOptions, strictSubscriptionGroups]);
+
+  const courseGroups = useMemo(
+    () => rawGroupOptions.filter((group) => group.course_id !== null),
+    [rawGroupOptions]
+  );
 
   const levelOptions = useMemo(() => {
     if ((optionsQuery.data?.levels || []).length > 0) {
@@ -260,16 +292,41 @@ export function usePlayerRenewalFlow({ auto = true } = {}) {
     return !startsAfterActiveSubscriptionEnd(selectedFromRaw, overlapAnchorISO);
   }, [courseId, overlapAnchorISO, rawCourseOptions, renewType]);
 
-  const filteredGroupOptions = useMemo(() => {
-    if (renewType === 'course') {
-      return rawGroupOptions.filter((group) => sameId(getGroupCourseId(group), courseId));
-    }
+  const selectedCourseGroups = useMemo(() => {
+    if (!courseId) return [];
+    return courseGroups.filter((group) => sameId(getGroupCourseId(group), courseId));
+  }, [courseGroups, courseId]);
 
-    return rawGroupOptions.filter((group) => {
-      const courseValue = getGroupCourseId(group);
-      return courseValue == null;
+  const visibleGroups = useMemo(() => {
+    if (renewType === 'subscription') return subscriptionGroups;
+    if (renewType === 'course') return selectedCourseGroups;
+    return [];
+  }, [renewType, subscriptionGroups, selectedCourseGroups]);
+
+  const filteredGroupOptions = visibleGroups;
+
+  useEffect(() => {
+    console.log('[renewal-flow] options.availableGroups source counts', {
+      optionsGroups: (optionsQuery.data?.groups || []).length,
+      overviewGroups: (overviewQuery.overview?.subscription?.availableGroups || []).length,
     });
-  }, [courseId, rawGroupOptions, renewType]);
+  }, [optionsQuery.data?.groups, overviewQuery.overview?.subscription?.availableGroups]);
+
+  useEffect(() => {
+    console.log('[renewal-flow] rawGroupOptions', rawGroupOptions);
+  }, [rawGroupOptions]);
+
+  useEffect(() => {
+    console.log('[renewal-flow] subscriptionGroups', subscriptionGroups);
+  }, [subscriptionGroups]);
+
+  useEffect(() => {
+    console.log('[renewal-flow] selectedCourseGroups', selectedCourseGroups);
+  }, [selectedCourseGroups]);
+
+  useEffect(() => {
+    console.log('[renewal-flow] visibleGroups', visibleGroups);
+  }, [visibleGroups]);
 
   const selectedGroup = useMemo(
     () => filteredGroupOptions.find((item) => sameId(item.value, groupId)) || null,
@@ -817,11 +874,20 @@ export function usePlayerRenewalFlow({ auto = true } = {}) {
     hasCourseOverlapSelection,
     hasServerBlockingCondition,
     blockingReason,
-    setRenewType,
+    setRenewType: (nextType) => {
+      const normalizedType = nextType === 'course' ? 'course' : 'subscription';
+      if (normalizedType === renewType) return;
+      setRenewType(normalizedType);
+      setGroupId('');
+      if (normalizedType !== 'course') {
+        setCourseIdState('');
+      }
+    },
     setCourseId: (value) => {
       const nextValue = toIdString(value);
       if (!nextValue) {
         setCourseIdState('');
+        setGroupId('');
         return;
       }
 
@@ -833,6 +899,7 @@ export function usePlayerRenewalFlow({ auto = true } = {}) {
       }
 
       setCourseIdState(nextValue);
+      setGroupId('');
     },
     setGroupId,
     setStartDate: (value) => {

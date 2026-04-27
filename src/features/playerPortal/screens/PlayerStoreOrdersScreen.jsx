@@ -66,7 +66,6 @@ function OrderGroupCard({ group, locale, t, colors, onPress, isRTL }) {
             })}
           </Text>
         </View>
-        <PortalStatusBadge status={normalizedStatus} label={statusLabel} domain="orderStatus" />
       </View>
 
       <View style={[styles.statsRow, { flexDirection: getRowDirection(isRTL) }]}>
@@ -169,15 +168,6 @@ export function PlayerStoreOrdersScreen() {
           title={t('playerPortal.store.orders.sections.listTitle')}
           subtitle={t('playerPortal.store.orders.sections.listSubtitle')}
         >
-          {statusPreview.length > 0 ? (
-            <Text variant="caption" color={colors.textMuted}>
-              {t('playerPortal.store.orders.labels.statusSummary', {
-                status: statusPreview
-                  .map((value) => resolveOrderStatusLabel(value, t, locale))
-                  .join(' - '),
-              })}
-            </Text>
-          ) : null}
 
           {showLoading ? (
             <View style={styles.loadingWrap}>

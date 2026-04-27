@@ -41,8 +41,9 @@ export function AppScreen({
 
   const content = scroll ? (
     <ScrollView
+      style={styles.flex}
       showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="always"
+      keyboardShouldPersistTaps="handled"
       keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
       contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={[

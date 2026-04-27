@@ -4,3 +4,4 @@ export * from './playgrounds.guards';
 export * from './playgrounds.statuses';
 export * from './playgrounds.copy';
 export * from './playgrounds.discovery';
+export * from './playgrounds.options';

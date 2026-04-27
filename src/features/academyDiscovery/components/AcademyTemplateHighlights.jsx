@@ -1,13 +1,19 @@
-import { StyleSheet, View } from 'react-native';
-import { CalendarDays, Globe2, ShieldCheck, Trophy, Users } from 'lucide-react-native';
-import { Surface } from '../../../components/ui/Surface';
-import { Text } from '../../../components/ui/Text';
-import { useI18n } from '../../../hooks/useI18n';
-import { useTheme } from '../../../hooks/useTheme';
-import { borderRadius, spacing } from '../../../theme/tokens';
-import { toArray } from '../utils/academyDiscovery.normalizers';
+import { StyleSheet, View } from "react-native";
+import {
+  CalendarDays,
+  Globe2,
+  ShieldCheck,
+  Trophy,
+  Users,
+} from "lucide-react-native";
+import { Surface } from "../../../components/ui/Surface";
+import { Text } from "../../../components/ui/Text";
+import { useI18n } from "../../../hooks/useI18n";
+import { useTheme } from "../../../hooks/useTheme";
+import { borderRadius, spacing } from "../../../theme/tokens";
+import { toArray } from "../utils/academyDiscovery.normalizers";
 
-const toClean = (value) => String(value ?? '').trim();
+const toClean = (value) => String(value ?? "").trim();
 
 const toCount = (value) => {
   const numeric = Number(value);
@@ -27,40 +33,42 @@ const buildHighlights = ({ academy, coursesCount = 0, copy }) => {
   const raw = academy?.raw || {};
   const playersCount = toCount(raw.number_of_players || raw.players_count);
   const coachesCount = toCount(raw.number_of_coaches || raw.coaches_count);
-  const languagesCount = toArray(raw.languages || raw.languages_json).length || toCount(raw.languages_count);
+  const languagesCount =
+    toArray(raw.languages || raw.languages_json).length ||
+    toCount(raw.languages_count);
   const foundedYear = toClean(raw.year_founded || raw.founded_year);
   const sportsCount = toArray(academy?.sportTypes).length;
 
   const rows = [
     {
-      key: 'founded',
-      label: copy?.labels?.founded || 'Founded',
+      key: "founded",
+      label: copy?.labels?.founded || "Founded",
       value: foundedYear,
     },
     {
-      key: 'players',
-      label: copy?.labels?.players || 'Players',
-      value: playersCount != null ? `${playersCount}+` : '',
+      key: "players",
+      label: copy?.labels?.players || "Players",
+      value: playersCount != null ? `${playersCount}+` : "",
     },
     {
-      key: 'coaches',
-      label: copy?.labels?.coaches || 'Coaches',
-      value: coachesCount != null ? String(coachesCount) : '',
+      key: "coaches",
+      label: copy?.labels?.coaches || "Coaches",
+      value: coachesCount != null ? String(coachesCount) : "",
     },
     {
-      key: 'courses',
-      label: copy?.labels?.courses || 'Courses',
-      value: coursesCount > 0 ? String(coursesCount) : '',
+      key: "courses",
+      label: copy?.labels?.courses || "Courses",
+      value: coursesCount > 0 ? String(coursesCount) : "",
     },
     {
-      key: 'sports',
-      label: copy?.labels?.sports || 'Sports',
-      value: sportsCount > 0 ? String(sportsCount) : '',
+      key: "sports",
+      label: copy?.labels?.sports || "Sports",
+      value: sportsCount > 0 ? String(sportsCount) : "",
     },
     {
-      key: 'languages',
-      label: copy?.labels?.languages || 'Languages',
-      value: languagesCount ? String(languagesCount) : '',
+      key: "languages",
+      label: copy?.labels?.languages || "Languages",
+      value: languagesCount ? String(languagesCount) : "",
     },
   ];
 
@@ -85,12 +93,18 @@ export function AcademyTemplateHighlights({ academy, coursesCount = 0, copy }) {
         const Icon = iconMap[item.key] || Trophy;
 
         return (
-          <Surface key={item.key} variant="soft" padding="sm" style={styles.item}>
+          <Surface
+            key={item.key}
+            variant="soft"
+            padding="sm"
+            style={styles.item}
+          >
             <View
               style={[
                 styles.iconWrap,
                 {
                   backgroundColor: colors.accentOrangeSoft,
+                  alignSelf: isRTL ? "flex-end" : "flex-start", // ✅ FIX
                 },
               ]}
             >
@@ -100,12 +114,16 @@ export function AcademyTemplateHighlights({ academy, coursesCount = 0, copy }) {
             <Text
               variant="caption"
               color={colors.textSecondary}
-              align={isRTL ? 'end' : 'start'}
+              style={{ textAlign: isRTL ? "right" : "left" }} // ✅ FIX
             >
               {item.label}
             </Text>
 
-            <Text variant="body" weight="bold" align={isRTL ? 'end' : 'start'}>
+            <Text
+              variant="body"
+              weight="bold"
+              style={{ textAlign: isRTL ? "right" : "left" }} // ✅ FIX
+            >
               {item.value}
             </Text>
           </Surface>
@@ -117,12 +135,12 @@ export function AcademyTemplateHighlights({ academy, coursesCount = 0, copy }) {
 
 const styles = StyleSheet.create({
   grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: spacing.sm,
   },
   item: {
-    width: '48%',
+    width: "48%",
     borderRadius: borderRadius.lg,
     gap: spacing.xs,
   },
@@ -130,7 +148,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: borderRadius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

@@ -756,7 +756,6 @@
         "sections": {
           "summaryTitle": "ملخص الطلب",
           "summarySubtitle": "المرجع وحالة التقدم",
-          "timelineTitle": "تسلسل الحالة",
           "timelineSubtitle": "من الدفع حتى التسليم",
           "itemsTitle": "عناصر الطلب",
           "itemsSubtitle": "المقاسات والكميات المرسلة"
@@ -813,6 +812,8 @@
         "tooLong": "مدة التجميد تتجاوز الحد المسموح {{days}} يومًا.",
         "yearLimit": "وصلت إلى الحد السنوي للتجميد ({{count}}).",
         "overlap": "التواريخ المحددة تتداخل مع تجميد قائم.",
+        "pendingPaymentBlocked": "لديك دفعة معلّقة. يرجى إكمالها للمتابعة.",
+        "pendingPaymentBlockedWithAmount": "لديك دفعة معلّقة بقيمة {{amount}}. يرجى إكمالها للمتابعة.",
         "unknown": "طلب التجميد غير صالح.",
         "submitTitle": "تعذر إرسال طلب التجميد",
         "submitFallback": "يرجى مراجعة تفاصيل الطلب ثم إعادة المحاولة.",
@@ -886,6 +887,8 @@
         "loadFallback": "أعد المحاولة لتحميل الأهلية والخيارات.",
         "pendingRequest": "يوجد طلب تجديد قيد الانتظار. لا يمكنك إرسال طلب آخر الآن.",
         "serverBlocked": "طلب التجديد محظور حالياً.",
+        "pendingPaymentBlocked": "لديك دفعة معلّقة. يرجى إكمالها للمتابعة.",
+        "pendingPaymentBlockedWithAmount": "لديك دفعة معلّقة بقيمة {{amount}}. يرجى إكمالها للمتابعة.",
         "overlapCourse": "يُسمح فقط بالدورات التي تبدأ بعد {{date}}.",
         "submitTitle": "تعذر إرسال طلب التجديد",
         "submitFallback": "يرجى مراجعة الاختيارات ثم إعادة المحاولة."
