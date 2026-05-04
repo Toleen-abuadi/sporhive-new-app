@@ -307,7 +307,7 @@ const AR = {
     status: 'الحالة',
     cannotModify: 'لا يمكن تعديل هذا الحجز الآن.',
     statusFilter: 'فلتر الحالة',
-    standardTier: 'قياسي',
+    standardTier: 'عادي',
     contactNumber: 'رقم التواصل',
     bookingDateTime: 'تاريخ ووقت الحجز',
     notAvailable: 'غير متاح',

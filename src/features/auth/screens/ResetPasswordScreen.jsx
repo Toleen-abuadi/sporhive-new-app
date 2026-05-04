@@ -9,7 +9,7 @@ import { Text } from '../../../components/ui/Text';
 import { ROUTES } from '../../../constants/routes';
 import { useI18n } from '../../../hooks/useI18n';
 import { useTheme } from '../../../hooks/useTheme';
-import { AUTH_LOGIN_MODES, normalizeLoginMode, useAuth } from '../../../services/auth';
+import { AUTH_LOGIN_MODES, normalizeAuthError, normalizeLoginMode, useAuth } from '../../../services/auth';
 import { withAlpha } from '../../../theme/colors';
 import { borderRadius, spacing } from '../../../theme/tokens';
 import {
@@ -27,8 +27,8 @@ import {
 import {
   hasValidationErrors,
   formatPhoneForInlineText,
-  normalizeAlphabeticInput,
   normalizeOtpValue,
+  normalizeUsernameInput,
   resolveAuthErrorMessage,
   validateOtp,
   validatePublicResetPassword,
@@ -42,6 +42,7 @@ const STEPS = Object.freeze({
 });
 
 const RESEND_SECONDS = 45;
+const MAX_REQUEST_ATTEMPTS = 3;
 const OTP_COOLDOWN_STORE = new Map();
 const getParamValue = (value) => (Array.isArray(value) ? value[0] : value);
 const normalizeResetPhone = (value) => {
@@ -199,6 +200,7 @@ export function ResetPasswordScreen() {
   const [submitError, setSubmitError] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendIn, setResendIn] = useState(0);
+  const [requestAttemptCount, setRequestAttemptCount] = useState(0);
 
   const [phone, setPhone] = useState(defaultPhonePayload());
   const [academy, setAcademy] = useState(null);
@@ -216,6 +218,7 @@ export function ResetPasswordScreen() {
   const [academiesLoading, setAcademiesLoading] = useState(false);
   const [academyError, setAcademyError] = useState('');
   const requestInFlightRef = useRef(false);
+  const isRequestLocked = requestAttemptCount >= MAX_REQUEST_ATTEMPTS;
 
   const modeOptions = [
     { value: AUTH_LOGIN_MODES.PUBLIC, label: t('auth.mode.public') },
@@ -227,6 +230,17 @@ export function ResetPasswordScreen() {
     const match = academies.find((item) => item.id === Number(lastSelectedAcademyId));
     return match ? [match] : [];
   }, [academies, lastSelectedAcademyId]);
+
+  const identifyFormValid = useMemo(() => {
+    const errors = validateResetRequest({
+      mode,
+      academyId: academy?.id,
+      username,
+      phonePayload: phone,
+      t,
+    });
+    return !hasValidationErrors(errors);
+  }, [academy?.id, mode, phone, t, username]);
 
   useEffect(() => {
     if (!resendIn) return;
@@ -325,9 +339,15 @@ export function ResetPasswordScreen() {
     setShowGenerated(false);
     setPublicResetCompleted(false);
     setResendIn(0);
+    setRequestAttemptCount(0);
     setResetContext(null);
     clearErrors();
   };
+
+  const resetRequestAttempts = useCallback(() => {
+    setRequestAttemptCount((count) => (count > 0 ? 0 : count));
+    setSubmitError((prev) => (prev === t('auth.errors.tooManyAttempts') ? '' : prev));
+  }, [t]);
 
   const startResend = (seconds = RESEND_SECONDS) => setResendIn(Math.max(0, toSafeSeconds(seconds)));
 
@@ -364,6 +384,42 @@ export function ResetPasswordScreen() {
       setLoading(false);
     }
 
+    const resolveResetRequestErrorMessage = (sourceError) => {
+      const normalized = normalizeAuthError(sourceError);
+      const message = String(normalized?.message || '').toLowerCase();
+      const hasCredentialSubject = message.includes('username') || message.includes('phone');
+      const hasCredentialFailure =
+        message.includes('invalid') ||
+        message.includes('wrong') ||
+        message.includes('not found') ||
+        message.includes('does not exist');
+
+      if (
+        normalized?.status === 401 ||
+        message.includes('invalid credentials') ||
+        message.includes('invalid phone or password') ||
+        message.includes('invalid username') ||
+        message.includes('invalid phone') ||
+        message.includes('user not found') ||
+        message.includes('username not found') ||
+        message.includes('phone not found') ||
+        (hasCredentialSubject && hasCredentialFailure)
+      ) {
+        return t('auth.errors.invalidCredentials');
+      }
+
+      if (
+        message.includes('invalid or expired otp') ||
+        message.includes('invalid or expired code') ||
+        message.includes('wrong otp') ||
+        message.includes('invalid otp')
+      ) {
+        return t('auth.errors.invalidOtp');
+      }
+
+      return resolveAuthErrorMessage(sourceError, t, 'auth.errors.resetRequestFailed');
+    };
+
     if (!result?.success) {
       const retryAfter =
         extractRetryAfterSeconds(result?.error?.details) ||
@@ -376,7 +432,10 @@ export function ResetPasswordScreen() {
         startResend(remaining);
         setOtpFocusKey((prev) => prev + 1);
       }
-      setSubmitError(resolveAuthErrorMessage(result?.error, t, 'auth.errors.resetRequestFailed'));
+      const nextMessage = resolveResetRequestErrorMessage(result?.error);
+      const nextAttempts = Math.min(requestAttemptCount + 1, MAX_REQUEST_ATTEMPTS);
+      setRequestAttemptCount(nextAttempts);
+      setSubmitError(nextAttempts >= MAX_REQUEST_ATTEMPTS ? t('auth.errors.tooManyAttempts') : nextMessage);
       return { success: false };
     }
 
@@ -391,11 +450,17 @@ export function ResetPasswordScreen() {
     const retryAfter = extractRetryAfterSeconds(result.data) || RESEND_SECONDS;
     startResend(applyContextCooldown(context, retryAfter));
     setOtpFocusKey((prev) => prev + 1);
+    setRequestAttemptCount(0);
     toast.success(t('auth.messages.otpSent'));
     return { success: true };
   };
 
   const requestOtp = async () => {
+    if (isRequestLocked) {
+      setSubmitError(t('auth.errors.tooManyAttempts'));
+      return;
+    }
+
     clearErrors();
     setResetContext(null);
     const errors = validateResetRequest({
@@ -591,6 +656,7 @@ export function ResetPasswordScreen() {
                     loading={academiesLoading}
                     error={academyError}
                     onSelect={(next) => {
+                      resetRequestAttempts();
                       setAcademy(next);
                       setFieldErrors((prev) => ({ ...prev, academy: '' }));
                     }}
@@ -603,7 +669,10 @@ export function ResetPasswordScreen() {
                   <AuthTextField
                     label={t('auth.fields.username')}
                     value={username}
-                    onChangeText={(value) => setUsername(normalizeAlphabeticInput(value))}
+                    onChangeText={(value) => {
+                      resetRequestAttempts();
+                      setUsername(normalizeUsernameInput(value));
+                    }}
                     placeholder={t('auth.placeholders.username')}
                     leftIcon="user"
                     error={fieldErrors.username}
@@ -614,13 +683,21 @@ export function ResetPasswordScreen() {
               <PhoneField
                 label={t('auth.fields.phone')}
                 value={phone}
-                onChange={setPhone}
+                onChange={(next) => {
+                  resetRequestAttempts();
+                  setPhone(next);
+                }}
                 error={fieldErrors.phone}
               />
 
               <ErrorBanner message={submitError} />
 
-              <Button onPress={requestOtp} loading={loading} fullWidth>
+              <Button
+                onPress={requestOtp}
+                loading={loading}
+                disabled={loading || requestInFlightRef.current || isRequestLocked || !identifyFormValid}
+                fullWidth
+              >
                 {t('auth.actions.sendCode')}
               </Button>
             </View>

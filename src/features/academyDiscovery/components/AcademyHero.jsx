@@ -60,7 +60,7 @@ export function AcademyHero({ academy, copy, style }) {
             )}
           </View>
 
-          <View style={styles.nameWrap}>
+          <View style={[styles.nameWrap, isRTL ? styles.nameWrapRtl : null]}>
             <Text variant="h2" weight="bold">
               {academy.name}
             </Text>
@@ -75,7 +75,15 @@ export function AcademyHero({ academy, copy, style }) {
           </View>
         </View>
 
-        <View style={[styles.tagsRow, { flexDirection: getRowDirection(isRTL) }]}>
+        <View
+          style={[
+            styles.tagsRow,
+            {
+              flexDirection: getRowDirection(isRTL),
+              justifyContent: isRTL ? 'flex-end' : 'flex-start',
+            },
+          ]}
+        >
           {academy.isPro ? <Chip label={copy?.card?.proLabel || 'PRO'} selected /> : null}
           {!academy.isPro && academy.isFeatured ? (
             <Chip label={copy?.card?.featuredLabel || 'Featured'} selected />
@@ -144,6 +152,9 @@ const styles = StyleSheet.create({
   nameWrap: {
     flex: 1,
     gap: spacing.xs,
+  },
+  nameWrapRtl: {
+    alignItems: 'flex-end',
   },
   locationRow: {
     alignItems: 'center',

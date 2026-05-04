@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { CalendarDays, CircleAlert, History, Snowflake, XCircle } from 'lucide-react-native';
+import { CalendarDays, CircleAlert, History, Snowflake } from 'lucide-react-native';
 import { useToast } from '../../../components/feedback/ToastHost';
 import { AppScreen } from '../../../components/ui/AppScreen';
 import { Button } from '../../../components/ui/Button';
@@ -24,7 +24,6 @@ import {
 import { usePlayerFreeze, usePlayerOverview } from '../hooks';
 import {
   addDaysISODate,
-  canCancelScheduledFreeze,
   inclusiveDays,
   toISODate,
   validateFreezeRequest,
@@ -102,12 +101,11 @@ const isFreezeHistoryEmptyLikeError = (error) => {
   );
 };
 
-function FreezeHistoryCard({ item, locale, t, colors, onCancel, isRTL }) {
+function FreezeHistoryCard({ item, locale, t, colors, isRTL }) {
   const duration = inclusiveDays(item.startDate, item.endDate);
-  const canCancel = canCancelScheduledFreeze(item);
 
   return (
-      <View style={[styles.historyCard, { borderColor: colors.border, backgroundColor: colors.surfaceSoft }]}> 
+      <View style={[styles.historyCard, { borderColor: colors.border, backgroundColor: colors.surfaceSoft }]}>
       <View style={[styles.historyHead, { flexDirection: getRowDirection(isRTL) }]}>
         <PortalStatusBadge status={getPhaseStatus(item)} domain="freezeStatus" />
         <Text variant="caption" color={colors.textMuted}>
@@ -133,17 +131,6 @@ function FreezeHistoryCard({ item, locale, t, colors, onCancel, isRTL }) {
           {item.reason}
         </Text>
       ) : null}
-
-      {canCancel ? (
-        <Button
-          fullWidth
-          variant="secondary"
-          onPress={() => onCancel(item)}
-          leadingIcon={<XCircle size={14} color={colors.error} strokeWidth={2.1} />}
-        >
-          {t('playerPortal.freeze.actions.cancelScheduled')}
-        </Button>
-      ) : null}
     </View>
   );
 }
@@ -166,11 +153,9 @@ export function PlayerFreezeScreen() {
     canFetch,
     guardReason,
     requestFreeze,
-    cancelFreeze,
     refreshAll,
     getUsedCountForYear,
     isSubmittingRequest,
-    isCancellingRequest,
   } = usePlayerFreeze({ auto: true });
 
   const [startDate, setStartDate] = useState('');
@@ -280,18 +265,6 @@ export function PlayerFreezeScreen() {
     const nextStart = addDaysISODate(toISODate(new Date()), 1);
     setStartDate(nextStart);
     setEndDate(addDaysISODate(nextStart, 1));
-  };
-
-  const handleCancelFreeze = async (freezeRow) => {
-    if (isCancellingRequest) return;
-    const result = await cancelFreeze(freezeRow.id);
-    if (!result.success) {
-      if (result.error?.code === 'FREEZE_CANCEL_IN_FLIGHT') return;
-      toast.error((isArabic ? '' : result.error?.message) || t('playerPortal.freeze.messages.cancelFailed'));
-      return;
-    }
-
-    toast.success((isArabic ? '' : result.data?.message) || t('playerPortal.freeze.messages.cancelled'));
   };
 
   const showInitialLoading = isLoading && !error && items.length === 0;
@@ -547,7 +520,6 @@ export function PlayerFreezeScreen() {
                   locale={locale}
                   t={t}
                   colors={colors}
-                  onCancel={handleCancelFreeze}
                   isRTL={isRTL}
                 />
               ))}
@@ -559,7 +531,6 @@ export function PlayerFreezeScreen() {
                   locale={locale}
                   t={t}
                   colors={colors}
-                  onCancel={handleCancelFreeze}
                   isRTL={isRTL}
                 />
               ))}
@@ -571,7 +542,6 @@ export function PlayerFreezeScreen() {
                   locale={locale}
                   t={t}
                   colors={colors}
-                  onCancel={handleCancelFreeze}
                   isRTL={isRTL}
                 />
               ))}
@@ -590,7 +560,6 @@ export function PlayerFreezeScreen() {
                   locale={locale}
                   t={t}
                   colors={colors}
-                  onCancel={handleCancelFreeze}
                   isRTL={isRTL}
                 />
               ))}
@@ -631,6 +600,18 @@ const styles = StyleSheet.create({
   },
   inputGroup: {
     gap: spacing.xs,
+  },
+  noteBox: {
+    borderWidth: 1,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+  },
+  noteBody: {
+    flex: 1,
+    gap: 2,
   },
   input: {
     minHeight: 44,

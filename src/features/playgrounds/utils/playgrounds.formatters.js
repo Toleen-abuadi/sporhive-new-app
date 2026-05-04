@@ -1,33 +1,15 @@
-import { cleanString, toNumber, toTimeHHMM } from './playgrounds.normalizers';
+import { cleanString, toNumber } from './playgrounds.normalizers';
 import { resolveNumericLocale, toEnglishDigits } from '../../../utils/numbering';
-
-const LTR_ISOLATE_OPEN = '\u2066';
-const LTR_ISOLATE_CLOSE = '\u2069';
-
-const isArabicLocale = (locale) =>
-  String(locale || '').toLowerCase().startsWith('ar');
+import {
+  formatPrice,
+  formatRange as baseFormatRange,
+  formatTime,
+  formatTimeRange,
+  isArabicLocale,
+  isolateLTR,
+} from '../../../utils/formatting';
 
 const resolveLocale = (locale) => resolveNumericLocale(locale, 'en-US');
-
-const isolateLTR = (value) => {
-  const text = cleanString(value);
-  if (!text) return '';
-  return `${LTR_ISOLATE_OPEN}${text}${LTR_ISOLATE_CLOSE}`;
-};
-
-const resolveCurrencyLabel = (currencyCode, locale) => {
-  if (currencyCode === 'JOD' && isArabicLocale(locale)) return '\u062F.\u0623';
-  return currencyCode;
-};
-
-const normalizeCurrencyCode = (currency) => {
-  const raw = cleanString(currency).toUpperCase();
-  if (!raw) return 'JOD';
-  if (['JOD', 'JD', '\u062F.\u0623', '\u062F.\u0627', '\u062F\u0623', '\u062F\u0627'].includes(raw)) {
-    return 'JOD';
-  }
-  return raw;
-};
 
 export function formatPlaygroundDate(value, locale = 'en') {
   const raw = cleanString(value);
@@ -58,59 +40,18 @@ export function formatPlaygroundDate(value, locale = 'en') {
 }
 
 export function formatPlaygroundTime(value, locale = 'en') {
-  const hhmm = toTimeHHMM(value);
-  if (!hhmm) return '';
-
-  const match = hhmm.match(/^(\d{2}):(\d{2})$/);
-  if (!match) return hhmm;
-
-  const hour24 = Number(match[1]);
-  const minute = Number(match[2]);
-
-  if (!Number.isInteger(hour24) || !Number.isInteger(minute)) return hhmm;
-  if (hour24 < 0 || hour24 > 23 || minute < 0 || minute > 59) return hhmm;
-
-  const hour12 = hour24 % 12 || 12;
-  const isAr = isArabicLocale(locale);
-  const meridiem = hour24 >= 12
-    ? (isAr ? '\u0645' : 'PM')
-    : (isAr ? '\u0635' : 'AM');
-
-  const formatted = `${toEnglishDigits(hour12)}:${String(minute).padStart(2, '0')} ${meridiem}`;
-  return isAr ? isolateLTR(formatted) : formatted;
+  return formatTime(value, locale);
 }
 
 export function formatPlaygroundTimeRange(startTime, endTime, locale = 'en') {
-  const start = formatPlaygroundTime(startTime, locale);
-  const end = formatPlaygroundTime(endTime, locale);
-  if (!start && !end) return '';
-  if (!end) return start;
-  if (!start) return end;
-
-  return `${start} - ${end}`;
+  return formatTimeRange(startTime, endTime, locale);
 }
 
 export function formatPlaygroundPrice(value, { locale = 'en', currency = 'JOD' } = {}) {
-  const numeric = toNumber(value);
-  if (numeric == null) return '';
-  const currencyCode = normalizeCurrencyCode(currency);
-
-  if (isArabicLocale(locale)) {
-    const amount = toEnglishDigits(numeric.toFixed(2));
-    const currencyLabel = resolveCurrencyLabel(currencyCode, locale);
-    return `${isolateLTR(amount)} ${currencyLabel}`;
-  }
-
-  try {
-    return toEnglishDigits(new Intl.NumberFormat(resolveLocale(locale), {
-      style: 'currency',
-      currency: currencyCode,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(numeric));
-  } catch {
-    return `${toEnglishDigits(numeric.toFixed(2))} ${currencyCode}`;
-  }
+  return formatPrice(value, currency, locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 const resolvePriceLabel = (locale, labelType = 'price') => {
@@ -140,18 +81,21 @@ export function formatPlayersRange(minPlayers, maxPlayers, locale = 'en') {
   if (min != null && max != null) {
     const start = Math.min(min, max);
     const end = Math.max(min, max);
-    const range = isolateLTR(`${start}-${end}`);
+    const range = baseFormatRange(start, end);
     return isArabic ? range : `${start}-${end} players`;
   }
 
   if (min != null) {
-    const from = isolateLTR(`${min}+`);
+    const from = baseFormatRange(min, null);
     return isArabic ? from : `${min}+ players`;
   }
 
-  return isArabic
-    ? `\u062d\u062a\u0649 ${isolateLTR(String(max))}`
-    : `Up to ${max} players`;
+  const upTo = baseFormatRange(null, max);
+  return isArabic ? `\u062d\u062a\u0649 ${upTo}` : `Up to ${max} players`;
+}
+
+export function formatRange(min, max) {
+  return baseFormatRange(min, max);
 }
 
 export function formatDurationMinutes(minutes, locale = 'en') {
@@ -162,14 +106,17 @@ export function formatDurationMinutes(minutes, locale = 'en') {
   if (value % 60 === 0) {
     const hours = value / 60;
     if (isArabic) {
+      const hourLabel = isolateLTR(toEnglishDigits(hours));
       return hours === 1
         ? '\u0633\u0627\u0639\u0629 \u0648\u0627\u062d\u062f\u0629'
-        : `${toEnglishDigits(hours)} \u0633\u0627\u0639\u0627\u062a`;
+        : `${hourLabel} \u0633\u0627\u0639\u0627\u062a`;
     }
     return hours === 1 ? '1 hour' : `${toEnglishDigits(hours)} hours`;
   }
 
-  const minutesLabel = toEnglishDigits(value);
+  const minutesLabel = isArabic
+    ? isolateLTR(toEnglishDigits(value))
+    : toEnglishDigits(value);
   return isArabic ? `${minutesLabel} \u062f\u0642\u064a\u0642\u0629` : `${minutesLabel} min`;
 }
 
@@ -179,6 +126,6 @@ export function formatDistanceKm(distanceKm, locale = 'en') {
   const distance = toEnglishDigits(value.toFixed(1));
 
   return isArabicLocale(locale)
-    ? `${distance} \u0643\u0645`
+    ? `${isolateLTR(distance)} \u0643\u0645`
     : `${distance} km`;
 }

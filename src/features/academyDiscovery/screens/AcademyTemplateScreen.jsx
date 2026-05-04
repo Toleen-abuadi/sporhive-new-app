@@ -59,9 +59,10 @@ const openExternalUrl = async (value) => {
 export function AcademyTemplateScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const { colors } = useTheme();
   const copy = getAcademyDiscoveryCopy(locale);
+  const contactUsLabel = t('common.contactUs');
 
   const slug = cleanString(resolveParamValue(params.slug));
   const templateQuery = useAcademyTemplate({
@@ -79,6 +80,7 @@ export function AcademyTemplateScreen() {
   const primaryPhone = phones[0] || '';
   const email = academy?.contactEmail || '';
   const website = academy?.website || '';
+  const hasDirectContactInfo = Boolean(primaryPhone || email || website);
 
   const aboutText = academy?.description || '';
   const hasLocationInfo = Boolean(
@@ -89,7 +91,7 @@ export function AcademyTemplateScreen() {
       academy?.lat != null ||
       academy?.lng != null
   );
-  const hasContactInfo = Boolean(primaryPhone || email || website || hasLocationInfo);
+  const hasContactInfo = Boolean(hasDirectContactInfo || hasLocationInfo);
 
   const showHero = Boolean(academy && sections.hero !== false);
   const showAbout = Boolean(sections.about || aboutText);
@@ -126,18 +128,8 @@ export function AcademyTemplateScreen() {
       };
     }
 
-    if (mapHref) {
-      return {
-        label: copy?.actions?.getDirections || copy?.template?.contactAcademy,
-        execute: () => openExternalUrl(mapHref),
-      };
-    }
-
-    return {
-      label: copy?.template?.contactAcademy,
-      execute: () => {},
-    };
-  }, [copy?.actions?.call, copy?.actions?.email, copy?.actions?.getDirections, copy?.actions?.website, copy?.template?.contactAcademy, email, mapHref, primaryPhone, website]);
+    return null;
+  }, [copy?.actions?.call, copy?.actions?.email, copy?.actions?.website, copy?.template?.contactAcademy, email, primaryPhone, website]);
 
   const handlePrimaryAction = () => {
     if (!academy?.slug) return;
@@ -147,7 +139,7 @@ export function AcademyTemplateScreen() {
       return;
     }
 
-    contactPrimary.execute();
+    contactPrimary?.execute?.();
   };
 
   return (
@@ -299,9 +291,11 @@ export function AcademyTemplateScreen() {
                 },
               ]}
             >
-              <Button fullWidth onPress={handlePrimaryAction}>
-                {canJoin ? copy.actions.joinNow : contactPrimary.label}
-              </Button>
+              {canJoin || contactPrimary ? (
+                <Button fullWidth onPress={handlePrimaryAction}>
+                  {canJoin ? copy.actions.joinNow : contactUsLabel}
+                </Button>
+              ) : null}
 
             </View>
           </>

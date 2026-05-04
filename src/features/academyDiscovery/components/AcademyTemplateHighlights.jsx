@@ -12,6 +12,7 @@ import { useI18n } from "../../../hooks/useI18n";
 import { useTheme } from "../../../hooks/useTheme";
 import { borderRadius, spacing } from "../../../theme/tokens";
 import { toArray } from "../utils/academyDiscovery.normalizers";
+import { isolateLTR } from "../../../utils/formatting";
 
 const toClean = (value) => String(value ?? "").trim();
 
@@ -43,32 +44,32 @@ const buildHighlights = ({ academy, coursesCount = 0, copy }) => {
     {
       key: "founded",
       label: copy?.labels?.founded || "Founded",
-      value: foundedYear,
+      value: foundedYear ? isolateLTR(foundedYear) : "",
     },
     {
       key: "players",
       label: copy?.labels?.players || "Players",
-      value: playersCount != null ? `${playersCount}+` : "",
+      value: playersCount != null ? isolateLTR(`${playersCount}+`) : "",
     },
     {
       key: "coaches",
       label: copy?.labels?.coaches || "Coaches",
-      value: coachesCount != null ? String(coachesCount) : "",
+      value: coachesCount != null ? isolateLTR(String(coachesCount)) : "",
     },
     {
       key: "courses",
       label: copy?.labels?.courses || "Courses",
-      value: coursesCount > 0 ? String(coursesCount) : "",
+      value: coursesCount > 0 ? isolateLTR(String(coursesCount)) : "",
     },
     {
       key: "sports",
       label: copy?.labels?.sports || "Sports",
-      value: sportsCount > 0 ? String(sportsCount) : "",
+      value: sportsCount > 0 ? isolateLTR(String(sportsCount)) : "",
     },
     {
       key: "languages",
       label: copy?.labels?.languages || "Languages",
-      value: languagesCount ? String(languagesCount) : "",
+      value: languagesCount ? isolateLTR(String(languagesCount)) : "",
     },
   ];
 
@@ -88,7 +89,7 @@ export function AcademyTemplateHighlights({ academy, coursesCount = 0, copy }) {
   if (!items.length) return null;
 
   return (
-    <View style={styles.grid}>
+    <View style={[styles.grid, isRTL ? styles.gridRtl : null]}>
       {items.map((item) => {
         const Icon = iconMap[item.key] || Trophy;
 
@@ -138,6 +139,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.sm,
+  },
+  gridRtl: {
+    flexDirection: "row-reverse",
   },
   item: {
     width: "48%",

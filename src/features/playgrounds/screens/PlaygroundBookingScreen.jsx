@@ -31,8 +31,8 @@ import { borderRadius, spacing } from "../../../theme/tokens";
 import { getRowDirection } from "../../../utils/rtl";
 import {
   formatDurationMinutes,
-  formatLabeledPrice,
   formatPlaygroundDate,
+  formatPlaygroundPrice,
   formatPlaygroundTimeRange,
   resolvePaymentType,
   toIsoDate,
@@ -50,7 +50,6 @@ import {
 import {
   useAvailableSlots,
   useCreateBooking,
-  useUpdateBooking,
   useVenueDetails,
 } from "../hooks";
 import {
@@ -186,8 +185,6 @@ export function PlaygroundBookingScreen() {
   const copy = getPlaygroundsCopy(locale);
 
   const venueId = String(resolveParamValue(params.venueId) || "").trim();
-  const bookingId = String(resolveParamValue(params.bookingId) || "").trim();
-  const isUpdateMode = Boolean(bookingId);
 
   const [stepIndex, setStepIndex] = useState(0);
   const [stepError, setStepError] = useState("");
@@ -300,8 +297,6 @@ export function PlaygroundBookingScreen() {
   }, [availableSlots, selectedSlot, selectedSlotId]);
 
   const createBookingMutation = useCreateBooking();
-  const updateBookingMutation = useUpdateBooking();
-
   const allowCash = venue?.academyProfile?.paymentConfig?.allowCash !== false;
   const allowCliq = Boolean(venue?.academyProfile?.paymentConfig?.allowCliq);
   const allowCashOnDate = Boolean(
@@ -309,8 +304,6 @@ export function PlaygroundBookingScreen() {
   );
 
   useEffect(() => {
-    if (isUpdateMode) return;
-
     if (paymentType === "cliq" && !allowCliq) {
       if (allowCash) {
         setPaymentType("cash");
@@ -337,7 +330,6 @@ export function PlaygroundBookingScreen() {
     allowCashOnDate,
     allowCliq,
     cashOnDate,
-    isUpdateMode,
     paymentType,
   ]);
 
@@ -358,20 +350,18 @@ export function PlaygroundBookingScreen() {
       },
     ];
 
-    if (!isUpdateMode) {
-      base.push(
-        {
-          key: "players",
-          label: copy.sections.players,
-          title: copy.booking.step3Title,
-        },
-        {
-          key: "payment",
-          label: copy.sections.payment,
-          title: copy.booking.step4Title,
-        },
-      );
-    }
+    base.push(
+      {
+        key: "players",
+        label: copy.sections.players,
+        title: copy.booking.step3Title,
+      },
+      {
+        key: "payment",
+        label: copy.sections.payment,
+        title: copy.booking.step4Title,
+      },
+    );
 
     base.push({
       key: "review",
@@ -380,7 +370,7 @@ export function PlaygroundBookingScreen() {
     });
 
     return base;
-  }, [copy, isUpdateMode]);
+  }, [copy]);
 
   const currentStep = steps[stepIndex] || steps[0];
   const isOnReview = currentStep?.key === "review";
@@ -391,19 +381,13 @@ export function PlaygroundBookingScreen() {
     Boolean(bookingDate) && Boolean(selectedSlotFromAvailable?.startTime);
   const playersValid = playersCount >= minPlayers && playersCount <= maxPlayers;
   const paymentValid =
-    isUpdateMode ||
-    (Boolean(paymentType) &&
-      ((paymentType === "cash" && allowCash) ||
-        (paymentType === "cliq" && allowCliq)) &&
-      (paymentType !== "cliq" || Boolean(cliqImage?.uri)));
+    Boolean(paymentType) &&
+    ((paymentType === "cash" && allowCash) ||
+      (paymentType === "cliq" && allowCliq)) &&
+    (paymentType !== "cliq" || Boolean(cliqImage?.uri));
 
-  const canSubmitAction = isUpdateMode
-    ? updateBookingMutation.canUpdate
-    : createBookingMutation.canCreate;
-
-  const guardReason = isUpdateMode
-    ? updateBookingMutation.guardReason
-    : createBookingMutation.guardReason;
+  const canSubmitAction = createBookingMutation.canCreate;
+  const guardReason = createBookingMutation.guardReason;
 
   const guardMessage = !canSubmitAction
     ? resolvePlaygroundsGuardMessage(guardReason, locale) ||
@@ -426,15 +410,10 @@ export function PlaygroundBookingScreen() {
     return false;
   }, [currentStep?.key, durationValid, slotValid, playersValid, paymentValid]);
 
-  const isSubmitting =
-    createBookingMutation.isLoading || updateBookingMutation.isLoading;
+  const isSubmitting = createBookingMutation.isLoading;
 
   const canSubmitBooking =
-    durationValid &&
-    slotValid &&
-    (isUpdateMode || (playersValid && paymentValid)) &&
-    canSubmitAction &&
-    !isSubmitting;
+    durationValid && slotValid && playersValid && paymentValid && canSubmitAction && !isSubmitting;
 
   const getStepError = (stepKey) => {
     if (stepKey === "duration" && !durationValid) {
@@ -498,32 +477,11 @@ export function PlaygroundBookingScreen() {
     const preSubmitError =
       getStepError("duration") ||
       getStepError("slot") ||
-      (!isUpdateMode ? getStepError("players") || getStepError("payment") : "");
+      getStepError("players") ||
+      getStepError("payment");
     if (preSubmitError) {
       setStepError(preSubmitError);
       toast.error(preSubmitError);
-      return;
-    }
-
-    if (isUpdateMode) {
-      const result = await updateBookingMutation.updateBooking(bookingId, {
-        new_date: bookingDate,
-        new_start_time: selectedSlotFromAvailable?.startTime,
-      });
-
-      if (!result.success) {
-        const message = resolvePlaygroundsErrorMessage(
-          result.error,
-          locale,
-          copy.errors.actionFailed,
-        );
-        setStepError(message);
-        toast.error(message);
-        return;
-      }
-
-      toast.success(copy.booking.updateSuccess);
-      router.replace(ROUTES.PLAYGROUNDS_MY_BOOKINGS);
       return;
     }
 
@@ -564,7 +522,6 @@ export function PlaygroundBookingScreen() {
     {
       label: copy.labels.date,
       value: formatPlaygroundDate(bookingDate, locale),
-      forceLTR: true,
       icon: CalendarDays,
     },
     {
@@ -574,7 +531,6 @@ export function PlaygroundBookingScreen() {
         selectedSlotFromAvailable?.endTime,
         locale,
       ),
-      forceLTR: true,
       icon: CalendarClock,
     },
     {
@@ -584,22 +540,18 @@ export function PlaygroundBookingScreen() {
     },
     {
       label: copy.labels.players,
-      value: isUpdateMode ? undefined : String(playersCount || ""),
+      value: String(playersCount || ""),
       forceLTR: true,
       icon: Users,
     },
     {
       label: copy.labels.payment,
-      value: isUpdateMode
-        ? copy.labels.notAvailable
-        : resolvePaymentType(paymentType, locale),
+      value: resolvePaymentType(paymentType, locale),
       icon: CreditCard,
     },
     {
       label: copy.labels.price,
-      value: !isUpdateMode
-        ? formatLabeledPrice(selectedDuration?.basePrice, { locale, label: copy.labels.price })
-        : copy.labels.notAvailable,
+      value: formatPlaygroundPrice(selectedDuration?.basePrice, { locale }),
       icon: ReceiptText,
     },
   ];
@@ -608,11 +560,7 @@ export function PlaygroundBookingScreen() {
     <AppScreen safe>
       <View style={styles.root}>
         <ScreenHeader
-          title={
-            isUpdateMode
-              ? copy.booking.updateModeTitle
-              : copy.sections.bookingStepper
-          }
+          title={copy.sections.bookingStepper}
           subtitle={venue?.name || ""}
           onBack={handleBack}
           right={<LanguageSwitch compact />}
@@ -675,14 +623,6 @@ export function PlaygroundBookingScreen() {
                       {copy.actions.loginToContinue}
                     </Button>
                   ) : null}
-                </Surface>
-              ) : null}
-
-              {isUpdateMode ? (
-                <Surface variant="soft" padding="md">
-                  <Text variant="caption" color={colors.textSecondary}>
-                    {copy.booking.updateModeHint}
-                  </Text>
                 </Surface>
               ) : null}
 
@@ -993,9 +933,7 @@ export function PlaygroundBookingScreen() {
                   disabled={!canSubmitBooking}
                   style={styles.reviewPrimaryButton}
                 >
-                  {isUpdateMode
-                    ? copy.actions.reschedule
-                    : copy.actions.confirmBooking}
+                  {copy.actions.confirmBooking}
                 </Button>
               )}
 

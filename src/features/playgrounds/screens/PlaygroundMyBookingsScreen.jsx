@@ -14,7 +14,6 @@ import { useToast } from '../../../components/feedback/ToastHost';
 import {
   ROUTES,
   buildAuthLoginRoute,
-  buildPlaygroundBookingRoute,
   buildPlaygroundsRatingRoute,
 } from '../../../constants/routes';
 import { useI18n } from '../../../hooks/useI18n';
@@ -39,12 +38,6 @@ import {
 } from '../components';
 
 const STATUS_FILTERS = ['all', 'pending', 'approved', 'rejected', 'cancelled'];
-
-const resolveRestrictionMessage = (reason, copy) => {
-  if (reason === 'less_than_24h') return copy.errors.before24h;
-  if (reason === 'status_restricted') return copy.labels.cannotModify;
-  return '';
-};
 
 const resolveStatusLabel = (status, t, copy) => {
   if (status === 'all') {
@@ -204,12 +197,9 @@ function CancelContactModal({
   );
 }
 
-function BookingCard({ booking, locale = 'en', copy, onCancel, onReschedule, onRate }) {
+function BookingCard({ booking, locale = 'en', copy, onCancel, onRate }) {
   const { colors } = useTheme();
   const { isRTL } = useI18n();
-
-  const canAnyAction = Boolean(booking.canCancel || booking.canUpdate);
-  const restrictionMessage = resolveRestrictionMessage(booking.modifyRestrictionReason, copy);
 
   return (
     <Surface variant="elevated" padding="md" style={styles.bookingCard}>
@@ -267,12 +257,6 @@ function BookingCard({ booking, locale = 'en', copy, onCancel, onReschedule, onR
       </View>
 
       <View style={[styles.bookingActions, { flexDirection: getRowDirection(isRTL) }]}>
-        {booking.canUpdate ? (
-          <Button size="sm" variant="secondary" onPress={() => onReschedule?.(booking)}>
-            {copy.actions.reschedule}
-          </Button>
-        ) : null}
-
         {booking.canCancel ? (
           <Button size="sm" variant="secondary" onPress={() => onCancel?.(booking)}>
             {copy.actions.cancelBooking}
@@ -354,16 +338,6 @@ export function PlaygroundMyBookingsScreen() {
 
   const handleCancelPrompt = (booking) => {
     setCancelTarget(booking);
-  };
-
-  const handleReschedule = (booking) => {
-    router.push(
-      buildPlaygroundBookingRoute(booking.venueId, {
-        bookingId: booking.id,
-        currentDate: booking.date,
-        currentPlayers: String(booking.numberOfPlayers || ''),
-      })
-    );
   };
 
   const handleRate = (booking) => {
@@ -452,7 +426,6 @@ export function PlaygroundMyBookingsScreen() {
           locale={locale}
           copy={copy}
           onCancel={handleCancelPrompt}
-          onReschedule={handleReschedule}
           onRate={handleRate}
         />
       ))}

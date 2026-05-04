@@ -66,6 +66,6 @@ const styles = StyleSheet.create({
   },
   content: {
     gap: spacing.sm,
-    paddingRight: spacing.sm,
+    paddingHorizontal: spacing.sm,
   },
 });

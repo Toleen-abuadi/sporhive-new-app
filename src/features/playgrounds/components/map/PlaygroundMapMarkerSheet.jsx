@@ -90,7 +90,15 @@ export function PlaygroundMapMarkerSheet({
         ) : null}
 
         {venue.hasSpecialOffer ? (
-          <View style={[styles.offerBadge, { backgroundColor: colors.successSoft }]}>
+          <View
+            style={[
+              styles.offerBadge,
+              {
+                backgroundColor: colors.successSoft,
+                flexDirection: getRowDirection(isRTL),
+              },
+            ]}
+          >
             <Sparkles size={12} color={colors.success} strokeWidth={2.2} />
             <Text variant="caption" weight="semibold" color={colors.success}>
               {copy?.labels?.specialOffer}

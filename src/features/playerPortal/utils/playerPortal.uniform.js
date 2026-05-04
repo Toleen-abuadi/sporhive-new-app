@@ -114,7 +114,13 @@ export const validateUniformCheckout = ({
 
   if (!Array.isArray(cartItems) || cartItems.length === 0) {
     errors.push('cart_empty');
-    return { valid: false, errors, warnings };
+    return {
+      valid: false,
+      hasBlockingError: true,
+      errors,
+      blockingErrors: errors,
+      warnings,
+    };
   }
 
   cartItems.forEach((item) => {
@@ -149,9 +155,14 @@ export const validateUniformCheckout = ({
     }
   }
 
+  const uniqueErrors = Array.from(new Set(errors));
+  const uniqueWarnings = Array.from(new Set(warnings));
+
   return {
-    valid: errors.length === 0,
-    errors,
-    warnings,
+    valid: uniqueErrors.length === 0,
+    hasBlockingError: uniqueErrors.length > 0,
+    errors: uniqueErrors,
+    blockingErrors: uniqueErrors,
+    warnings: uniqueWarnings,
   };
 };

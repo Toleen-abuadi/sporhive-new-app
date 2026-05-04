@@ -3,6 +3,7 @@ export {
   AUTH_PASSWORD_MIN_LENGTH,
   hasValidationErrors,
   normalizeAlphabeticInput,
+  normalizeUsernameInput,
   normalizeOtpValue,
   trimText,
   validateOtp,

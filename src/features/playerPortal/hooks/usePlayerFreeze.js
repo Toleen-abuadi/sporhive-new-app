@@ -122,7 +122,6 @@ export function usePlayerFreeze({ auto = true } = {}) {
   const seededOverviewRef = useRef(null);
 
   const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
-  const [isCancellingRequest, setIsCancellingRequest] = useState(false);
 
   const seedFromOverview = useCallback(
     (raw) => {
@@ -218,49 +217,6 @@ export function usePlayerFreeze({ auto = true } = {}) {
     [fetchFreezeHistory, overviewQuery, session.canFetchOverview, session.guardReason, session.requestContext]
   );
 
-  const cancelFreeze = useCallback(
-    async (freezeId) => {
-      if (isCancellingRequest) {
-        return {
-          success: false,
-          error: {
-            code: 'FREEZE_CANCEL_IN_FLIGHT',
-            status: 0,
-            message: '',
-          },
-        };
-      }
-
-      if (!session.canFetchOverview || !session.requestContext) {
-        return {
-          success: false,
-          error: {
-            code: session.guardReason || 'FREEZE_GUARD_FAILED',
-            status: 0,
-            message: 'Player session is not ready for freeze requests.',
-          },
-        };
-      }
-
-      setIsCancellingRequest(true);
-
-      try {
-        const result = await playerPortalApi.cancelFreezeRequest(session.requestContext, {
-          freeze_id: toNumber(freezeId),
-        });
-
-        if (!result.success) return result;
-
-        await Promise.all([fetchFreezeHistory({ refresh: true }), overviewQuery.refetch()]);
-
-        return result;
-      } finally {
-        setIsCancellingRequest(false);
-      }
-    },
-    [fetchFreezeHistory, isCancellingRequest, overviewQuery, session.canFetchOverview, session.guardReason, session.requestContext]
-  );
-
   useEffect(() => {
     const raw = overviewQuery.overview?.raw;
     if (!raw) return;
@@ -308,10 +264,8 @@ export function usePlayerFreeze({ auto = true } = {}) {
     canFetch: session.canFetchOverview,
     guardReason: session.guardReason,
     isSubmittingRequest,
-    isCancellingRequest,
     fetchFreezeHistory,
     requestFreeze,
-    cancelFreeze,
     refreshAll: () => Promise.all([fetchFreezeHistory({ refresh: true }), overviewQuery.refetch()]),
     getUsedCountForYear: (startDate) => countByYear(query.data?.items || [], startDate),
   };

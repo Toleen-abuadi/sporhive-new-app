@@ -1,9 +1,13 @@
 import { normalizeJoinStatus } from './academyDiscovery.statuses';
 import { cleanString, toArray, toNumber } from './academyDiscovery.normalizers';
-import { resolveNumericLocale, toEnglishDigits } from '../../../utils/numbering';
-
-const resolveLocaleTag = (locale) =>
-  resolveNumericLocale(locale, 'en-US');
+import { toEnglishDigits } from '../../../utils/numbering';
+import {
+  formatPrice,
+  formatRange,
+  formatTime,
+  isArabicLocale,
+  isolateLTR,
+} from '../../../utils/formatting';
 
 export const getLocalizedText = ({
   locale = 'en',
@@ -13,7 +17,7 @@ export const getLocalizedText = ({
 } = {}) => {
   const english = cleanString(valueEn);
   const arabic = cleanString(valueAr);
-  const isArabic = String(locale || '').toLowerCase().startsWith('ar');
+  const isArabic = isArabicLocale(locale);
 
   if (isArabic) return arabic || english || fallback;
   return english || arabic || fallback;
@@ -23,19 +27,11 @@ export const formatAcademyFee = (
   amount,
   { locale = 'en', currency = 'JOD', feeType = '' } = {}
 ) => {
-  const numeric = toNumber(amount);
-  if (numeric == null) return '';
-
-  let formatted = '';
-  try {
-    formatted = toEnglishDigits(new Intl.NumberFormat(resolveLocaleTag(locale), {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: 2,
-    }).format(numeric));
-  } catch {
-    formatted = `${numeric.toFixed(2)} ${currency}`;
-  }
+  const formatted = formatPrice(amount, currency, locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  if (!formatted) return '';
 
   const suffix = cleanString(feeType);
   if (!suffix) return formatted;
@@ -48,37 +44,37 @@ export const formatAcademyDistance = (distanceKm, locale = 'en') => {
 
   if (numeric < 1) {
     const meters = toEnglishDigits(Math.max(1, Math.round(numeric * 1000)));
-    return String(locale || '').toLowerCase().startsWith('ar')
-      ? `${meters} متر`
+    return isArabicLocale(locale)
+      ? `${isolateLTR(meters)} متر`
       : `${meters} m`;
   }
 
   const rounded = toEnglishDigits(numeric.toFixed(numeric < 10 ? 1 : 0));
-  return String(locale || '').toLowerCase().startsWith('ar')
-    ? `${rounded} كم`
+  return isArabicLocale(locale)
+    ? `${isolateLTR(rounded)} كم`
     : `${rounded} km`;
 };
 
 export const formatAcademyAgeRange = (agesFrom, agesTo, locale = 'en') => {
   const from = toNumber(agesFrom);
   const to = toNumber(agesTo);
-  const isArabic = String(locale || '').toLowerCase().startsWith('ar');
+  const isArabic = isArabicLocale(locale);
 
   if (from == null && to == null) return '';
   if (from != null && to != null) {
-    return isArabic ? `${from}-${to} سنة` : `${from}-${to} years`;
+    return isArabic ? `${formatRange(from, to)} سنة` : `${from}-${to} years`;
   }
   if (from != null) {
-    return isArabic ? `${from}+ سنة` : `${from}+ years`;
+    return isArabic ? `${formatRange(from, null)} سنة` : `${from}+ years`;
   }
-  return isArabic ? `حتى ${to} سنة` : `Up to ${to} years`;
+  return isArabic ? `حتى ${formatRange(null, to)} سنة` : `Up to ${to} years`;
 };
 
 export const formatAcademySports = (sports, locale = 'en', maxItems = 3) => {
   const list = toArray(sports).filter(Boolean);
   if (!list.length) return '';
   const limited = list.slice(0, Math.max(1, Number(maxItems) || 3));
-  const separator = String(locale || '').toLowerCase().startsWith('ar') ? '، ' : ', ';
+  const separator = isArabicLocale(locale) ? '، ' : ', ';
   return limited.join(separator);
 };
 
@@ -93,9 +89,9 @@ const DAYS_AR = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأرب
 
 export const formatCourseScheduleItem = (schedule = {}, locale = 'en') => {
   const day = toNumber(schedule.day_of_week ?? schedule.dayOfWeek);
-  const start = cleanString(schedule.start_time || schedule.startTime);
-  const end = cleanString(schedule.end_time || schedule.endTime);
-  const isArabic = String(locale || '').toLowerCase().startsWith('ar');
+  const start = formatTime(schedule.start_time || schedule.startTime, locale);
+  const end = formatTime(schedule.end_time || schedule.endTime, locale);
+  const isArabic = isArabicLocale(locale);
 
   const dayLabel =
     day != null && day >= 0 && day <= 6
@@ -111,7 +107,7 @@ export const formatCourseScheduleItem = (schedule = {}, locale = 'en') => {
 
 export const formatJoinStatusLabel = (status, locale = 'en') => {
   const normalized = normalizeJoinStatus(status);
-  const isArabic = String(locale || '').toLowerCase().startsWith('ar');
+  const isArabic = isArabicLocale(locale);
 
   if (normalized === 'forwarded') {
     return isArabic ? 'تم الإرسال' : 'Forwarded';

@@ -1,22 +1,12 @@
 import { toNumber } from './playerPortal.normalizers';
 import { translateApiEnumValue } from '../../../utils/apiValueLocalization';
 import { resolveNumericLocale, toEnglishDigits } from '../../../utils/numbering';
-
-const LTR_ISOLATE_OPEN = '\u2066';
-const LTR_ISOLATE_CLOSE = '\u2069';
+import { formatPrice } from '../../../utils/formatting';
 
 const resolveLocale = (locale) => {
   const normalized = String(locale || '').toLowerCase();
   const fallback = normalized.startsWith('ar') ? 'ar-JO' : 'en-US';
   return resolveNumericLocale(locale, fallback);
-};
-
-const isArabicLocale = (locale) => String(locale || '').toLowerCase().startsWith('ar');
-const isolateLTR = (value) => `${LTR_ISOLATE_OPEN}${String(value ?? '')}${LTR_ISOLATE_CLOSE}`;
-
-const resolveCurrencyLabel = (currencyCode, locale) => {
-  if (currencyCode === 'JOD' && isArabicLocale(locale)) return '\u062F.\u0623';
-  return 'currencyCode';
 };
 
 export function formatDateLabel(value, { locale = 'en', fallback = '-' } = {}) {
@@ -57,23 +47,12 @@ export function formatAmountLabel(value, { locale = 'en', fallback = '0', curren
   }
 
   const currencyCode = String(currency || '').trim().toUpperCase() || 'JOD';
-  if (isArabicLocale(locale)) {
-    const amount = toEnglishDigits(numeric.toFixed(2));
-    const currencyLabel = resolveCurrencyLabel(currencyCode, locale);
-    return isolateLTR(`${amount} ${currencyLabel}`);
-  }
-
-  try {
-    return toEnglishDigits(new Intl.NumberFormat(resolveLocale(locale), {
-      style: 'currency',
-      currency: currencyCode,
-      currencyDisplay: 'code',
-      maximumFractionDigits: 2,
-      minimumFractionDigits: 2,
-    }).format(numeric));
-  } catch {
-    return `${toEnglishDigits(numeric.toFixed(2))} ${currencyCode}`;
-  }
+  const formatted = formatPrice(numeric, currencyCode, locale, {
+    currencyDisplay: 'code',
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
+  });
+  return formatted || `${toEnglishDigits(numeric.toFixed(2))} ${currencyCode}`;
 }
 
 export function formatEnumLabel(

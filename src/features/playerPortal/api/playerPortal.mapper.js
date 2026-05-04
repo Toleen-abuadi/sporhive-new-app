@@ -595,8 +595,11 @@ const mapUniformOrderRow = (order) => {
   const productNameEn = cleanString(
     row.uniform_en ||
       row.uniform_type_en ||
+      row.name_en ||
+      row.label_en ||
       row.product_name_en ||
       product.name_en ||
+      product.label_en ||
       product.name ||
       row.uniform_type ||
       row.product_name ||
@@ -605,6 +608,8 @@ const mapUniformOrderRow = (order) => {
   const productNameAr = cleanString(
     row.uniform_ar ||
       row.uniform_type_ar ||
+      row.name_ar ||
+      row.label_ar ||
       row.product_name_ar ||
       product.name_ar ||
       product.label_ar

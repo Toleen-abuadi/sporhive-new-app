@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { RefreshControl, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useToast } from '../../../components/feedback/ToastHost';
@@ -40,7 +40,48 @@ const CHECKOUT_ERROR_KEYS = Object.freeze({
 
 function resolveCheckoutErrors(errors, t) {
   const unique = Array.from(new Set(errors || []));
-  return unique.map((code) => t(CHECKOUT_ERROR_KEYS[code] || 'playerPortal.store.checkout.errors.validationFallback'));
+  return unique.map((code) =>
+    t(CHECKOUT_ERROR_KEYS[code] || 'playerPortal.store.checkout.errors.validationFallback')
+  );
+}
+
+function resolveCheckoutValidation({
+  cartItems,
+  productMap,
+  printing,
+  canFetch,
+  isStoreLoading,
+  storeLastUpdatedAt,
+}) {
+  const hasCartItems = Array.isArray(cartItems) && cartItems.length > 0;
+  const isValidationPending =
+    Boolean(canFetch) &&
+    hasCartItems &&
+    !storeLastUpdatedAt &&
+    isStoreLoading;
+
+  if (isValidationPending) {
+    return {
+      ready: false,
+      valid: false,
+      hasBlockingError: false,
+      errors: [],
+      blockingErrors: [],
+      warnings: [],
+    };
+  }
+
+  const base = validateUniformCheckout({
+    cartItems,
+    productMap,
+    printing,
+  });
+
+  return {
+    ready: true,
+    ...base,
+    blockingErrors: Array.from(new Set(base.blockingErrors || base.errors || [])),
+  };
 }
 
 const resolveOrderRefCandidates = (resultData) => {
@@ -105,9 +146,18 @@ export function PlayerStoreCheckoutScreen() {
   const { colors } = useTheme();
   const session = usePlayerPortalSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const { state: cartState, summary: cartSummary, actions: cartActions } = usePlayerUniformCart();
-  const { productMap, canFetch, guardReason, isRefreshing, fetchStore } = usePlayerUniformStore({
+  const {
+    productMap,
+    canFetch,
+    guardReason,
+    isRefreshing,
+    isLoading: isStoreLoading,
+    lastUpdatedAt: storeLastUpdatedAt,
+    fetchStore,
+  } = usePlayerUniformStore({
     auto: true,
   });
   const { createOrder, fetchOrders } = usePlayerUniformOrders();
@@ -115,32 +165,53 @@ export function PlayerStoreCheckoutScreen() {
   const cartItems = useMemo(() => cartState.items || [], [cartState.items]);
   const validation = useMemo(
     () =>
-      validateUniformCheckout({
+      resolveCheckoutValidation({
         cartItems,
         productMap,
         printing: cartState.printing,
+        canFetch,
+        isStoreLoading,
+        storeLastUpdatedAt,
       }),
-    [cartItems, cartState.printing, productMap]
+    [canFetch, cartItems, cartState.printing, isStoreLoading, productMap, storeLastUpdatedAt]
   );
   const validationMessages = useMemo(
-    () => resolveCheckoutErrors(validation.errors, t),
-    [t, validation.errors]
+    () => resolveCheckoutErrors(validation.blockingErrors, t),
+    [t, validation.blockingErrors]
   );
-  const hasBlockingValidationError = !validation.valid;
-  const canPlaceOrder = !isSubmitting && cartItems.length > 0 && !hasBlockingValidationError;
+  const isValidationPending = !validation.ready;
+  const hasBlockingValidationError = validation.ready && validation.hasBlockingError;
+  const canPlaceOrder =
+    canFetch &&
+    !isSubmitting &&
+    cartItems.length > 0 &&
+    !isValidationPending &&
+    !hasBlockingValidationError;
 
   const handleSubmitOrder = async () => {
-    if (hasBlockingValidationError) {
-      toast.error(
-        validationMessages[0] || t('playerPortal.store.checkout.errors.validationFallback')
-      );
-      return;
-    }
+    if (submittingRef.current || isSubmitting) return;
+    if (!canFetch) return;
+    if (isValidationPending) return;
 
     if (cartItems.length === 0) {
       toast.error(t('playerPortal.store.checkout.errors.cartEmpty'));
       return;
     }
+
+    const snapshotValidation = validateUniformCheckout({
+      cartItems,
+      productMap,
+      printing: cartState.printing,
+    });
+
+    if (snapshotValidation.hasBlockingError) {
+      const messages = resolveCheckoutErrors(snapshotValidation.blockingErrors, t);
+      toast.error(messages[0] || t('playerPortal.store.checkout.errors.validationFallback'));
+      return;
+    }
+
+    submittingRef.current = true;
+    setIsSubmitting(true);
 
     const payload = buildUniformOrderPayload({
       cartItems,
@@ -148,13 +219,10 @@ export function PlayerStoreCheckoutScreen() {
       tryoutId: session.tryoutId,
     });
 
-    setIsSubmitting(true);
     try {
       const result = await createOrder(payload);
       if (!result.success) {
-        toast.error(
-          result.error?.message || t('playerPortal.store.checkout.errors.submitFallback')
-        );
+        toast.error(result.error?.message || t('playerPortal.store.checkout.errors.submitFallback'));
         return;
       }
 
@@ -179,14 +247,14 @@ export function PlayerStoreCheckoutScreen() {
         router.replace(buildPlayerStoreOrderDetailsRoute(matchedOrder.ref));
         return;
       }
+
       setTimeout(() => {
-      router.push(ROUTES.PLAYER_STORE_ORDERS);
-    }, 500);
+        router.push(ROUTES.PLAYER_STORE_ORDERS);
+      }, 500);
     } catch (error) {
-      toast.error(
-        error?.message || t('playerPortal.store.checkout.errors.submitFallback')
-      );
+      toast.error(error?.message || t('playerPortal.store.checkout.errors.submitFallback'));
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };

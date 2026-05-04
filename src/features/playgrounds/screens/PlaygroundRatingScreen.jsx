@@ -175,7 +175,6 @@ export function PlaygroundRatingScreen() {
       {
         label: copy.labels.date,
         value: formatPlaygroundDate(bookingSummary.date, locale),
-        forceLTR: true,
       },
       {
         label: copy.labels.chooseSlot,
@@ -184,7 +183,6 @@ export function PlaygroundRatingScreen() {
           bookingSummary.endTime,
           locale
         ),
-        forceLTR: true,
       },
       {
         label: copy.labels.status,

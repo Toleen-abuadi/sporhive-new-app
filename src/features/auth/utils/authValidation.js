@@ -3,6 +3,7 @@ import { digitsOnly } from './phone';
 
 export const AUTH_PASSWORD_MIN_LENGTH = 8;
 export const AUTH_OTP_LENGTH = 6;
+export const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
 
 export const trimText = (value) => String(value || '').trim();
 export const normalizeAlphabeticInput = (value) => {
@@ -13,6 +14,10 @@ export const normalizeAlphabeticInput = (value) => {
     .replace(/\s{2,}/g, ' ')
     .trimStart();
 };
+export const normalizeUsernameInput = (value) =>
+  String(value || '')
+    .replace(/[^a-zA-Z0-9_]/g, '')
+    .trimStart();
 export const normalizeOtpValue = (value) => digitsOnly(value).slice(0, AUTH_OTP_LENGTH);
 
 export const hasValidationErrors = (errors) => Object.keys(errors || {}).length > 0;
@@ -57,6 +62,8 @@ export function validatePlayerLogin({ academyId, username, password, t }) {
   }
   if (!trimText(username)) {
     errors.username = t('auth.errors.usernameRequired');
+  } else if (!USERNAME_REGEX.test(trimText(username))) {
+    errors.username = t('auth.errors.usernameInvalid');
   }
   if (!trimText(password)) {
     errors.password = t('auth.errors.passwordRequired');
@@ -105,6 +112,8 @@ export function validateResetRequest({ mode, academyId, username, phonePayload, 
 
   if (resolvedMode === AUTH_LOGIN_MODES.PLAYER && !trimText(username)) {
     errors.username = t('auth.errors.usernameRequired');
+  } else if (resolvedMode === AUTH_LOGIN_MODES.PLAYER && !USERNAME_REGEX.test(trimText(username))) {
+    errors.username = t('auth.errors.usernameInvalid');
   }
 
   if (!phonePayload?.nationalNumber) {

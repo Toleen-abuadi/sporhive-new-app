@@ -74,7 +74,7 @@ export function AcademyCard({
 
         <View style={styles.content}>
           <View style={[styles.headerRow, { flexDirection: getRowDirection(isRTL) }]}>
-            <View style={styles.titleWrap}>
+            <View style={[styles.titleWrap, isRTL ? styles.titleWrapRtl : null]}>
               <Text variant="h3" weight="bold" numberOfLines={1}>
                 {academy.name}
               </Text>
@@ -155,7 +155,7 @@ export function AcademyCard({
           </View>
 
           {showCompare ? (
-            <View style={styles.compareRow}>
+            <View style={[styles.compareRow, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
               <Button
                 size="sm"
                 variant="ghost"
