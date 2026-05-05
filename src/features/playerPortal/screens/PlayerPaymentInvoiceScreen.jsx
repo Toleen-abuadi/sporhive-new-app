@@ -29,8 +29,15 @@ const normalizeInvoiceLanguage = (value) =>
 
 const resolveInvoiceErrorMessage = (reason, t) => {
   const code = String(reason?.code || "").toUpperCase();
+  if (code === "INVOICE_EMPTY") {
+    return t("playerPortal.payments.invoice.errors.empty");
+  }
+
+  if (code === "INVOICE_RESPONSE_INVALID") {
+    return t("playerPortal.payments.invoice.errors.invalid");
+  }
+
   if (
-    code === "INVOICE_RESPONSE_INVALID" ||
     code === "HTTP_ERROR" ||
     code === "NETWORK_ERROR" ||
     code === "AUTH_REQUEST_FAILED" ||
@@ -40,7 +47,7 @@ const resolveInvoiceErrorMessage = (reason, t) => {
     return t("playerPortal.payments.invoice.errors.download");
   }
 
-  return reason?.message || t("playerPortal.payments.invoice.errors.download");
+  return t("playerPortal.payments.invoice.errors.download");
 };
 
 export function PlayerPaymentInvoiceScreen() {
@@ -76,7 +83,6 @@ export function PlayerPaymentInvoiceScreen() {
 
   const loadInvoice = useCallback(
     async ({
-      refresh = false,
       silent = false,
       downloadAfterLoad = false,
     } = {}) => {
@@ -87,10 +93,12 @@ export function PlayerPaymentInvoiceScreen() {
         };
       }
 
-      if (isLoadingRef.current && !refresh) {
+      if (isLoadingRef.current) {
         return {
           success: false,
-          error: new Error("Invoice request is already in progress."),
+          error: Object.assign(new Error("Invoice request is already in progress."), {
+            code: "INVOICE_IN_PROGRESS",
+          }),
         };
       }
 
@@ -104,6 +112,15 @@ export function PlayerPaymentInvoiceScreen() {
         const resolvedPaymentId = Number(payment.id);
         if (!Number.isFinite(resolvedPaymentId)) {
           throw new Error("Invoice payment reference is invalid.");
+        }
+
+        if (__DEV__) {
+          console.log("[playerPortal][invoice-screen] selected-payment", {
+            id: payment?.id ?? null,
+            invoice_id: payment?.invoiceId || payment?.externalInvoiceNumber || null,
+            amount: payment?.amountNumber ?? payment?.amount ?? null,
+            status: payment?.status || null,
+          });
         }
 
         const result = await playerPortalApi.printInvoice(
@@ -130,6 +147,7 @@ export function PlayerPaymentInvoiceScreen() {
           arrayBuffer: result.data.arrayBuffer,
           fileName: result.data.fileName || `invoice-${payment.id}.pdf`,
           contentType: result.data.contentType,
+          contentDisposition: result.data.contentDisposition,
         });
 
         setDocumentRef((prev) => {
@@ -178,13 +196,16 @@ export function PlayerPaymentInvoiceScreen() {
   );
 
   const handleDownload = async () => {
+    if (isLoadingRef.current || isLoading) {
+      return;
+    }
+
     const result = await loadInvoice({
-      refresh: true,
       silent: false,
       downloadAfterLoad: true,
     });
 
-    if (!result?.success) {
+    if (!result?.success && String(result?.error?.code || "") !== "INVOICE_IN_PROGRESS") {
       toast.error(resolveInvoiceErrorMessage(result?.error, t));
     }
   };

@@ -13,6 +13,7 @@
     recommended: 'Recommended',
     distanceAsc: 'Nearest',
     priceAsc: 'Lowest price',
+    priceDesc: 'Highest price',
     ratingDesc: 'Top rated',
   },
   labels: {
@@ -237,6 +238,7 @@ const AR = {
     recommended: 'مقترح',
     distanceAsc: 'الأقرب',
     priceAsc: 'الأقل سعراً',
+    priceDesc: 'الأعلى سعراً',
     ratingDesc: 'الأعلى تقييماً',
   },
   labels: {

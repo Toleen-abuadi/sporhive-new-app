@@ -1,293 +1,400 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
-import { CalendarDays, ChevronDown, Filter, MapPin, Search, Users } from 'lucide-react-native';
+import { useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
+import { SlidersHorizontal, ChevronDown, ChevronUp, Search, RotateCcw } from 'lucide-react-native';
+
+import { DatePickerField } from '../../../components/ui/DatePickerField';
 import { Button } from '../../../components/ui/Button';
 import { Chip } from '../../../components/ui/Chip';
-import { DatePickerField } from '../../../components/ui/DatePickerField';
 import { Surface } from '../../../components/ui/Surface';
 import { Text } from '../../../components/ui/Text';
+import { useI18n } from '../../../hooks/useI18n';
 import { useTheme } from '../../../hooks/useTheme';
 import { borderRadius, spacing } from '../../../theme/tokens';
 import { getRowDirection } from '../../../utils/rtl';
-import { ActivityChips } from './ActivityChips';
 
-const toNumberLabel = (value) => {
-  if (value == null || value === '') return '';
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric) || numeric <= 0) return '';
-  return String(Math.floor(numeric));
+const SPORTS_FILTERS = Object.freeze([
+  { id: '', labelKey: 'playgrounds.filters.sports.allSports' },
+  { id: 'football', labelKey: 'playgrounds.filters.sports.football' },
+  { id: 'basketball', labelKey: 'playgrounds.filters.sports.basketball' },
+  { id: 'tennis', labelKey: 'playgrounds.filters.sports.tennis' },
+  { id: 'swimming', labelKey: 'playgrounds.filters.sports.swimming' },
+  { id: 'gym', labelKey: 'playgrounds.filters.sports.gym' },
+]);
+
+const MARKETPLACE_TABS = Object.freeze([
+  { id: 'all', labelKey: 'playgrounds.filters.tabs.all' },
+  { id: 'offers', labelKey: 'playgrounds.filters.tabs.offers' },
+  { id: 'featured', labelKey: 'playgrounds.filters.tabs.featured' },
+  { id: 'premium', labelKey: 'playgrounds.filters.tabs.premium' },
+  { id: 'pro', labelKey: 'playgrounds.filters.tabs.pro' },
+]);
+
+const SORT_OPTIONS = Object.freeze([
+  { id: 'recommended', labelKey: 'playgrounds.filters.sort.recommended' },
+  { id: 'price_asc', labelKey: 'playgrounds.filters.sort.priceLowHigh' },
+  { id: 'price_desc', labelKey: 'playgrounds.filters.sort.priceHighLow' },
+  { id: 'distance_asc', labelKey: 'playgrounds.filters.sort.nearest' },
+  { id: 'rating_desc', labelKey: 'playgrounds.filters.sort.highestRated' },
+]);
+
+const todayIsoDate = () => {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
+const safeTextInputAlign = (isRTL) => ({
+  textAlign: isRTL ? 'right' : 'left',
+  writingDirection: isRTL ? 'rtl' : 'ltr',
+});
+
 export function PlaygroundsFilterForm({
-  locale = 'en',
-  isRTL = false,
-  copy,
-  allSportsLabel = '',
-  activityOptions = [],
-  selectedActivityId = '',
-  selectedDate = '',
-  selectedPlayers = null,
-  selectedLocation = '',
-  selectedDurationId = '',
+  filters,
+  activeTab,
   durationOptions = [],
-  showAdvanced = false,
-  onToggleAdvanced,
-  onSelectActivity,
-  onSelectDate,
-  onSelectPlayers,
-  onSelectLocation,
-  onSelectDuration,
+  activeFiltersCount = 0,
+  canReset = false,
+  searching = false,
+  onChange,
+  onTabChange,
+  onSortChange,
   onSearch,
   onReset,
 }) {
+  const { t, isRTL } = useI18n();
   const { colors } = useTheme();
-  const [playersInput, setPlayersInput] = useState(() => toNumberLabel(selectedPlayers));
+  const [expanded, setExpanded] = useState(false);
 
-  useEffect(() => {
-    setPlayersInput(toNumberLabel(selectedPlayers));
-  }, [selectedPlayers]);
+  const selectedSort = String(filters?.orderBy || 'recommended');
+  const selectedSport = String(filters?.activityId || '');
 
-  const activeFiltersCount = useMemo(
-    () =>
-      [
-        Boolean(selectedActivityId),
-        Boolean(selectedDate),
-        selectedPlayers != null,
-        Boolean(String(selectedLocation || '').trim()),
-        Boolean(selectedDurationId),
-      ].filter(Boolean).length,
-    [selectedActivityId, selectedDate, selectedPlayers, selectedLocation, selectedDurationId]
+  const showDurationFilters = useMemo(
+    () => Array.isArray(durationOptions) && durationOptions.length > 0,
+    [durationOptions]
   );
 
-  const handlePlayersChange = (value) => {
-    const normalized = String(value || '').replace(/[^\d]/g, '');
-    setPlayersInput(normalized);
-    if (!normalized) {
-      onSelectPlayers?.(null);
-      return;
-    }
-    const numeric = Number(normalized);
-    onSelectPlayers?.(Number.isFinite(numeric) && numeric > 0 ? Math.floor(numeric) : null);
-  };
+  const selectedSortLabel =
+    SORT_OPTIONS.find((option) => option.id === selectedSort)?.labelKey ||
+    'playgrounds.filters.sort.recommended';
 
   return (
-    <Surface variant="soft" padding="md" style={styles.card}>
-      <View style={[styles.primaryRow, { flexDirection: getRowDirection(isRTL) }]}>
-        <View style={[styles.filtersTitleWrap, { flexDirection: getRowDirection(isRTL) }]}>
-          <View style={[styles.filtersIconWrap, { backgroundColor: colors.accentOrange }]}>
-            <Filter size={14} color={colors.white} strokeWidth={2.2} />
-          </View>
-          <View style={styles.filtersTitleTextWrap}>
-            <Text variant="bodySmall" weight="semibold">
-              {copy?.labels?.filters}
-            </Text>
-            <Text variant="caption" color={colors.textSecondary}>
-              {copy?.labels?.filtersHint}
-            </Text>
-          </View>
-        </View>
+    <Surface variant="soft" padding="sm" style={styles.surface}>
+      <View style={styles.content}>
+        <View style={[styles.topRow, { flexDirection: getRowDirection(isRTL) }]}>
+          <Pressable
+            onPress={() => setExpanded((value) => !value)}
+            style={[
+              styles.collapseButton,
+              {
+                flexDirection: getRowDirection(isRTL),
+                borderColor: colors.border,
+                backgroundColor: colors.surface,
+              },
+            ]}
+          >
+            <View style={[styles.iconBadge, { backgroundColor: colors.accentOrangeSoft }]}>
+              <SlidersHorizontal size={16} color={colors.accentOrange} strokeWidth={2.4} />
+            </View>
 
-        <View style={[styles.actionsRow, { flexDirection: getRowDirection(isRTL) }]}>
-          {activeFiltersCount ? (
-            <Chip label={`${copy?.labels?.activeFilters}: ${activeFiltersCount}`} />
-          ) : null}
-          <Button size="sm" variant="ghost" onPress={onReset}>
-            {copy?.actions?.clearFilters}
+            <View style={styles.titleBlock}>
+              <Text variant="bodySmall" weight="bold">
+                {t('playgrounds.filters.title', { defaultValue: 'Filters' })}
+              </Text>
+              <Text variant="caption" color={colors.textMuted} numberOfLines={1}>
+                {activeFiltersCount > 0
+                  ? t('playgrounds.filters.activeCount', { count: activeFiltersCount })
+                  : t(selectedSortLabel)}
+              </Text>
+            </View>
+
+            {expanded ? (
+              <ChevronUp size={18} color={colors.textSecondary} strokeWidth={2.2} />
+            ) : (
+              <ChevronDown size={18} color={colors.textSecondary} strokeWidth={2.2} />
+            )}
+          </Pressable>
+
+          <Button
+            size="sm"
+            style={styles.searchMiniButton}
+            loading={searching}
+            disabled={searching}
+            onPress={onSearch}
+            leadingIcon={<Search size={14} color={colors.white} strokeWidth={2.3} />}
+          >
+            {t('playgrounds.filters.actions.search')}
           </Button>
         </View>
-      </View>
 
-      <ActivityChips
-        items={activityOptions}
-        selectedId={selectedActivityId}
-        onSelect={onSelectActivity}
-        allLabel={allSportsLabel}
-        getLabel={(item) => item.label}
-      />
-
-      <View style={styles.inlineFieldsRow}>
-        <View style={styles.dateFieldWrap}>
-          <DatePickerField
-            label={copy?.labels?.date}
-            value={selectedDate}
-            onChange={onSelectDate}
-            minDate={new Date()}
-            placeholder="dd/mm/yyyy"
-          />
-        </View>
-
-        <View style={[styles.playersFieldWrap, { borderColor: colors.border, backgroundColor: colors.surface }]}>
-          <Users size={14} color={colors.textMuted} strokeWidth={2.2} />
-          <TextInput
-            value={playersInput}
-            onChangeText={handlePlayersChange}
-            keyboardType="number-pad"
-            inputMode="numeric"
-            maxLength={2}
-            placeholder={copy?.labels?.players}
-            placeholderTextColor={colors.textMuted}
-            style={[styles.playersInput, { color: colors.textPrimary }]}
-            textAlign="left"
-          />
-        </View>
-
-        <View style={[styles.locationFieldWrap, { borderColor: colors.border, backgroundColor: colors.surface }]}>
-          <MapPin size={14} color={colors.textMuted} strokeWidth={2.2} />
-          <TextInput
-            value={selectedLocation}
-            onChangeText={onSelectLocation}
-            placeholder={copy?.labels?.locationPlaceholder}
-            placeholderTextColor={colors.textMuted}
-            style={[
-              styles.locationInput,
-              { color: colors.textPrimary, textAlign: locale === 'ar' ? 'right' : 'left' },
-            ]}
-          />
-        </View>
-
-        <Button
-          size="sm"
-          onPress={onSearch}
-          style={styles.searchButton}
-          leadingIcon={<Search size={14} color={colors.white} strokeWidth={2.2} />}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={[styles.chipsRow, { flexDirection: getRowDirection(isRTL) }]}
         >
-          {copy?.actions?.search}
-        </Button>
-      </View>
-
-      <Pressable
-        accessibilityRole="button"
-        onPress={onToggleAdvanced}
-        style={({ pressed }) => [
-          styles.advancedToggle,
-          { flexDirection: getRowDirection(isRTL), opacity: pressed ? 0.85 : 1 },
-        ]}
-      >
-        <Text variant="caption" color={colors.textSecondary}>
-          {showAdvanced ? copy?.actions?.hideFilters : copy?.actions?.showFilters}
-        </Text>
-        <ChevronDown
-          size={14}
-          color={colors.textMuted}
-          strokeWidth={2.2}
-          style={showAdvanced ? styles.chevronExpanded : null}
-        />
-      </Pressable>
-
-      {showAdvanced ? (
-        <View style={styles.advancedWrap}>
-          <View style={[styles.advancedLabelRow, { flexDirection: getRowDirection(isRTL) }]}>
-            <CalendarDays size={12} color={colors.textMuted} strokeWidth={2.2} />
-            <Text variant="caption" color={colors.textSecondary}>
-              {copy?.labels?.chooseDuration}
-            </Text>
-          </View>
-          <View style={[styles.durationChipsWrap, { flexDirection: getRowDirection(isRTL) }]}>
+          {MARKETPLACE_TABS.map((tab) => (
             <Chip
-              label={copy?.tabs?.all}
-              selected={!selectedDurationId}
-              onPress={() => onSelectDuration?.('')}
+              key={tab.id}
+              label={t(tab.labelKey)}
+              selected={activeTab === tab.id}
+              onPress={() => onTabChange?.(tab.id)}
             />
-            {durationOptions.map((duration) => (
-              <Chip
-                key={duration.id}
-                label={duration.label}
-                selected={selectedDurationId === duration.id}
-                onPress={() =>
-                  onSelectDuration?.(selectedDurationId === duration.id ? '' : duration.id)
-                }
+          ))}
+        </ScrollView>
+
+        {expanded ? (
+          <View style={styles.expandedContent}>
+            <View style={styles.section}>
+              <Text variant="caption" color={colors.textSecondary}>
+                {t('playgrounds.filters.fields.sport', { defaultValue: 'Sport' })}
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={[styles.chipsRow, { flexDirection: getRowDirection(isRTL) }]}
+              >
+                {SPORTS_FILTERS.map((sport) => (
+                  <Chip
+                    key={sport.id || 'all'}
+                    label={t(sport.labelKey)}
+                    selected={selectedSport === sport.id}
+                    onPress={() => onChange?.('activityId', sport.id)}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+
+            <View style={styles.grid}>
+              <View style={styles.gridItem}>
+                <DatePickerField
+                  label={t('playgrounds.filters.fields.date')}
+                  value={String(filters?.date || '')}
+                  onChange={(value) => onChange?.('date', value)}
+                  placeholder={t('common.formats.isoDatePlaceholder')}
+                  minDate={todayIsoDate()}
+                />
+              </View>
+
+              <View style={styles.gridItem}>
+                <Text variant="caption" color={colors.textSecondary}>
+                  {t('playgrounds.filters.fields.players')}
+                </Text>
+                <TextInput
+                  keyboardType="number-pad"
+                  value={String(filters?.numberOfPlayers || '')}
+                  onChangeText={(value) => onChange?.('numberOfPlayers', value)}
+                  placeholder={t('playgrounds.filters.placeholders.players')}
+                  placeholderTextColor={colors.textMuted}
+                  style={[
+                    styles.input,
+                    safeTextInputAlign(isRTL),
+                    {
+                      borderColor: colors.border,
+                      backgroundColor: colors.surface,
+                      color: colors.textPrimary,
+                    },
+                  ]}
+                />
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text variant="caption" color={colors.textSecondary}>
+                {t('playgrounds.filters.fields.location')}
+              </Text>
+              <TextInput
+                value={String(filters?.baseLocation || '')}
+                onChangeText={(value) => onChange?.('baseLocation', value)}
+                placeholder={t('playgrounds.filters.placeholders.location')}
+                placeholderTextColor={colors.textMuted}
+                style={[
+                  styles.input,
+                  safeTextInputAlign(isRTL),
+                  {
+                    borderColor: colors.border,
+                    backgroundColor: colors.surface,
+                    color: colors.textPrimary,
+                  },
+                ]}
               />
-            ))}
+            </View>
+
+            {showDurationFilters ? (
+              <View style={styles.section}>
+                <Text variant="caption" color={colors.textSecondary}>
+                  {t('playgrounds.filters.fields.duration')}
+                </Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={[styles.chipsRow, { flexDirection: getRowDirection(isRTL) }]}
+                >
+                  {durationOptions.map((item) => (
+                    <Chip
+                      key={item.id}
+                      label={item.label}
+                      selected={String(filters?.durationId || '') === String(item.id)}
+                      onPress={() => onChange?.('durationId', String(item.id || ''))}
+                    />
+                  ))}
+                </ScrollView>
+              </View>
+            ) : null}
+
+            <View
+              style={[
+                styles.specialOfferRow,
+                {
+                  flexDirection: getRowDirection(isRTL),
+                  borderColor: colors.border,
+                  backgroundColor: colors.surface,
+                },
+              ]}
+            >
+              <View style={styles.titleBlock}>
+                <Text variant="bodySmall" weight="semibold">
+                  {t('playgrounds.filters.fields.specialOffers')}
+                </Text>
+              </View>
+
+              <Switch
+                value={Boolean(filters?.hasSpecialOffer)}
+                onValueChange={(value) => onChange?.('hasSpecialOffer', Boolean(value))}
+                trackColor={{ false: colors.border, true: colors.accentOrangeSoft }}
+                thumbColor={Boolean(filters?.hasSpecialOffer) ? colors.accentOrange : colors.surface}
+              />
+            </View>
+
+            <View style={styles.section}>
+              <Text variant="caption" color={colors.textSecondary}>
+                {t('playgrounds.filters.fields.sort')}
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={[styles.chipsRow, { flexDirection: getRowDirection(isRTL) }]}
+              >
+                {SORT_OPTIONS.map((option) => (
+                  <Chip
+                    key={option.id}
+                    label={t(option.labelKey)}
+                    selected={selectedSort === option.id}
+                    onPress={() => onSortChange?.(option.id)}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+
+            <View style={[styles.actionsRow, { flexDirection: getRowDirection(isRTL) }]}>
+              <Button
+                size="sm"
+                style={styles.actionButton}
+                loading={searching}
+                disabled={searching}
+                onPress={onSearch}
+                leadingIcon={<Search size={14} color={colors.white} strokeWidth={2.3} />}
+              >
+                {t('playgrounds.filters.actions.search')}
+              </Button>
+
+              {canReset ? (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  style={styles.actionButton}
+                  onPress={onReset}
+                  disabled={searching}
+                  leadingIcon={<RotateCcw size={14} color={colors.textPrimary} strokeWidth={2.3} />}
+                >
+                  {t('playgrounds.filters.actions.reset')}
+                </Button>
+              ) : null}
+            </View>
           </View>
-        </View>
-      ) : null}
+        ) : null}
+      </View>
     </Surface>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
+  surface: {
+    borderRadius: borderRadius.xl,
+  },
+  content: {
     gap: spacing.sm,
   },
-  primaryRow: {
+  topRow: {
     alignItems: 'center',
-    justifyContent: 'space-between',
     gap: spacing.sm,
   },
-  filtersTitleWrap: {
+  collapseButton: {
     flex: 1,
+    minHeight: 48,
+    borderWidth: 1,
+    borderRadius: borderRadius.lg,
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
-  filtersIconWrap: {
-    width: 30,
-    height: 30,
-    borderRadius: borderRadius.md,
+  iconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: borderRadius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  filtersTitleTextWrap: {
+  titleBlock: {
     flex: 1,
     gap: 2,
   },
-  actionsRow: {
-    alignItems: 'center',
-    gap: spacing.xs,
+  searchMiniButton: {
+    minWidth: 94,
+    minHeight: 46,
   },
-  inlineFieldsRow: {
+  expandedContent: {
     gap: spacing.sm,
   },
-  dateFieldWrap: {
-    width: '100%',
+  section: {
+    gap: spacing.xs,
   },
-  playersFieldWrap: {
-    minHeight: 42,
+  chipsRow: {
+    gap: spacing.xs,
+    paddingVertical: 2,
+    paddingHorizontal: 1,
+  },
+  grid: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  gridItem: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacing.xs,
+  },
+  input: {
+    minHeight: 44,
     borderWidth: 1,
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.sm,
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.xs,
+    fontSize: 14,
   },
-  playersInput: {
-    flex: 1,
-    fontSize: 13,
-    paddingVertical: 0,
-  },
-  locationFieldWrap: {
-    minHeight: 42,
+  specialOfferRow: {
+    minHeight: 56,
     borderWidth: 1,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.lg,
     paddingHorizontal: spacing.sm,
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  locationInput: {
-    flex: 1,
-    fontSize: 13,
-    paddingVertical: 0,
-  },
-  searchButton: {
-    alignSelf: 'flex-end',
-  },
-  advancedToggle: {
+    paddingVertical: spacing.xs,
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: spacing.xs,
-  },
-  chevronExpanded: {
-    transform: [{ rotate: '180deg' }],
-  },
-  advancedWrap: {
-    gap: spacing.xs,
-  },
-  advancedLabelRow: {
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  durationChipsWrap: {
-    flexWrap: 'wrap',
     gap: spacing.sm,
+  },
+  actionsRow: {
+    gap: spacing.sm,
+  },
+  actionButton: {
+    flex: 1,
   },
 });

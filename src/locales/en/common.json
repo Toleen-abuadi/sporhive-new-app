@@ -521,6 +521,8 @@
         "errors": {
           "loadTitle": "Unable to load invoice",
           "loadFallback": "Please retry in a few seconds.",
+          "empty": "Invoice file is empty. Please try again.",
+          "invalid": "Invoice PDF is unavailable right now.",
           "open": "Unable to open invoice.",
           "share": "Unable to share invoice.",
           "download": "Unable to download invoice."
@@ -979,6 +981,52 @@
         "weight": "Weight must be a valid number within allowed range.",
         "height": "Height must be a valid number within allowed range."
       }
+    }
+  },
+  "playgrounds": {
+    "filters": {
+      "title": "Filters",
+      "specialOffersHint": "Show venues with active offers",
+      "sports": {
+        "allSports": "All Sports",
+        "football": "Football",
+        "basketball": "Basketball",
+        "tennis": "Tennis",
+        "swimming": "Swimming",
+        "gym": "Gym"
+      },
+      "fields": {
+        "sport": "Sport",
+        "date": "Date",
+        "players": "Players",
+        "location": "Location",
+        "duration": "Duration",
+        "specialOffers": "Special Offers",
+        "sort": "Sort"
+      },
+      "placeholders": {
+        "players": "Number of players",
+        "location": "Area or city"
+      },
+      "actions": {
+        "search": "Search",
+        "reset": "Reset"
+      },
+      "sort": {
+        "recommended": "Recommended",
+        "priceLowHigh": "Price: Low to High",
+        "priceHighLow": "Price: High to Low",
+        "nearest": "Nearest",
+        "highestRated": "Highest Rated"
+      },
+      "tabs": {
+        "all": "All",
+        "offers": "Offers",
+        "featured": "Featured",
+        "premium": "Premium",
+        "pro": "Pro"
+      },
+      "activeCount": "{{count}} active filters"
     }
   },
   "booking": {

@@ -19,15 +19,13 @@ import { useI18n } from '../../../hooks/useI18n';
 import { useTheme } from '../../../hooks/useTheme';
 import { spacing } from '../../../theme/tokens';
 import { getRowDirection } from '../../../utils/rtl';
-import { getPlaygroundsCopy } from '../utils/playgrounds.copy';
+import { useVenues } from '../hooks';
 import {
   buildPlaygroundsDiscoveryRouteParams,
-  buildPlaygroundsFiltersFromState,
   parsePlaygroundsDiscoveryParams,
 } from '../utils/playgrounds.discovery';
-import { resolveActivityType } from '../utils/playgrounds.options';
-import { ACTIVITY_TYPE_OPTIONS, VENUE_DURATION_OPTIONS } from '../utils/constants';
-import { useActivities, useVenues } from '../hooks';
+import { getPlaygroundsCopy } from '../utils/playgrounds.copy';
+import { VENUE_DURATION_OPTIONS } from '../utils/constants';
 import {
   EmptyPlaygroundsState,
   PlaygroundsErrorState,
@@ -37,10 +35,60 @@ import {
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 
-const normalizeCourseId = (value) => {
-  const numeric = Number(value);
-  if (Number.isFinite(numeric)) return String(Math.trunc(numeric));
-  return String(value || '').trim();
+const INITIAL_FILTERS = Object.freeze({
+  activityId: '',
+  date: '',
+  numberOfPlayers: '',
+  durationId: '',
+  baseLocation: '',
+  hasSpecialOffer: false,
+  orderBy: 'recommended',
+});
+
+const MARKETPLACE_TABS = Object.freeze(['all', 'offers', 'featured', 'premium', 'pro']);
+
+const resolveTab = (value) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  return MARKETPLACE_TABS.includes(normalized) ? normalized : 'all';
+};
+
+const normalizePlayersInput = (value) => {
+  const digitsOnly = String(value || '').replace(/[^\d]/g, '');
+  if (!digitsOnly) return '';
+  const parsed = Number.parseInt(digitsOnly, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return '';
+  return String(parsed);
+};
+
+const parsePositiveIntOrNull = (value) => {
+  const normalized = normalizePlayersInput(value);
+  if (!normalized) return null;
+  const parsed = Number.parseInt(normalized, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
+
+const buildInitialStateFromRoute = (routeState) => {
+  const nextFilters = {
+    activityId: String(routeState?.selectedActivityId || '').trim(),
+    date: String(routeState?.selectedDate || '').trim(),
+    numberOfPlayers:
+      routeState?.selectedPlayers == null ? '' : normalizePlayersInput(routeState.selectedPlayers),
+    durationId: String(routeState?.selectedDurationId || '').trim(),
+    baseLocation: String(routeState?.selectedLocation || '').trim(),
+    hasSpecialOffer: Boolean(routeState?.hasSpecialOffer),
+    orderBy: String(routeState?.sortBy || INITIAL_FILTERS.orderBy).trim() || INITIAL_FILTERS.orderBy,
+  };
+
+  return {
+    activeTab: resolveTab(routeState?.tab),
+    filters: nextFilters,
+  };
+};
+
+const toSafeText = (value) => String(value || '').trim();
+const toIsoDateOrEmpty = (value) => {
+  const raw = toSafeText(value).slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : '';
 };
 
 const extractVenueDurationMinutes = (venue) => {
@@ -66,7 +114,126 @@ const extractVenueDurationMinutes = (venue) => {
   return [...minutesSet];
 };
 
-const toSafeText = (value) => String(value || '').trim();
+const countActiveFilters = ({ filters, activeTab }) =>
+  [
+    Boolean(toSafeText(filters?.activityId)),
+    Boolean(toSafeText(filters?.date)),
+    parsePositiveIntOrNull(filters?.numberOfPlayers) != null,
+    Boolean(toSafeText(filters?.durationId)),
+    Boolean(toSafeText(filters?.baseLocation)),
+    Boolean(filters?.hasSpecialOffer),
+    resolveTab(activeTab) !== 'all',
+  ].filter(Boolean).length;
+
+const buildVenuesPayload = ({ filters, activeTab }) => ({
+  activity_id: toSafeText(filters?.activityId) || undefined,
+  date: toIsoDateOrEmpty(filters?.date) || undefined,
+  number_of_players: parsePositiveIntOrNull(filters?.numberOfPlayers) || undefined,
+  duration_id: toSafeText(filters?.durationId) || undefined,
+  base_location: toSafeText(filters?.baseLocation) || undefined,
+  has_special_offer: resolveTab(activeTab) === 'offers' ? true : filters?.hasSpecialOffer || undefined,
+  featured_only: resolveTab(activeTab) === 'featured' ? true : undefined,
+  premium_only: resolveTab(activeTab) === 'premium' ? true : undefined,
+  pro_only: resolveTab(activeTab) === 'pro' ? true : undefined,
+  include_inactive: false,
+});
+
+const buildRouteStateFromApplied = ({ filters, activeTab }) => ({
+  tab: resolveTab(activeTab),
+  selectedActivityId: toSafeText(filters?.activityId),
+  selectedDate: toIsoDateOrEmpty(filters?.date),
+  selectedPlayers: parsePositiveIntOrNull(filters?.numberOfPlayers),
+  sortBy: toSafeText(filters?.orderBy) || INITIAL_FILTERS.orderBy,
+  selectedLocation: toSafeText(filters?.baseLocation),
+  hasSpecialOffer: Boolean(filters?.hasSpecialOffer),
+  selectedDurationId: toSafeText(filters?.durationId),
+  selectedTags: [],
+});
+
+const getNumericValue = (value, fallback = null) => {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+};
+
+const getVenuePrice = (venue) =>
+  getNumericValue(
+    venue?.price ?? venue?.raw?.price ?? venue?.raw?.estimated_price ?? venue?.raw?.price_text,
+    null
+  );
+
+const getVenueDistance = (venue) =>
+  getNumericValue(
+    venue?.distanceKm ?? venue?.raw?.distance ?? venue?.raw?.distance_km ?? venue?.raw?.distance_value,
+    Number.POSITIVE_INFINITY
+  );
+
+const getVenueRating = (venue) =>
+  getNumericValue(
+    venue?.avgRating ?? venue?.raw?.avg_rating ?? venue?.raw?.average_rating ?? venue?.raw?.rating,
+    0
+  );
+
+const sortVenues = (venues = [], orderBy = 'recommended') => {
+  const rows = (Array.isArray(venues) ? venues : []).map((venue, index) => ({
+    venue,
+    index,
+  }));
+
+  if (orderBy === 'price_asc') {
+    rows.sort((left, right) => {
+      const leftPrice = getVenuePrice(left.venue);
+      const rightPrice = getVenuePrice(right.venue);
+
+      if (leftPrice == null && rightPrice == null) return left.index - right.index;
+      if (leftPrice == null) return 1;
+      if (rightPrice == null) return -1;
+      if (leftPrice !== rightPrice) return leftPrice - rightPrice;
+      return left.index - right.index;
+    });
+  } else if (orderBy === 'price_desc') {
+    rows.sort((left, right) => {
+      const leftPrice = getVenuePrice(left.venue);
+      const rightPrice = getVenuePrice(right.venue);
+
+      if (leftPrice == null && rightPrice == null) return left.index - right.index;
+      if (leftPrice == null) return 1;
+      if (rightPrice == null) return -1;
+      if (leftPrice !== rightPrice) return rightPrice - leftPrice;
+      return left.index - right.index;
+    });
+  } else if (orderBy === 'distance_asc') {
+    rows.sort((left, right) => {
+      const leftDistance = getVenueDistance(left.venue);
+      const rightDistance = getVenueDistance(right.venue);
+      if (leftDistance !== rightDistance) return leftDistance - rightDistance;
+      return left.index - right.index;
+    });
+  } else if (orderBy === 'rating_desc') {
+    rows.sort((left, right) => {
+      const leftRating = getVenueRating(left.venue);
+      const rightRating = getVenueRating(right.venue);
+      if (rightRating !== leftRating) return rightRating - leftRating;
+      return left.index - right.index;
+    });
+  } else {
+    rows.sort((left, right) => left.index - right.index);
+  }
+
+  return rows.map((item) => item.venue);
+};
+
+const logPlaygrounds = (stage, payload = null) => {
+  if (!__DEV__) return;
+  try {
+    if (payload == null) {
+      console.log(stage);
+      return;
+    }
+    console.log(stage, payload);
+  } catch {
+    // no-op
+  }
+};
 
 export function PlaygroundsIndexScreen() {
   const router = useRouter();
@@ -82,90 +249,50 @@ export function PlaygroundsIndexScreen() {
         activityId: params?.activityId,
         date: params?.date,
         players: params?.players,
+        sortBy: params?.sortBy,
         location: params?.location,
+        hasSpecialOffer: params?.hasSpecialOffer,
         durationId: params?.durationId,
       }),
-    [params?.activityId, params?.date, params?.durationId, params?.location, params?.players, params?.tab]
-  );
-
-  const routeScopedState = useMemo(
-    () => ({
-      tab: 'all',
-      selectedActivityId: routeDiscoveryState.selectedActivityId,
-      selectedDate: routeDiscoveryState.selectedDate,
-      selectedPlayers: routeDiscoveryState.selectedPlayers,
-      sortBy: 'recommended',
-      selectedLocation: routeDiscoveryState.selectedLocation,
-      hasSpecialOffer: false,
-      selectedDurationId: routeDiscoveryState.selectedDurationId || '',
-      selectedTags: [],
-    }),
     [
-      routeDiscoveryState.selectedActivityId,
-      routeDiscoveryState.selectedDate,
-      routeDiscoveryState.selectedDurationId,
-      routeDiscoveryState.selectedLocation,
-      routeDiscoveryState.selectedPlayers,
+      params?.activityId,
+      params?.date,
+      params?.durationId,
+      params?.hasSpecialOffer,
+      params?.location,
+      params?.players,
+      params?.sortBy,
+      params?.tab,
     ]
   );
 
-  const routeDiscoverySignature = useMemo(() => JSON.stringify(routeScopedState), [routeScopedState]);
+  const routeInitialState = useMemo(
+    () => buildInitialStateFromRoute(routeDiscoveryState),
+    [routeDiscoveryState]
+  );
+  const routeInitialSignature = useMemo(() => JSON.stringify(routeInitialState), [routeInitialState]);
 
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  const [selectedActivityId, setSelectedActivityId] = useState(routeScopedState.selectedActivityId);
-  const [selectedDate, setSelectedDate] = useState(routeScopedState.selectedDate);
-  const [selectedPlayers, setSelectedPlayers] = useState(routeScopedState.selectedPlayers);
-  const [selectedLocation, setSelectedLocation] = useState(routeScopedState.selectedLocation);
-  const [selectedDurationId, setSelectedDurationId] = useState(routeScopedState.selectedDurationId);
-  const [appliedState, setAppliedState] = useState(routeScopedState);
+  const [activeTab, setActiveTab] = useState(routeInitialState.activeTab);
+  const [filters, setFilters] = useState(routeInitialState.filters);
+  const [appliedFilters, setAppliedFilters] = useState(routeInitialState.filters);
+  const [hasSearched, setHasSearched] = useState(false);
 
   useEffect(() => {
-    setSelectedActivityId(routeScopedState.selectedActivityId);
-    setSelectedDate(routeScopedState.selectedDate || '');
-    setSelectedPlayers(routeScopedState.selectedPlayers ?? null);
-    setSelectedLocation(routeScopedState.selectedLocation);
-    setSelectedDurationId(routeScopedState.selectedDurationId || '');
-    setAppliedState(routeScopedState);
-  }, [routeDiscoverySignature, routeScopedState]);
-
-  const activitiesQuery = useActivities({ auto: true });
-
-  const discoveryState = useMemo(
-    () => ({
-      ...routeScopedState,
-      selectedActivityId,
-      selectedDate,
-      selectedPlayers,
-      selectedLocation,
-      selectedDurationId,
-    }),
-    [routeScopedState, selectedActivityId, selectedDate, selectedPlayers, selectedLocation, selectedDurationId]
-  );
-
-  const hasActiveRefinements = useMemo(
-    () =>
-      Boolean(
-        appliedState.selectedActivityId ||
-          appliedState.selectedDate ||
-          appliedState.selectedPlayers != null ||
-          appliedState.selectedLocation ||
-          appliedState.selectedDurationId
-      ),
-    [appliedState]
-  );
+    setActiveTab(routeInitialState.activeTab);
+    setFilters(routeInitialState.filters);
+    setAppliedFilters(routeInitialState.filters);
+    setHasSearched(false);
+  }, [routeInitialSignature, routeInitialState]);
 
   const apiFilters = useMemo(
-    () =>
-      buildPlaygroundsFiltersFromState({
-        ...appliedState,
-        tab: 'all',
-        hasSpecialOffer: false,
-        selectedTags: [],
-        sortBy: 'recommended',
-        selectedDurationId: '',
-      }),
-    [appliedState]
+    () => buildVenuesPayload({ filters: appliedFilters, activeTab }),
+    [appliedFilters, activeTab]
   );
+  const apiFiltersSignature = useMemo(() => JSON.stringify(apiFilters), [apiFilters]);
+
+  useEffect(() => {
+    logPlaygrounds('[playgrounds][venues] request-payload', apiFilters);
+  }, [apiFiltersSignature, apiFilters]);
 
   const venuesQuery = useVenues({
     filters: apiFilters,
@@ -173,69 +300,16 @@ export function PlaygroundsIndexScreen() {
     fetchMap: true,
   });
 
-  const activityLookupById = useMemo(() => {
-    const map = new Map();
-    (activitiesQuery.items || []).forEach((item) => {
-      const id = normalizeCourseId(item?.id);
-      if (id) map.set(id, item);
+  useEffect(() => {
+    if (venuesQuery.venuesLoading) return;
+    logPlaygrounds('[playgrounds][venues] response-count', {
+      count: Array.isArray(venuesQuery.venues) ? venuesQuery.venues.length : 0,
+      tab: activeTab,
     });
-    return map;
-  }, [activitiesQuery.items]);
-
-  const allSportsLabel = useMemo(() => {
-    const allOption = ACTIVITY_TYPE_OPTIONS.find((item) => !item.id || item.key === 'all');
-    return locale === 'ar' ? allOption?.nameAr || copy.tabs.all : allOption?.nameEn || copy.tabs.all;
-  }, [copy.tabs.all, locale]);
-
-  const activityOptions = useMemo(() => {
-    const map = new Map();
-
-    (venuesQuery.venues || []).forEach((venue) => {
-      const id = normalizeCourseId(venue?.activityId);
-      if (!id || map.has(id)) return;
-
-      const raw = venue?.raw || {};
-      const fallback = resolveActivityType(
-        raw.activity_key ||
-          raw.activity_name_en ||
-          raw.activity_name_ar ||
-          raw.activity_name ||
-          raw.activity?.name_en ||
-          raw.activity?.name_ar ||
-          raw.activity?.name ||
-          id,
-        locale
-      );
-      const item = activityLookupById.get(id);
-      const localized = locale === 'ar' ? item?.nameAr || item?.nameEn : item?.nameEn || item?.nameAr;
-      const label = toSafeText(localized || fallback?.label);
-      if (!label) return;
-      map.set(id, { id, label });
-    });
-
-    const items = [...map.values()].sort((left, right) =>
-      left.label.localeCompare(right.label, locale === 'ar' ? 'ar' : 'en')
-    );
-
-    if (selectedActivityId && !map.has(selectedActivityId)) {
-      const item = activityLookupById.get(selectedActivityId);
-      const fallbackLabel = item
-        ? locale === 'ar'
-          ? item?.nameAr || item?.nameEn
-          : item?.nameEn || item?.nameAr
-        : resolveActivityType(selectedActivityId, locale)?.label;
-      const label = toSafeText(fallbackLabel);
-      if (label) {
-        items.push({ id: selectedActivityId, label });
-      }
-    }
-
-    return items;
-  }, [activityLookupById, locale, selectedActivityId, venuesQuery.venues]);
+  }, [activeTab, venuesQuery.venues, venuesQuery.venuesLoading]);
 
   const durationOptions = useMemo(() => {
     const durationsInData = new Set();
-
     (venuesQuery.venues || []).forEach((venue) => {
       extractVenueDurationMinutes(venue).forEach((minutes) => durationsInData.add(minutes));
     });
@@ -249,8 +323,8 @@ export function PlaygroundsIndexScreen() {
         label: locale === 'ar' ? item.labelAr : item.labelEn,
       }));
 
-    if (selectedDurationId && !dynamic.some((item) => item.id === selectedDurationId)) {
-      const fallback = known.find((item) => String(item.id) === selectedDurationId);
+    if (filters.durationId && !dynamic.some((item) => item.id === filters.durationId)) {
+      const fallback = known.find((item) => String(item.id) === filters.durationId);
       if (fallback) {
         dynamic.push({
           id: String(fallback.id),
@@ -262,68 +336,100 @@ export function PlaygroundsIndexScreen() {
 
     dynamic.sort((left, right) => left.minutes - right.minutes);
     return dynamic;
-  }, [locale, selectedDurationId, venuesQuery.venues]);
-
-  const filteredVenues = useMemo(() => {
-    const selectedDuration = durationOptions.find((item) => item.id === appliedState.selectedDurationId) || null;
-    if (!selectedDuration) return venuesQuery.venues || [];
-
-    return (venuesQuery.venues || []).filter((venue) =>
-      extractVenueDurationMinutes(venue).includes(selectedDuration.minutes)
-    );
-  }, [appliedState.selectedDurationId, durationOptions, venuesQuery.venues]);
+  }, [filters.durationId, locale, venuesQuery.venues]);
 
   const mapRouteParams = useMemo(
     () =>
-      buildPlaygroundsDiscoveryRouteParams({
-        ...appliedState,
-        tab: 'all',
-        hasSpecialOffer: false,
-        selectedTags: [],
-        sortBy: 'recommended',
-      }),
-    [appliedState]
+      buildPlaygroundsDiscoveryRouteParams(buildRouteStateFromApplied({ filters: appliedFilters, activeTab })),
+    [activeTab, appliedFilters]
+  );
+
+  const activeFilterCount = useMemo(
+    () => countActiveFilters({ filters, activeTab }),
+    [activeTab, filters]
+  );
+  const appliedFilterCount = useMemo(
+    () => countActiveFilters({ filters: appliedFilters, activeTab }),
+    [activeTab, appliedFilters]
+  );
+  const canResetFilters = activeFilterCount > 0;
+
+  const sortedVenues = useMemo(
+    () => sortVenues(venuesQuery.venues, appliedFilters.orderBy),
+    [appliedFilters.orderBy, venuesQuery.venues]
   );
 
   const isInitialLoading = venuesQuery.venuesLoading && !venuesQuery.venues.length && !venuesQuery.venuesError;
+  const showNoResults = !isInitialLoading && !venuesQuery.venuesLoading && !venuesQuery.venuesError && !sortedVenues.length;
+  const hasActiveRefinements = appliedFilterCount > 0 || hasSearched;
 
-  const canApplyFilters = useMemo(
-    () => JSON.stringify(discoveryState) !== JSON.stringify(appliedState),
-    [appliedState, discoveryState]
-  );
+  const handleFilterChange = (key, value) => {
+    setFilters((prev) => {
+      const nextValue =
+        key === 'numberOfPlayers'
+          ? normalizePlayersInput(value)
+          : key === 'hasSpecialOffer'
+          ? Boolean(value)
+          : String(value ?? '');
+      const next = {
+        ...prev,
+        [key]: nextValue,
+      };
+      logPlaygrounds('[playgrounds][filters] draft-change', {
+        key,
+        value: nextValue,
+      });
+      return next;
+    });
+  };
 
-  const applyFilters = () => {
-    setAppliedState(discoveryState);
+  const handleSortChange = (value) => {
+    const safeSort = String(value || INITIAL_FILTERS.orderBy).trim() || INITIAL_FILTERS.orderBy;
+    setFilters((prev) => ({ ...prev, orderBy: safeSort }));
+    setAppliedFilters((prev) => ({ ...prev, orderBy: safeSort }));
+  };
+
+  const handleTabChange = (nextTab) => {
+    const safeTab = resolveTab(nextTab);
+    setActiveTab(safeTab);
+    setHasSearched(true);
     router.replace(
       buildPlaygroundsHomeRoute(
-        buildPlaygroundsDiscoveryRouteParams({
-          ...discoveryState,
-          tab: 'all',
-          hasSpecialOffer: false,
-          selectedTags: [],
-          sortBy: 'recommended',
-        })
+        buildPlaygroundsDiscoveryRouteParams(
+          buildRouteStateFromApplied({ filters: appliedFilters, activeTab: safeTab })
+        )
       )
     );
   };
 
-  const resetFilters = () => {
-    const resetState = {
-      ...routeScopedState,
-      selectedActivityId: '',
-      selectedDate: '',
-      selectedPlayers: null,
-      selectedLocation: '',
-      selectedDurationId: '',
-    };
+  const handleSearch = () => {
+    logPlaygrounds('[playgrounds][filters] search', {
+      activeTab,
+      filters,
+    });
+    setAppliedFilters(filters);
+    setHasSearched(true);
+    router.replace(
+      buildPlaygroundsHomeRoute(
+        buildPlaygroundsDiscoveryRouteParams(buildRouteStateFromApplied({ filters, activeTab }))
+      )
+    );
+  };
 
-    setSelectedActivityId('');
-    setSelectedDate('');
-    setSelectedPlayers(null);
-    setSelectedLocation('');
-    setSelectedDurationId('');
-    setAppliedState(resetState);
-    router.replace(buildPlaygroundsHomeRoute(buildPlaygroundsDiscoveryRouteParams(resetState)));
+  const handleReset = () => {
+    logPlaygrounds('[playgrounds][filters] reset', {
+      fromTab: activeTab,
+    });
+    const resetFilters = { ...INITIAL_FILTERS };
+    setActiveTab('all');
+    setFilters(resetFilters);
+    setAppliedFilters(resetFilters);
+    setHasSearched(false);
+    router.replace(
+      buildPlaygroundsHomeRoute(
+        buildPlaygroundsDiscoveryRouteParams(buildRouteStateFromApplied({ filters: resetFilters, activeTab: 'all' }))
+      )
+    );
   };
 
   return (
@@ -358,33 +464,18 @@ export function PlaygroundsIndexScreen() {
       </AnimatedView>
 
       <PlaygroundsFilterForm
-        locale={locale}
-        isRTL={isRTL}
-        copy={copy}
-        allSportsLabel={allSportsLabel}
-        activityOptions={activityOptions}
-        selectedActivityId={selectedActivityId}
-        selectedDate={selectedDate}
-        selectedPlayers={selectedPlayers}
-        selectedLocation={selectedLocation}
-        selectedDurationId={selectedDurationId}
+        filters={filters}
+        activeTab={activeTab}
         durationOptions={durationOptions}
-        showAdvanced={showAdvancedFilters}
-        onToggleAdvanced={() => setShowAdvancedFilters((prev) => !prev)}
-        onSelectActivity={setSelectedActivityId}
-        onSelectDate={setSelectedDate}
-        onSelectPlayers={setSelectedPlayers}
-        onSelectLocation={setSelectedLocation}
-        onSelectDuration={setSelectedDurationId}
-        onSearch={applyFilters}
-        onReset={resetFilters}
+        activeFiltersCount={activeFilterCount}
+        canReset={canResetFilters}
+        searching={venuesQuery.venuesLoading}
+        onChange={handleFilterChange}
+        onTabChange={handleTabChange}
+        onSortChange={handleSortChange}
+        onSearch={handleSearch}
+        onReset={handleReset}
       />
-
-      {canApplyFilters ? (
-        <Text variant="caption" color={colors.textMuted}>
-          {copy.labels.selectFieldToContinue}
-        </Text>
-      ) : null}
 
       {venuesQuery.venuesLoading && venuesQuery.venues.length ? (
         <Text variant="caption" color={colors.textMuted}>
@@ -404,24 +495,18 @@ export function PlaygroundsIndexScreen() {
         />
       ) : null}
 
-      {!isInitialLoading && !venuesQuery.venuesError && !filteredVenues.length ? (
+      {showNoResults ? (
         <EmptyPlaygroundsState
-          title={
-            hasActiveRefinements
-              ? copy.empty.filteredVenuesTitle || copy.empty.venuesTitle
-              : copy.empty.venuesTitle
-          }
+          title={hasActiveRefinements ? copy.empty.filteredVenuesTitle : copy.empty.venuesTitle}
           description={
-            hasActiveRefinements
-              ? copy.empty.filteredVenuesDescription || copy.empty.venuesDescription
-              : copy.empty.venuesDescription
+            hasActiveRefinements ? copy.empty.filteredVenuesDescription : copy.empty.venuesDescription
           }
         />
       ) : null}
 
-      {!isInitialLoading && filteredVenues.length ? (
+      {!isInitialLoading && sortedVenues.length ? (
         <AnimatedView layout={LinearTransition.duration(220)} style={styles.listWrap}>
-          {filteredVenues.map((venue) => (
+          {sortedVenues.map((venue) => (
             <VenueCard
               key={venue.id}
               venue={venue}

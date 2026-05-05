@@ -17,15 +17,17 @@ export const PLAYGROUNDS_TAB_CONFIG = Object.freeze([
 
 export const PLAYGROUNDS_SORT_CONFIG = Object.freeze([
   'recommended',
-  'distance_asc',
   'price_asc',
+  'price_desc',
+  'distance_asc',
   'rating_desc',
 ]);
 
 export const PLAYGROUNDS_SORT_LABEL_KEY = Object.freeze({
   recommended: 'recommended',
-  distance_asc: 'distanceAsc',
   price_asc: 'priceAsc',
+  price_desc: 'priceDesc',
+  distance_asc: 'distanceAsc',
   rating_desc: 'ratingDesc',
 });
 
@@ -163,6 +165,7 @@ export function buildPlaygroundsFiltersFromState(state = {}) {
     duration_id: normalizedDurationId || undefined,
     tags: normalizedTags.length ? normalizedTags : undefined,
     order_by: normalizeSortBy(normalized.sortBy),
+    include_inactive: false,
   });
 
   if (normalized.tab === 'offers') {

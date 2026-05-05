@@ -1,8 +1,17 @@
 import { useMemo, useState } from 'react';
-import { FlatList, Modal, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import {
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
 import { Feather } from '@expo/vector-icons';
+
 import { Text } from '../ui/Text';
-import { KeyboardAwareModalSheet } from '../ui/KeyboardAwareModalSheet';
 import { useI18n } from '../../hooks/useI18n';
 import { useTheme } from '../../hooks/useTheme';
 import { withAlpha } from '../../theme/colors';
@@ -35,18 +44,33 @@ export function CountryCodePicker({
 }) {
   const { colors, isDark } = useTheme();
   const { t, isRTL } = useI18n();
+
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const titleLabel = title ||
-    translateWithFallback(t, 'common.phone.countryCode', translateWithFallback(t, 'auth.fields.countryCode', 'Country code'));
-  const searchLabel = searchPlaceholder ||
+
+  const titleLabel =
+    title ||
+    translateWithFallback(
+      t,
+      'common.phone.countryCode',
+      translateWithFallback(t, 'auth.fields.countryCode', 'Country code')
+    );
+
+  const searchLabel =
+    searchPlaceholder ||
     translateWithFallback(
       t,
       'common.phone.searchCountry',
       translateWithFallback(t, 'auth.placeholders.searchCountry', 'Search country code')
     );
-  const noResultsText = noResultsLabel ||
-    translateWithFallback(t, 'common.phone.noCountryResults', translateWithFallback(t, 'auth.academy.noResults', 'No results'));
+
+  const noResultsText =
+    noResultsLabel ||
+    translateWithFallback(
+      t,
+      'common.phone.noCountryResults',
+      translateWithFallback(t, 'auth.academy.noResults', 'No results')
+    );
 
   const selected = useMemo(
     () => options.find((item) => String(item.dialCode) === String(value)) || options[0],
@@ -61,14 +85,19 @@ export function CountryCodePicker({
       const text = normalizeSearch(
         `${item?.dialCode || ''} ${item?.iso2 || ''} ${resolveCountryName(item, t)}`
       );
+
       return text.includes(query);
     });
   }, [options, search, t]);
 
-  const select = (country) => {
-    onChange?.(String(country?.dialCode || selected?.dialCode || ''));
+  const closeDialog = () => {
     setOpen(false);
     setSearch('');
+  };
+
+  const select = (country) => {
+    onChange?.(String(country?.dialCode || selected?.dialCode || ''));
+    closeDialog();
   };
 
   return (
@@ -86,41 +115,68 @@ export function CountryCodePicker({
             backgroundColor: disabled
               ? colors.inputBackgroundDisabled || colors.surfaceSoft
               : colors.inputBackground || colors.surface,
-            flexDirection: 'row',
-            direction: 'ltr',
             opacity: disabled ? 0.55 : 1,
           },
         ]}
       >
         <Text style={styles.flag}>{selected?.flag || 'WW'}</Text>
+
         <Text variant="bodySmall" weight="bold">
           {selected?.dialCode || ''}
         </Text>
+
         <Feather
           name="chevron-down"
           size={16}
           color={colors.textSecondary}
-          style={{ marginLeft: spacing.xs }}
+          style={styles.triggerIcon}
         />
       </Pressable>
 
       <Modal
         visible={open}
         transparent
-        animationType="slide"
+        animationType="fade"
         statusBarTranslucent
-        onRequestClose={() => setOpen(false)}
+        onRequestClose={closeDialog}
       >
-        <View style={[styles.backdrop, { backgroundColor: colors.overlay || withAlpha(colors.black, 0.45) }]}>
-          <KeyboardAwareModalSheet
-            backgroundColor={colors.background}
-            borderColor={colors.border}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={[
+            styles.backdrop,
+            {
+              backgroundColor: colors.overlay || withAlpha(colors.black, 0.45),
+            },
+          ]}
+        >
+          <Pressable style={StyleSheet.absoluteFill} onPress={closeDialog} />
+
+          <View
+            style={[
+              styles.dialog,
+              {
+                backgroundColor: colors.background,
+                borderColor: colors.border,
+              },
+            ]}
           >
-            <View style={[styles.sheetHeader, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-              <Text variant="h3" weight="bold">
-                {titleLabel}
-              </Text>
-              <Pressable onPress={() => setOpen(false)} style={styles.closeBtn}>
+            <View style={[styles.header, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+              <View style={styles.headerText}>
+                <Text variant="h3" weight="bold" style={{ textAlign: isRTL ? 'right' : 'left' }}>
+                  {titleLabel}
+                </Text>
+              </View>
+
+              <Pressable
+                onPress={closeDialog}
+                hitSlop={10}
+                style={[
+                  styles.closeBtn,
+                  {
+                    backgroundColor: colors.surfaceSoft || withAlpha(colors.textPrimary, 0.06),
+                  },
+                ]}
+              >
                 <Feather name="x" size={18} color={colors.textSecondary} />
               </Pressable>
             </View>
@@ -136,12 +192,14 @@ export function CountryCodePicker({
               ]}
             >
               <Feather name="search" size={16} color={colors.textMuted} />
+
               <TextInput
                 value={search}
                 onChangeText={setSearch}
                 placeholder={searchLabel}
                 placeholderTextColor={colors.inputPlaceholder || colors.textMuted}
                 autoCapitalize="none"
+                autoCorrect={false}
                 keyboardAppearance={isDark ? 'dark' : 'light'}
                 style={[
                   styles.searchInput,
@@ -159,6 +217,7 @@ export function CountryCodePicker({
               keyExtractor={(item) => `${item.iso2}-${item.dialCode}`}
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="on-drag"
+              showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.list}
               ListEmptyComponent={
                 <View style={styles.emptyWrap}>
@@ -169,6 +228,7 @@ export function CountryCodePicker({
               }
               renderItem={({ item }) => {
                 const active = String(item.dialCode) === String(selected?.dialCode);
+
                 return (
                   <Pressable
                     onPress={() => select(item)}
@@ -186,21 +246,30 @@ export function CountryCodePicker({
                     ]}
                   >
                     <Text style={styles.flag}>{item.flag || item.iso2}</Text>
+
                     <View style={styles.countryText}>
-                      <Text weight="semibold">{resolveCountryName(item, t)}</Text>
-                      <Text variant="caption" color={colors.textSecondary}>
+                      <Text weight="semibold" style={{ textAlign: isRTL ? 'right' : 'left' }}>
+                        {resolveCountryName(item, t)}
+                      </Text>
+
+                      <Text
+                        variant="caption"
+                        color={colors.textSecondary}
+                        style={{ textAlign: isRTL ? 'right' : 'left' }}
+                      >
                         {item.dialCode}
                       </Text>
                     </View>
+
                     {active ? (
-                      <Feather name="check-circle" size={16} color={colors.accentOrange} />
+                      <Feather name="check-circle" size={17} color={colors.accentOrange} />
                     ) : null}
                   </Pressable>
                 );
               }}
             />
-          </KeyboardAwareModalSheet>
-        </View>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
     </>
   );
@@ -215,22 +284,49 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    direction: 'ltr',
     gap: spacing.xs,
+  },
+  triggerIcon: {
+    marginLeft: spacing.xs,
   },
   flag: {
     fontSize: 15,
   },
   backdrop: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
   },
-  sheetHeader: {
+  dialog: {
+    width: '100%',
+    maxWidth: 430,
+    maxHeight: '82%',
+    borderWidth: 1,
+    borderRadius: borderRadius.xl,
+    padding: spacing.md,
+    gap: spacing.md,
+    shadowColor: '#000',
+    shadowOpacity: 0.16,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 12,
+  },
+  header: {
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  headerText: {
+    flex: 1,
   },
   closeBtn: {
-    width: 32,
-    height: 32,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -248,16 +344,16 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   listBody: {
-    flex: 1,
+    flexGrow: 0,
   },
   list: {
     gap: spacing.sm,
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.sm,
   },
   row: {
     borderWidth: 1,
     borderRadius: borderRadius.lg,
-    minHeight: 54,
+    minHeight: 56,
     alignItems: 'center',
     gap: spacing.sm,
     paddingHorizontal: spacing.md,

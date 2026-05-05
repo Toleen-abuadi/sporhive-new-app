@@ -197,7 +197,7 @@ function CancelContactModal({
   );
 }
 
-function BookingCard({ booking, locale = 'en', copy, onCancel, onRate }) {
+function BookingCard({ booking, locale = 'en', copy, onCancel}) {
   const { colors } = useTheme();
   const { isRTL } = useI18n();
 
@@ -260,12 +260,6 @@ function BookingCard({ booking, locale = 'en', copy, onCancel, onRate }) {
         {booking.canCancel ? (
           <Button size="sm" variant="secondary" onPress={() => onCancel?.(booking)}>
             {copy.actions.cancelBooking}
-          </Button>
-        ) : null}
-
-        {booking.status === 'approved' ? (
-          <Button size="sm" onPress={() => onRate?.(booking)}>
-            {copy.actions.openRating}
           </Button>
         ) : null}
       </View>
@@ -338,10 +332,6 @@ export function PlaygroundMyBookingsScreen() {
 
   const handleCancelPrompt = (booking) => {
     setCancelTarget(booking);
-  };
-
-  const handleRate = (booking) => {
-    router.push(buildPlaygroundsRatingRoute(booking.id));
   };
 
   return (
@@ -426,7 +416,6 @@ export function PlaygroundMyBookingsScreen() {
           locale={locale}
           copy={copy}
           onCancel={handleCancelPrompt}
-          onRate={handleRate}
         />
       ))}
 

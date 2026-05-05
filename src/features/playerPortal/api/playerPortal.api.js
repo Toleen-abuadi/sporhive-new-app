@@ -142,6 +142,37 @@ const startsWithPdfHeader = (arrayBuffer) => {
   );
 };
 
+const toArrayBufferOrNull = (value) => {
+  if (value instanceof ArrayBuffer) return value;
+  if (ArrayBuffer.isView(value)) {
+    return value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength);
+  }
+  return null;
+};
+
+const readPdfHeaderText = (arrayBuffer) => {
+  if (!(arrayBuffer instanceof ArrayBuffer) || arrayBuffer.byteLength < 5) return '';
+  const bytes = new Uint8Array(arrayBuffer, 0, 5);
+  try {
+    return new TextDecoder('utf-8').decode(bytes);
+  } catch {
+    try {
+      return String.fromCharCode(...bytes);
+    } catch {
+      return '';
+    }
+  }
+};
+
+const debugInvoice = (stage, payload = {}) => {
+  if (!__DEV__) return;
+  try {
+    console.log(`[playerPortal][invoice] ${stage}`, payload);
+  } catch {
+    // no-op
+  }
+};
+
 const safeReadPayload = async (response, { expectBinary = false } = {}) => {
   const contentTypeHeader = cleanString(response.headers.get('content-type'));
   const contentType = contentTypeHeader.toLowerCase();
@@ -768,25 +799,37 @@ export const playerPortalApi = {
 
   async printInvoice(context, payload = {}) {
     const safePayload = toObject(payload);
-      const paymentId = toNumber(safePayload.id);
-      const language = cleanString(safePayload.language).toLowerCase() === 'ar' ? 'ar' : 'en';
-      const customerId = toNumber(context?.customerId || context?.academyId);
-      if (paymentId == null) {
-        return {
+    const paymentId = toNumber(safePayload.id);
+    const language = cleanString(safePayload.language).toLowerCase() === 'ar' ? 'ar' : 'en';
+    const customerId = toNumber(context?.customerId || context?.academyId);
+    const academyId = toNumber(context?.academyId);
+
+    if (paymentId == null) {
+      return {
         success: false,
         error: createPortalError({
           code: 'BAD_REQUEST',
           status: 400,
           message: 'Invoice payment id is required.',
         }),
-        };
-      }
-
-      const requestPayload = {
-        id: paymentId,
-        language,
-        customer_id: customerId,
       };
+    }
+
+    debugInvoice('request', {
+      endpoint: PLAYER_PORTAL_ENDPOINTS.PRINT_INVOICE,
+      paymentId,
+      language,
+      hasCustomerId: customerId != null,
+      hasAcademyId: academyId != null,
+    });
+
+    const requestPayload = {
+      id: paymentId,
+      language,
+    };
+    if (customerId != null) {
+      requestPayload.customer_id = customerId;
+    }
     const playerName = cleanString(safePayload.player_name);
     if (playerName) {
       requestPayload.player_name = playerName;
@@ -803,10 +846,45 @@ export const playerPortalApi = {
         'Accept-Language': language,
       },
     });
-    if (!result.success) return result;
+
+    if (!result.success) {
+      debugInvoice('response-error', {
+        endpoint: PLAYER_PORTAL_ENDPOINTS.PRINT_INVOICE,
+        paymentId,
+        language,
+        status: Number(result.error?.status) || 0,
+        code: cleanString(result.error?.code) || 'PLAYER_PORTAL_ERROR',
+        message: cleanString(result.error?.message) || 'Invoice request failed.',
+      });
+      return result;
+    }
+
     const responseData = toObject(result.data);
-    const arrayBuffer = responseData.arrayBuffer;
-    if (!(arrayBuffer instanceof ArrayBuffer) || arrayBuffer.byteLength === 0) {
+    const arrayBuffer = toArrayBufferOrNull(responseData.arrayBuffer);
+    const contentType = cleanString(responseData.contentType);
+    const normalizedContentType = contentType.toLowerCase();
+    const contentDisposition = cleanString(responseData.contentDisposition);
+    const byteLength = arrayBuffer?.byteLength || 0;
+    const headerText = readPdfHeaderText(arrayBuffer);
+    const hasPdfHeader = startsWithPdfHeader(arrayBuffer);
+
+    debugInvoice('response-meta', {
+      endpoint: PLAYER_PORTAL_ENDPOINTS.PRINT_INVOICE,
+      paymentId,
+      language,
+      status: Number(result.meta?.status) || 0,
+      contentType: contentType || 'unknown',
+      contentDisposition: contentDisposition || '',
+      byteLength,
+      headerText: headerText || '',
+      hasPdfHeader,
+    });
+
+    const isStructuredText =
+      normalizedContentType.includes('application/json') ||
+      normalizedContentType.startsWith('text/');
+
+    if (!(arrayBuffer instanceof ArrayBuffer)) {
       return {
         success: false,
         error: createPortalError({
@@ -818,8 +896,34 @@ export const playerPortalApi = {
       };
     }
 
-    const normalizedContentType = cleanString(responseData.contentType).toLowerCase();
-    const looksLikePdf = normalizedContentType.includes('application/pdf') || startsWithPdfHeader(arrayBuffer);
+    if (isStructuredText) {
+      return {
+        success: false,
+        error: createPortalError({
+          code: 'INVOICE_RESPONSE_INVALID',
+          status: Number(result.meta?.status) || 502,
+          message:
+            inferMessageFromPayload(responseData, '') ||
+            decodeBufferText(arrayBuffer) ||
+            'Invoice PDF is unavailable right now.',
+          details: responseData,
+        }),
+      };
+    }
+
+    if (byteLength === 0) {
+      return {
+        success: false,
+        error: createPortalError({
+          code: 'INVOICE_EMPTY',
+          status: Number(result.meta?.status) || 502,
+          message: 'Invoice file is empty. Please try again.',
+          details: responseData,
+        }),
+      };
+    }
+
+    const looksLikePdf = normalizedContentType.includes('application/pdf') || hasPdfHeader;
     if (!looksLikePdf) {
       return {
         success: false,
@@ -832,7 +936,6 @@ export const playerPortalApi = {
       };
     }
 
-    const contentDisposition = cleanString(responseData.contentDisposition);
     const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
     const basicMatch = contentDisposition.match(/filename="?([^"]+)"?/i);
     const encodedName = cleanString(utf8Match?.[1] || basicMatch?.[1]);
@@ -850,7 +953,8 @@ export const playerPortalApi = {
       success: true,
       data: {
         arrayBuffer,
-        contentType: cleanString(responseData.contentType) || 'application/pdf',
+        contentType: contentType || 'application/pdf',
+        contentDisposition,
         fileName: normalizedFileName,
       },
       meta: result.meta,

@@ -36,6 +36,58 @@ const REQUEST_STEPS = Object.freeze({
   REVIEW: 'review',
 });
 
+const DEFAULT_RANGE_DAYS = 2;
+const SAFE_DEFAULT_LOOKAHEAD_DAYS = 365;
+
+const debugFreeze = (stage, payload = {}) => {
+  if (!__DEV__) return;
+  try {
+    console.log(`[playerPortal][freeze] ${stage}`, payload);
+  } catch {
+    // no-op
+  }
+};
+
+const resolveNextValidRange = ({
+  rows = [],
+  maxDays = 90,
+  todayISO = toISODate(new Date()),
+  preferredDurationDays = DEFAULT_RANGE_DAYS,
+} = {}) => {
+  const normalizedMaxDays = Number.isFinite(Number(maxDays)) ? Number(maxDays) : 90;
+  if (normalizedMaxDays < 2) {
+    return { startDate: '', endDate: '' };
+  }
+
+  const durationDays = Math.max(
+    2,
+    Math.min(Number(preferredDurationDays) || DEFAULT_RANGE_DAYS, normalizedMaxDays)
+  );
+
+  for (let offset = 1; offset <= SAFE_DEFAULT_LOOKAHEAD_DAYS; offset += 1) {
+    const candidateStart = addDaysISODate(todayISO, offset);
+    const candidateEnd = addDaysISODate(candidateStart, durationDays - 1);
+    const candidateValidation = validateFreezeRequest({
+      startDate: candidateStart,
+      endDate: candidateEnd,
+      maxDays: normalizedMaxDays,
+      maxPerYear: Number.MAX_SAFE_INTEGER,
+      usedCountThisYear: 0,
+      rows,
+      todayISO,
+    });
+
+    if (candidateValidation.valid) {
+      return {
+        startDate: candidateStart,
+        endDate: candidateEnd,
+      };
+    }
+  }
+
+  return { startDate: '', endDate: '' };
+};
+
 const getPhaseStatus = (item) => {
   const status = String(item?.status || '').toLowerCase();
   const phase = String(item?.phase || '').toLowerCase();
@@ -163,13 +215,26 @@ export function PlayerFreezeScreen() {
   const [reason, setReason] = useState('');
   const [requestStep, setRequestStep] = useState(REQUEST_STEPS.FORM);
   const [submitError, setSubmitError] = useState(null);
+  const [dateTouched, setDateTouched] = useState(false);
+  const [showValidationError, setShowValidationError] = useState(false);
+  const [allowAutoDateSeed, setAllowAutoDateSeed] = useState(true);
 
   useEffect(() => {
-    if (startDate) return;
-    const tomorrow = addDaysISODate(toISODate(new Date()), 1);
-    setStartDate(tomorrow);
-    setEndDate(addDaysISODate(tomorrow, 1));
-  }, [startDate]);
+    if (!allowAutoDateSeed || startDate) return;
+
+    const nextRange = resolveNextValidRange({
+      rows: items,
+      maxDays: policy.maxDays,
+      todayISO: toISODate(new Date()),
+      preferredDurationDays: DEFAULT_RANGE_DAYS,
+    });
+
+    setStartDate(nextRange.startDate);
+    setEndDate(nextRange.endDate);
+    if (!nextRange.startDate || !nextRange.endDate) {
+      setAllowAutoDateSeed(false);
+    }
+  }, [allowAutoDateSeed, items, policy.maxDays, startDate]);
 
   const usedCountThisYear = useMemo(
     () => getUsedCountForYear(startDate),
@@ -225,13 +290,28 @@ export function PlayerFreezeScreen() {
   const resolveLocalizedFreezeSubmitError = (error) =>
     resolveFreezeSubmitErrorMessage({ ...error, locale }, t);
 
+  const shouldShowValidationWarning = !validation.valid && (dateTouched || showValidationError);
+
+  useEffect(() => {
+    debugFreeze('validation-visibility', {
+      validationValid: Boolean(validation.valid),
+      dateTouched,
+      showValidationError,
+    });
+  }, [dateTouched, showValidationError, validation.valid]);
+
   const submitRequest = async () => {
+    if (isSubmittingRequest) {
+      return;
+    }
+
     if (!validation.valid) {
-      setSubmitError({ message: validationMessage });
+      setShowValidationError(true);
       return;
     }
 
     setSubmitError(null);
+    setShowValidationError(false);
     const result = await requestFreeze({
       startDate,
       endDate,
@@ -260,11 +340,38 @@ export function PlayerFreezeScreen() {
     toast.success(
       (isArabic ? '' : result.data?.payload?.message) || t('playerPortal.freeze.messages.submitted')
     );
+    const oldStartDate = startDate;
+    const oldEndDate = endDate;
+    const preferredDurationDays = Math.max(2, inclusiveDays(startDate, endDate));
+    const rowsForReset = [
+      ...items,
+      {
+        status: 'pending',
+        startDate: oldStartDate,
+        endDate: oldEndDate,
+      },
+    ];
+    const nextRange = resolveNextValidRange({
+      rows: rowsForReset,
+      maxDays: policy.maxDays,
+      todayISO: toISODate(new Date()),
+      preferredDurationDays,
+    });
+    debugFreeze('reset-after-success', {
+      oldStartDate,
+      oldEndDate,
+      nextStartDate: nextRange.startDate,
+      nextEndDate: nextRange.endDate,
+    });
+
+    setSubmitError(null);
     setReason('');
     setRequestStep(REQUEST_STEPS.FORM);
-    const nextStart = addDaysISODate(toISODate(new Date()), 1);
-    setStartDate(nextStart);
-    setEndDate(addDaysISODate(nextStart, 1));
+    setDateTouched(false);
+    setShowValidationError(false);
+    setAllowAutoDateSeed(Boolean(nextRange.startDate && nextRange.endDate));
+    setStartDate(nextRange.startDate);
+    setEndDate(nextRange.endDate);
   };
 
   const showInitialLoading = isLoading && !error && items.length === 0;
@@ -343,6 +450,8 @@ export function PlayerFreezeScreen() {
                   value={startDate}
                   onChange={(value) => {
                     setStartDate(value);
+                    setDateTouched(true);
+                    setShowValidationError(false);
                     const minEnd = addDaysISODate(value, 1);
                     if (endDate && endDate <= value) {
                       setEndDate(minEnd);
@@ -363,6 +472,8 @@ export function PlayerFreezeScreen() {
                   value={endDate}
                   onChange={(value) => {
                     setEndDate(value);
+                    setDateTouched(true);
+                    setShowValidationError(false);
                     setRequestStep(REQUEST_STEPS.FORM);
                   }}
                   placeholder={t('common.formats.isoDatePlaceholder')}
@@ -395,7 +506,7 @@ export function PlayerFreezeScreen() {
                 />
               </View>
 
-              {!validation.valid ? (
+              {shouldShowValidationWarning ? (
                 <View
                   style={[
                     styles.alertBox,
@@ -414,10 +525,11 @@ export function PlayerFreezeScreen() {
                 onPress={() => {
                   if (isSubmittingRequest) return;
                   if (!validation.valid) {
-                    setSubmitError({ message: validationMessage });
+                    setShowValidationError(true);
                     return;
                   }
                   setSubmitError(null);
+                  setShowValidationError(false);
                   setRequestStep(REQUEST_STEPS.REVIEW);
                 }}
                 leadingIcon={<CalendarDays size={14} color={colors.white} strokeWidth={2.2} />}
@@ -472,7 +584,10 @@ export function PlayerFreezeScreen() {
               error={submitError}
               fallbackMessage={t('playerPortal.freeze.errors.submitFallback')}
               retryLabel={t('playerPortal.actions.retry')}
-              onRetry={() => submitRequest()}
+              onRetry={() => {
+                if (isSubmittingRequest) return;
+                submitRequest();
+              }}
             />
           ) : null}
         </PortalSectionCard>
