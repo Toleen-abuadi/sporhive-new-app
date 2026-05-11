@@ -137,10 +137,6 @@ export function PlayerPaymentDetailsScreen() {
                 fallback: t('playerPortal.payments.labels.notPaid'),
               })}
             />
-            <DetailRow
-              label={t('playerPortal.payments.labels.invoiceRefShort')}
-              value={payment.invoiceId || t('playerPortal.payments.labels.notAvailable')}
-            />
             {(payment.useCredits || payment.creditsUsed > 0) ? (
               <DetailRow
                 label={t('playerPortal.payments.labels.creditsUsed')}

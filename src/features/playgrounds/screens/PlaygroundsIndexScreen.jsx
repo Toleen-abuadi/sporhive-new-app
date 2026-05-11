@@ -1,9 +1,18 @@
-import { useEffect, useMemo, useState } from 'react';
-import { RefreshControl, StyleSheet, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Animated as RNAnimated,
+  Modal,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import Animated, { LinearTransition } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { CalendarClock, Map, Menu, X } from 'lucide-react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppScreen } from '../../../components/ui/AppScreen';
-import { Button } from '../../../components/ui/Button';
 import { LanguageSwitch } from '../../../components/ui/LanguageSwitch';
 import { ScreenHeader } from '../../../components/ui/ScreenHeader';
 import { SectionLoader } from '../../../components/ui/Loader';
@@ -18,7 +27,7 @@ import {
 import { useI18n } from '../../../hooks/useI18n';
 import { useTheme } from '../../../hooks/useTheme';
 import { spacing } from '../../../theme/tokens';
-import { getRowDirection } from '../../../utils/rtl';
+import { getRowDirection, getWritingDirection } from '../../../utils/rtl';
 import { useVenues } from '../hooks';
 import {
   buildPlaygroundsDiscoveryRouteParams,
@@ -46,6 +55,8 @@ const INITIAL_FILTERS = Object.freeze({
 });
 
 const MARKETPLACE_TABS = Object.freeze(['all', 'offers', 'featured', 'premium', 'pro']);
+const MENU_OPEN_ANIMATION_MS = 220;
+const MENU_CLOSE_ANIMATION_MS = 180;
 
 const resolveTab = (value) => {
   const normalized = String(value || '').trim().toLowerCase();
@@ -235,6 +246,152 @@ const logPlaygrounds = (stage, payload = null) => {
   }
 };
 
+function PlaygroundsMenuRow({ label, icon: Icon, onPress, colors, isRTL }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.menuRow,
+        {
+          borderColor: colors.border,
+          backgroundColor: colors.surface,
+          flexDirection: getRowDirection(isRTL),
+          opacity: pressed ? 0.86 : 1,
+        },
+      ]}
+    >
+      <View style={[styles.menuIconWrap, { backgroundColor: colors.accentOrangeSoft }]}>
+        <Icon size={16} color={colors.accentOrange} strokeWidth={2.3} />
+      </View>
+      <Text
+        variant="bodySmall"
+        weight="medium"
+        style={[
+          styles.menuLabel,
+          {
+            color: colors.textPrimary,
+            writingDirection: getWritingDirection(isRTL),
+          },
+        ]}
+        numberOfLines={1}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function PlaygroundsMenuDrawer({
+  visible,
+  onClose,
+  onMyBookings,
+  onMapView,
+  t,
+  isRTL,
+  colors,
+}) {
+  const { width } = useWindowDimensions();
+  const animation = useRef(new RNAnimated.Value(0)).current;
+  const drawerWidth = Math.min(Math.max(width * 0.82, 280), 360);
+  const hiddenOffset = isRTL ? drawerWidth + 20 : -(drawerWidth + 20);
+
+  const translateX = animation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [hiddenOffset, 0],
+  });
+
+  const overlayOpacity = animation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  });
+
+  useEffect(() => {
+    RNAnimated.timing(animation, {
+      toValue: visible ? 1 : 0,
+      duration: visible ? MENU_OPEN_ANIMATION_MS : MENU_CLOSE_ANIMATION_MS,
+      useNativeDriver: true,
+    }).start();
+  }, [animation, visible]);
+
+  return (
+    <Modal transparent visible={visible} animationType="none" onRequestClose={onClose}>
+      <View style={styles.menuModalRoot}>
+        <RNAnimated.View
+          style={[
+            styles.menuOverlay,
+            {
+              backgroundColor: colors.overlay,
+              opacity: overlayOpacity,
+            },
+          ]}
+        >
+          <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        </RNAnimated.View>
+
+        <RNAnimated.View
+          style={[
+            styles.menuDrawer,
+            {
+              width: drawerWidth,
+              backgroundColor: colors.surfaceElevated,
+              borderColor: colors.border,
+              [isRTL ? 'right' : 'left']: 0,
+              transform: [{ translateX }],
+            },
+          ]}
+        >
+          <SafeAreaView style={styles.menuDrawerSafeArea} edges={['top', 'bottom']}>
+            <View style={[styles.menuHeader, { flexDirection: getRowDirection(isRTL) }]}>
+              <View style={styles.menuTitleWrap}>
+                <Text
+                  variant="h3"
+                  weight="semibold"
+                  style={{ writingDirection: getWritingDirection(isRTL) }}
+                >
+                  {t('playgrounds.menu.title')}
+                </Text>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t('playgrounds.menu.close')}
+                onPress={onClose}
+                style={({ pressed }) => [
+                  styles.menuCloseButton,
+                  {
+                    borderColor: colors.border,
+                    backgroundColor: pressed ? colors.surfaceSoft : colors.surface,
+                  },
+                ]}
+              >
+                <X size={16} color={colors.textPrimary} strokeWidth={2.3} />
+              </Pressable>
+            </View>
+
+            <View style={styles.menuList}>
+              <PlaygroundsMenuRow
+                label={t('playgrounds.menu.myBookings')}
+                icon={CalendarClock}
+                onPress={onMyBookings}
+                colors={colors}
+                isRTL={isRTL}
+              />
+              <PlaygroundsMenuRow
+                label={t('playgrounds.menu.mapView')}
+                icon={Map}
+                onPress={onMapView}
+                colors={colors}
+                isRTL={isRTL}
+              />
+            </View>
+          </SafeAreaView>
+        </RNAnimated.View>
+      </View>
+    </Modal>
+  );
+}
+
 export function PlaygroundsIndexScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -276,6 +433,7 @@ export function PlaygroundsIndexScreen() {
   const [filters, setFilters] = useState(routeInitialState.filters);
   const [appliedFilters, setAppliedFilters] = useState(routeInitialState.filters);
   const [hasSearched, setHasSearched] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   useEffect(() => {
     setActiveTab(routeInitialState.activeTab);
@@ -432,6 +590,19 @@ export function PlaygroundsIndexScreen() {
     );
   };
 
+  const openMenu = () => setMenuVisible(true);
+  const closeMenu = () => setMenuVisible(false);
+
+  const handleMyBookingsMenuPress = () => {
+    closeMenu();
+    router.push(ROUTES.PLAYGROUNDS_MY_BOOKINGS);
+  };
+
+  const handleMapViewMenuPress = () => {
+    closeMenu();
+    router.push(buildPlaygroundsMapRoute(mapRouteParams));
+  };
+
   return (
     <AppScreen
       scroll
@@ -446,21 +617,27 @@ export function PlaygroundsIndexScreen() {
       }
     >
       <AnimatedView layout={LinearTransition.duration(220)}>
-        <ScreenHeader title={copy.title} subtitle={copy.subtitle} right={<LanguageSwitch compact />} />
-      </AnimatedView>
-
-      <AnimatedView
-        layout={LinearTransition.duration(220)}
-        style={[styles.topActionsRow, { flexDirection: getRowDirection(isRTL) }]}
-      >
-        <View style={[styles.topActionsGroup, { flexDirection: getRowDirection(isRTL) }]}>
-          <Button size="sm" variant="secondary" onPress={() => router.push(ROUTES.PLAYGROUNDS_MY_BOOKINGS)}>
-            {copy.actions.myBookings}
-          </Button>
-          <Button size="sm" variant="secondary" onPress={() => router.push(buildPlaygroundsMapRoute(mapRouteParams))}>
-            {copy.actions.mapMode}
-          </Button>
-        </View>
+        <ScreenHeader
+          title={copy.title}
+          subtitle={copy.subtitle}
+          left={
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={locale === 'ar' ? 'فتح القائمة' : 'Open menu'}
+              onPress={openMenu}
+              style={({ pressed }) => [
+                styles.menuOpenButton,
+                {
+                  borderColor: colors.border,
+                  backgroundColor: pressed ? colors.surfaceSoft : colors.surface,
+                },
+              ]}
+            >
+              <Menu size={18} color={colors.textPrimary} strokeWidth={2.25} />
+            </Pressable>
+          }
+          right={<LanguageSwitch compact />}
+        />
       </AnimatedView>
 
       <PlaygroundsFilterForm
@@ -518,6 +695,16 @@ export function PlaygroundsIndexScreen() {
           ))}
         </AnimatedView>
       ) : null}
+
+      <PlaygroundsMenuDrawer
+        visible={menuVisible}
+        onClose={closeMenu}
+        onMyBookings={handleMyBookingsMenuPress}
+        onMapView={handleMapViewMenuPress}
+        t={t}
+        isRTL={isRTL}
+        colors={colors}
+      />
     </AppScreen>
   );
 }
@@ -527,15 +714,68 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingBottom: spacing['3xl'],
   },
-  topActionsRow: {
-    justifyContent: 'space-between',
+  menuOpenButton: {
+    width: 40,
+    height: 40,
+    borderWidth: 1,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuModalRoot: {
+    flex: 1,
+  },
+  menuOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  menuDrawer: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    borderWidth: 1,
+  },
+  menuDrawerSafeArea: {
+    flex: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    gap: spacing.md,
+  },
+  menuHeader: {
     alignItems: 'center',
     gap: spacing.sm,
   },
-  topActionsGroup: {
+  menuTitleWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  menuCloseButton: {
+    width: 36,
+    height: 36,
+    borderWidth: 1,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuList: {
+    gap: spacing.sm,
+  },
+  menuRow: {
+    borderWidth: 1,
+    borderRadius: 14,
     alignItems: 'center',
     gap: spacing.sm,
-    flexWrap: 'wrap',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+  },
+  menuIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuLabel: {
+    flex: 1,
   },
   listWrap: {
     gap: spacing.sm,

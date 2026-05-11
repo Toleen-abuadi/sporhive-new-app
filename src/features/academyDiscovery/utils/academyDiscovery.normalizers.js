@@ -79,6 +79,10 @@ export const normalizeAcademyDiscoveryFilters = (filters = {}) => {
     source.registration_enabled == null
       ? source.list_your_academy
       : source.registration_enabled;
+  const registrationOpenRaw =
+    source.registration_open == null
+      ? pickFirst(source.registrationOpen, source.is_registration_open)
+      : source.registration_open;
   const proOnlyRaw = source.is_pro == null ? pickFirst(source.pro_only, source.proOnly) : source.is_pro;
 
   return removeEmptyValues({
@@ -89,6 +93,8 @@ export const normalizeAcademyDiscoveryFilters = (filters = {}) => {
     age_to: toNumber(pickFirst(source.age_to, source.ageTo, source.ages_to)),
     registration_enabled:
       registrationEnabledRaw == null ? undefined : toBoolean(registrationEnabledRaw),
+    registration_open:
+      registrationOpenRaw == null ? undefined : toBoolean(registrationOpenRaw),
     is_pro: proOnlyRaw == null ? undefined : toBoolean(proOnlyRaw),
     lat: toNumber(source.lat),
     lng: toNumber(source.lng),

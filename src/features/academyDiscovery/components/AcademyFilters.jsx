@@ -27,7 +27,9 @@ const resolveSportOption = (item) => {
   const value = cleanString(item.value || item.id || item.key || item.sport);
   if (!value) return null;
 
+  const key = cleanString(value).toLowerCase();
   return {
+    key,
     value,
     label: cleanString(item.label || item.name || value),
   };
@@ -70,6 +72,30 @@ const resolveAgeRangeOption = (item) => {
   };
 };
 
+const resolveTextStyle = (isRTL) => ({
+  textAlign: isRTL ? 'right' : 'left',
+  writingDirection: isRTL ? 'rtl' : 'ltr',
+});
+
+const formatAgeRangeLabel = ({ minAge, maxAge, isRTL, copy }) => {
+  const minValue = cleanString(minAge);
+  const maxValue = cleanString(maxAge);
+  const ageUnitAr = cleanString(copy?.filters?.ageUnitAr || 'سنة');
+  const yearsEn = cleanString(copy?.filters?.ageYears || 'years');
+
+  if (!minValue && !maxValue) return '';
+  if (minValue && maxValue) {
+    if (isRTL) return `من ${minValue} إلى ${maxValue} ${ageUnitAr}`;
+    return `${minValue}-${maxValue} ${yearsEn}`;
+  }
+  if (minValue) {
+    if (isRTL) return `من ${minValue} ${ageUnitAr}`;
+    return `${cleanString(copy?.filters?.ageFromLabel || 'From')} ${minValue}`;
+  }
+  if (isRTL) return `حتى ${maxValue} ${ageUnitAr}`;
+  return `${cleanString(copy?.filters?.ageUpToLabel || 'Up to')} ${maxValue}`;
+};
+
 export function AcademyFilters({
   filters,
   onChange,
@@ -78,14 +104,26 @@ export function AcademyFilters({
   ageRangeOptions = [],
   dynamicTogglesMeta = {},
   copy,
-  onRefresh,
+  onApply,
 }) {
   const { colors, isDark } = useTheme();
   const { isRTL } = useI18n();
   const normalizedSort = normalizeAcademySort(filters?.sort);
+  const textStyle = resolveTextStyle(isRTL);
+  const rowDirection = getRowDirection(isRTL);
 
   const availableSports = useMemo(
-    () => sportOptions.map(resolveSportOption).filter(Boolean),
+    () => {
+      const map = new Map();
+      sportOptions
+        .map(resolveSportOption)
+        .filter(Boolean)
+        .forEach((item) => {
+          if (map.has(item.key)) return;
+          map.set(item.key, item);
+        });
+      return [...map.values()];
+    },
     [sportOptions]
   );
 
@@ -176,15 +214,17 @@ export function AcademyFilters({
       age_group: '',
       age_from: '',
       age_to: '',
-      registration_enabled: undefined,
+      registration_open: undefined,
       is_pro: undefined,
       sort: ACADEMY_DISCOVERY_SORT.RECOMMENDED,
     });
+    onApply?.();
   };
 
-  const registrationCount = Number(dynamicTogglesMeta?.registrationEnabledCount) || 0;
+  const registrationCount =
+    Number(dynamicTogglesMeta?.registrationOpenCount ?? dynamicTogglesMeta?.registrationEnabledCount) || 0;
   const proCount = Number(dynamicTogglesMeta?.proCount) || 0;
-  const registrationLabel = `${copy?.filters?.registrationEnabled || 'Registration enabled'}${
+  const registrationLabel = `${copy?.filters?.registrationOpen || copy?.filters?.registrationEnabled || 'Registration open'}${
     registrationCount > 0 ? ` (${registrationCount})` : ''
   }`;
   const proOnlyLabel = `${copy?.filters?.proOnly || 'PRO only'}${
@@ -199,7 +239,7 @@ export function AcademyFilters({
           {
             borderColor: colors.inputBorder || colors.border,
             backgroundColor: colors.inputBackground || colors.surface,
-            flexDirection: getRowDirection(isRTL),
+            flexDirection: rowDirection,
           },
         ]}
       >
@@ -215,17 +255,17 @@ export function AcademyFilters({
             styles.searchInput,
             {
               color: colors.inputText || colors.textPrimary,
-              textAlign: isRTL ? 'right' : 'left',
+              ...textStyle,
             },
           ]}
         />
       </View>
 
       <View style={styles.block}>
-        <Text variant="caption" color={colors.textSecondary}>
+        <Text variant="caption" color={colors.textSecondary} style={textStyle}>
           {copy?.filters?.sport}
         </Text>
-        <View style={[styles.rowWrap, { flexDirection: getRowDirection(isRTL) }]}>
+        <View style={[styles.rowWrap, { flexDirection: rowDirection }]}>
           <Chip
             label={copy?.filters?.allSports}
             selected={!filters?.sport}
@@ -248,7 +288,7 @@ export function AcademyFilters({
       </View>
 
       <View style={styles.block}>
-        <Text variant="caption" color={colors.textSecondary}>
+        <Text variant="caption" color={colors.textSecondary} style={textStyle}>
           {copy?.filters?.city}
         </Text>
         <TextInput
@@ -264,13 +304,13 @@ export function AcademyFilters({
               color: colors.inputText || colors.textPrimary,
               borderColor: colors.inputBorder || colors.border,
               backgroundColor: colors.inputBackground || colors.surface,
-              textAlign: isRTL ? 'right' : 'left',
+              ...textStyle,
             },
           ]}
         />
 
         {availableCities.length ? (
-          <View style={[styles.rowWrap, { flexDirection: getRowDirection(isRTL) }]}>
+          <View style={[styles.rowWrap, { flexDirection: rowDirection }]}>
             {availableCities.map((city) => (
               <Chip
                 key={city.value}
@@ -291,12 +331,12 @@ export function AcademyFilters({
       </View>
 
       <View style={styles.block}>
-        <Text variant="caption" color={colors.textSecondary}>
+        <Text variant="caption" color={colors.textSecondary} style={textStyle}>
           {copy?.filters?.ageGroup || 'Age group'}
         </Text>
 
         {availableAgeRanges.length ? (
-          <View style={[styles.rowWrap, { flexDirection: getRowDirection(isRTL) }]}>
+          <View style={[styles.rowWrap, { flexDirection: rowDirection }]}>
             {availableAgeRanges.map((item) => (
               <Chip
                 key={item.key}
@@ -308,7 +348,18 @@ export function AcademyFilters({
           </View>
         ) : null}
 
-        <View style={[styles.ageRangeRow, { flexDirection: getRowDirection(isRTL) }]}>
+        {(cleanString(filters?.age_from) || cleanString(filters?.age_to)) ? (
+          <Text variant="caption" color={colors.textMuted} style={textStyle}>
+            {formatAgeRangeLabel({
+              minAge: filters?.age_from,
+              maxAge: filters?.age_to,
+              isRTL,
+              copy,
+            })}
+          </Text>
+        ) : null}
+
+        <View style={[styles.ageRangeRow, { flexDirection: rowDirection }]}>
           <TextInput
             value={cleanString(filters?.age_from)}
             onChangeText={(value) => updateAge('age_from', value)}
@@ -322,6 +373,7 @@ export function AcademyFilters({
                 color: colors.inputText || colors.textPrimary,
                 borderColor: colors.inputBorder || colors.border,
                 backgroundColor: colors.inputBackground || colors.surface,
+                ...textStyle,
               },
             ]}
           />
@@ -339,6 +391,7 @@ export function AcademyFilters({
                 color: colors.inputText || colors.textPrimary,
                 borderColor: colors.inputBorder || colors.border,
                 backgroundColor: colors.inputBackground || colors.surface,
+                ...textStyle,
               },
             ]}
           />
@@ -346,14 +399,14 @@ export function AcademyFilters({
       </View>
 
       <View style={styles.block}>
-        <View style={[styles.rowWrap, { flexDirection: getRowDirection(isRTL) }]}>
+        <View style={[styles.rowWrap, { flexDirection: rowDirection }]}>
           <Chip
             label={registrationLabel}
-            selected={Boolean(filters?.registration_enabled)}
+            selected={Boolean(filters?.registration_open)}
             onPress={() =>
               updateField(
-                'registration_enabled',
-                filters?.registration_enabled ? undefined : true
+                'registration_open',
+                filters?.registration_open ? undefined : true
               )
             }
           />
@@ -366,10 +419,10 @@ export function AcademyFilters({
       </View>
 
       <View style={styles.block}>
-        <Text variant="caption" color={colors.textSecondary}>
+        <Text variant="caption" color={colors.textSecondary} style={textStyle}>
           {copy?.filters?.sort}
         </Text>
-        <View style={[styles.rowWrap, { flexDirection: getRowDirection(isRTL) }]}>
+        <View style={[styles.rowWrap, { flexDirection: rowDirection }]}>
           {sortOptions.map((item) => (
             <Chip
               key={item.value}
@@ -381,13 +434,13 @@ export function AcademyFilters({
         </View>
       </View>
 
-      <View style={[styles.actionsRow, { flexDirection: getRowDirection(isRTL) }]}>
+      <View style={[styles.actionsRow, { flexDirection: rowDirection }]}>
         <Button size="sm" variant="ghost" onPress={resetFilters} style={styles.actionButton}>
-          {copy?.actions?.clearFilters}
+          {copy?.actions?.clearFilters || copy?.actions?.resetFilters}
         </Button>
 
-        <Button variant="secondary" size="sm" onPress={onRefresh} style={styles.actionButton}>
-          {copy?.actions?.refresh}
+        <Button variant="secondary" size="sm" onPress={onApply} style={styles.actionButton}>
+          {copy?.actions?.applyFilters || copy?.actions?.refresh}
         </Button>
       </View>
     </Surface>
@@ -435,8 +488,6 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
-    textAlign: 'left',
-    writingDirection: 'ltr',
   },
   actionsRow: {
     alignItems: 'center',

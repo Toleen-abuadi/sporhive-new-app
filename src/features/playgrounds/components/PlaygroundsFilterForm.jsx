@@ -50,6 +50,11 @@ const safeTextInputAlign = (isRTL) => ({
   writingDirection: isRTL ? 'rtl' : 'ltr',
 });
 
+const resolveTextStyle = (isRTL) => ({
+  textAlign: isRTL ? 'right' : 'left',
+  writingDirection: isRTL ? 'rtl' : 'ltr',
+});
+
 export function PlaygroundsFilterForm({
   filters,
   activeTab,
@@ -69,6 +74,8 @@ export function PlaygroundsFilterForm({
 
   const selectedSort = String(filters?.orderBy || 'recommended');
   const selectedSport = String(filters?.activityId || '');
+  const rowDirection = getRowDirection(isRTL);
+  const textStyle = resolveTextStyle(isRTL);
 
   const showDurationFilters = useMemo(
     () => Array.isArray(durationOptions) && durationOptions.length > 0,
@@ -82,13 +89,13 @@ export function PlaygroundsFilterForm({
   return (
     <Surface variant="soft" padding="sm" style={styles.surface}>
       <View style={styles.content}>
-        <View style={[styles.topRow, { flexDirection: getRowDirection(isRTL) }]}>
+        <View style={[styles.topRow, { flexDirection: rowDirection }]}>
           <Pressable
             onPress={() => setExpanded((value) => !value)}
             style={[
               styles.collapseButton,
               {
-                flexDirection: getRowDirection(isRTL),
+                flexDirection: rowDirection,
                 borderColor: colors.border,
                 backgroundColor: colors.surface,
               },
@@ -99,10 +106,10 @@ export function PlaygroundsFilterForm({
             </View>
 
             <View style={styles.titleBlock}>
-              <Text variant="bodySmall" weight="bold">
+              <Text variant="bodySmall" weight="bold" style={textStyle}>
                 {t('playgrounds.filters.title', { defaultValue: 'Filters' })}
               </Text>
-              <Text variant="caption" color={colors.textMuted} numberOfLines={1}>
+              <Text variant="caption" color={colors.textMuted} numberOfLines={1} style={textStyle}>
                 {activeFiltersCount > 0
                   ? t('playgrounds.filters.activeCount', { count: activeFiltersCount })
                   : t(selectedSortLabel)}
@@ -131,7 +138,7 @@ export function PlaygroundsFilterForm({
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={[styles.chipsRow, { flexDirection: getRowDirection(isRTL) }]}
+          contentContainerStyle={[styles.chipsRow, { flexDirection: rowDirection }]}
         >
           {MARKETPLACE_TABS.map((tab) => (
             <Chip
@@ -146,13 +153,13 @@ export function PlaygroundsFilterForm({
         {expanded ? (
           <View style={styles.expandedContent}>
             <View style={styles.section}>
-              <Text variant="caption" color={colors.textSecondary}>
+              <Text variant="caption" color={colors.textSecondary} style={textStyle}>
                 {t('playgrounds.filters.fields.sport', { defaultValue: 'Sport' })}
               </Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={[styles.chipsRow, { flexDirection: getRowDirection(isRTL) }]}
+                contentContainerStyle={[styles.chipsRow, { flexDirection: rowDirection }]}
               >
                 {SPORTS_FILTERS.map((sport) => (
                   <Chip
@@ -165,7 +172,7 @@ export function PlaygroundsFilterForm({
               </ScrollView>
             </View>
 
-            <View style={styles.grid}>
+            <View style={[styles.grid, { flexDirection: rowDirection }]}>
               <View style={styles.gridItem}>
                 <DatePickerField
                   label={t('playgrounds.filters.fields.date')}
@@ -177,7 +184,7 @@ export function PlaygroundsFilterForm({
               </View>
 
               <View style={styles.gridItem}>
-                <Text variant="caption" color={colors.textSecondary}>
+                <Text variant="caption" color={colors.textSecondary} style={textStyle}>
                   {t('playgrounds.filters.fields.players')}
                 </Text>
                 <TextInput
@@ -200,7 +207,7 @@ export function PlaygroundsFilterForm({
             </View>
 
             <View style={styles.section}>
-              <Text variant="caption" color={colors.textSecondary}>
+              <Text variant="caption" color={colors.textSecondary} style={textStyle}>
                 {t('playgrounds.filters.fields.location')}
               </Text>
               <TextInput
@@ -222,13 +229,13 @@ export function PlaygroundsFilterForm({
 
             {showDurationFilters ? (
               <View style={styles.section}>
-                <Text variant="caption" color={colors.textSecondary}>
+                <Text variant="caption" color={colors.textSecondary} style={textStyle}>
                   {t('playgrounds.filters.fields.duration')}
                 </Text>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={[styles.chipsRow, { flexDirection: getRowDirection(isRTL) }]}
+                  contentContainerStyle={[styles.chipsRow, { flexDirection: rowDirection }]}
                 >
                   {durationOptions.map((item) => (
                     <Chip
@@ -246,14 +253,14 @@ export function PlaygroundsFilterForm({
               style={[
                 styles.specialOfferRow,
                 {
-                  flexDirection: getRowDirection(isRTL),
+                  flexDirection: rowDirection,
                   borderColor: colors.border,
                   backgroundColor: colors.surface,
                 },
               ]}
             >
               <View style={styles.titleBlock}>
-                <Text variant="bodySmall" weight="semibold">
+                <Text variant="bodySmall" weight="semibold" style={textStyle}>
                   {t('playgrounds.filters.fields.specialOffers')}
                 </Text>
               </View>
@@ -267,13 +274,13 @@ export function PlaygroundsFilterForm({
             </View>
 
             <View style={styles.section}>
-              <Text variant="caption" color={colors.textSecondary}>
+              <Text variant="caption" color={colors.textSecondary} style={textStyle}>
                 {t('playgrounds.filters.fields.sort')}
               </Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={[styles.chipsRow, { flexDirection: getRowDirection(isRTL) }]}
+                contentContainerStyle={[styles.chipsRow, { flexDirection: rowDirection }]}
               >
                 {SORT_OPTIONS.map((option) => (
                   <Chip
@@ -286,7 +293,7 @@ export function PlaygroundsFilterForm({
               </ScrollView>
             </View>
 
-            <View style={[styles.actionsRow, { flexDirection: getRowDirection(isRTL) }]}>
+            <View style={[styles.actionsRow, { flexDirection: rowDirection }]}>
               <Button
                 size="sm"
                 style={styles.actionButton}

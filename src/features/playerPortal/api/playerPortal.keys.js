@@ -14,6 +14,7 @@ export const PLAYER_PORTAL_ENDPOINTS = Object.freeze({
   FEEDBACK_TYPES: '/player-performance/feedback/types',
   FEEDBACK_PERIODS: '/player-performance/feedback/periods',
   FEEDBACK_PLAYER_SUMMARY: '/player-performance/feedback/player_summary',
+  FEEDBACK_LEADERBOARD: '/player-profile/leaderboard',
   UNIFORM_STORE: '/uniforms/store',
   UNIFORM_ORDER: '/uniforms/order',
   UNIFORM_ORDERS: '/uniforms/my_orders',

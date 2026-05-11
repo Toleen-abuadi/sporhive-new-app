@@ -512,6 +512,79 @@ export function mapFeedbackPeriodsResponse(payload) {
   };
 }
 
+const mapFeedbackLeaderboardRow = (item, index) => {
+  const row = toObject(item);
+  const player = toObject(row.player);
+  const avgPercentage =
+    toNumber(row.avg_percentage) ??
+    toNumber(row.average_percentage) ??
+    toNumber(row.percentage) ??
+    0;
+  const tryoutId =
+    toNumber(row.tryout_id) ??
+    toNumber(row.try_out) ??
+    toNumber(row.player_id) ??
+    toNumber(row.external_player_id) ??
+    toNumber(player.tryout_id) ??
+    toNumber(player.try_out) ??
+    toNumber(player.player_id) ??
+    toNumber(player.external_player_id) ??
+    null;
+
+  return {
+    rank: toNumber(row.rank) ?? toNumber(row.position) ?? index + 1,
+    tryoutId,
+    playerId: tryoutId,
+    playerName: cleanString(
+      row.player_name ||
+        row.player_display_name ||
+        row.name ||
+        player.display_name ||
+        player.name ||
+        player.full_name
+    ),
+    avgPercentage,
+    feedbackCount:
+      toNumber(row.feedback_count) ??
+      toNumber(row.ratings_count) ??
+      toNumber(row.count) ??
+      0,
+    isCurrent:
+      Boolean(row.is_current) ||
+      Boolean(row.isCurrent) ||
+      Boolean(row.current_player) ||
+      Boolean(player.is_current) ||
+      Boolean(player.isCurrent),
+    raw: row,
+  };
+};
+
+export function mapFeedbackLeaderboardResponse(payload) {
+  const root = toObject(payload);
+  const scoped = toObject(root.data);
+  const list = toArray(
+    root.leaderboard ||
+      scoped.leaderboard ||
+      root.items ||
+      scoped.items ||
+      root.rows ||
+      scoped.rows
+  );
+
+  return {
+    groupId:
+      toNumber(root.group_id) ??
+      toNumber(scoped.group_id) ??
+      toNumber(root.current_group_id) ??
+      toNumber(scoped.current_group_id) ??
+      null,
+    items: list
+      .map(mapFeedbackLeaderboardRow)
+      .filter((item) => item.rank != null || item.playerName),
+    raw: root,
+  };
+}
+
 const normalizeUniformSize = (value) => {
   const raw = cleanString(value);
   if (!raw) return '';

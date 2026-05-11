@@ -94,13 +94,18 @@
         "payment": "دفعة",
         "subscription": "اشتراك",
         "course": "دورة",
+        "full": "كامل",
+        "partial": "جزئي",
+        "additional": "إضافي",
+        "additional_uniform": "زي إضافي",
         "renewal": "تجديد",
         "freeze": "تجميد",
         "uniform": "يونيفورم",
         "invoice": "فاتورة",
         "registration": "تسجيل",
         "installment": "قسط",
-        "session": "جلسة"
+        "session": "جلسة",
+        "unknown": "غير محدد"
       },
       "registrationTypes": {
         "subscription": "اشتراك",
@@ -592,7 +597,9 @@
         "recentTitle": "أحدث التقييمات",
         "recentSubtitle": "آخر التقييمات المرسلة",
         "notesTitle": "ملاحظات المدرب",
-        "notesSubtitle": "آخر التعليقات"
+        "notesSubtitle": "آخر التعليقات",
+        "leaderboardTitle": "لوحة ترتيب المجموعة",
+        "leaderboardSubtitle": "أفضل اللاعبين في مجموعتك"
       },
       "periods": {
         "daily": "يومي",
@@ -603,9 +610,26 @@
         "averageValue": "متوسط القيمة: {{value}}",
         "totalFeedback": "إجمالي التقييمات: {{count}}",
         "sessionScore": "الدرجة: {{value}}%",
-        "rating": "التقييم"
+        "rating": "التقييم",
+        "competitionBoard": "لوحة المنافسة",
+        "sortBy": "ترتيب حسب",
+        "overall": "إجمالي",
+        "avgPercent": "متوسط %",
+        "feedbacks": "عدد التقييمات: {{count}}",
+        "feedbacksShort": "التقييمات",
+        "name": "الاسم",
+        "ratingTypes": "أنواع التقييم",
+        "you": "أنت",
+        "showDetails": "عرض التفاصيل",
+        "hideDetails": "إخفاء التفاصيل"
       },
       "empty": {
+        "pageTitle": "لا توجد بيانات أداء بعد",
+        "pageDescription": "ستظهر التقييمات وملاحظات المدرب هنا بعد إضافتها.",
+        "personalTitle": "لا توجد بيانات أداء شخصية بعد",
+        "personalDescription": "ستظهر تقييماتك وملاحظات المدرب هنا بعد إضافتها.",
+        "leaderboardTitle": "لا توجد لوحة ترتيب للمجموعة بعد",
+        "leaderboardDescription": "ستظهر لوحة ترتيب المجموعة بعد إضافة تقييمات للاعبين.",
         "breakdownTitle": "لا يوجد تفصيل تقييم بعد",
         "breakdownDescription": "سيظهر التفصيل بعد إرسال التقييمات.",
         "trendsTitle": "لا توجد بيانات اتجاهات بعد",
@@ -1034,6 +1058,12 @@
         "pro": "احترافية"
       },
       "activeCount": "{{count}} فلتر مفعّل"
+    },
+    "menu": {
+      "title": "الملاعب",
+      "myBookings": "حجوزاتي",
+      "mapView": "عرض الخريطة",
+      "close": "إغلاق القائمة"
     }
   }
 }

@@ -5,6 +5,7 @@ import { toArray, toNumber, toObject } from '../utils/playerPortal.normalizers';
 import { PLAYER_PORTAL_ENDPOINTS, PLAYER_PORTAL_PROXY_BASE_PATH } from './playerPortal.keys';
 import {
   mapFeedbackPeriodsResponse,
+  mapFeedbackLeaderboardResponse,
   mapFeedbackPlayerSummaryResponse,
   mapFeedbackTypesResponse,
   mapFreezeCancelResponse,
@@ -476,6 +477,29 @@ const shouldTreatFreezeHistoryAsEmpty = (error) => {
   );
 };
 
+export const shouldTreatFeedbackLeaderboardAsEmpty = (error) => {
+  const status = Number(error?.status) || 0;
+  if ([204, 404].includes(status)) return true;
+
+  const code = cleanString(error?.code).toUpperCase();
+  if (code === 'NOT_FOUND') return true;
+
+  const message = cleanString(error?.message).toLowerCase();
+  if (message.includes('not found')) return true;
+  if (message.includes('no leaderboard')) return true;
+  if (message.includes('no records')) return true;
+
+  const details = toObject(error?.details);
+  const detailsMessage =
+    cleanString(details?.message || details?.error || details?.detail).toLowerCase();
+
+  return (
+    detailsMessage.includes('not found') ||
+    detailsMessage.includes('no leaderboard') ||
+    detailsMessage.includes('no records')
+  );
+};
+
 export const playerPortalApi = {
   getApiBaseUrl() {
     return API_BASE_URL;
@@ -768,6 +792,38 @@ export const playerPortalApi = {
       includePlayerId: true,
       requirePlayerId: true,
     }).then((result) => ensureProxyResultShape(result, mapFeedbackPlayerSummaryResponse));
+  },
+
+  async getFeedbackLeaderboard(context, payload = {}) {
+    const result = await proxyRequest(PLAYER_PORTAL_ENDPOINTS.FEEDBACK_LEADERBOARD, {
+      context,
+      payload,
+      includePlayerId: true,
+      requirePlayerId: true,
+    });
+
+    if (result.success) {
+      return ensureProxyResultShape(result, mapFeedbackLeaderboardResponse);
+    }
+
+    if (shouldTreatFeedbackLeaderboardAsEmpty(result.error)) {
+      return {
+        success: true,
+        data: {
+          groupId: null,
+          items: [],
+          raw: {},
+        },
+        meta: {
+          status: Number(result.error?.status) || 200,
+          endpoint: PLAYER_PORTAL_ENDPOINTS.FEEDBACK_LEADERBOARD,
+          fallback: 'empty',
+          empty: true,
+        },
+      };
+    }
+
+    return result;
   },
 
   getUniformStore(context, payload = {}) {

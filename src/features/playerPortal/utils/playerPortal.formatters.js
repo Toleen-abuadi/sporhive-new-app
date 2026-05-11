@@ -131,7 +131,14 @@ export function formatPaymentTypeLabel(
     fallback: '',
   });
   const labels = [typeLabel, subTypeLabel].filter(Boolean);
-  if (!labels.length) return fallback;
+  if (!labels.length) {
+    return formatEnumLabel('unknown', {
+      t,
+      locale,
+      domain: 'paymentType',
+      fallback,
+    });
+  }
   return labels.join(separator);
 }
 

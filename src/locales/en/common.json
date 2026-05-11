@@ -94,13 +94,18 @@
         "payment": "Payment",
         "subscription": "Subscription",
         "course": "Course",
+        "full": "Full",
+        "partial": "Partial",
+        "additional": "Additional",
+        "additional_uniform": "Additional Uniform",
         "renewal": "Renewal",
         "freeze": "Freeze",
         "uniform": "Uniform",
         "invoice": "Invoice",
         "registration": "Registration",
         "installment": "Installment",
-        "session": "Session"
+        "session": "Session",
+        "unknown": "Unspecified"
       },
       "registrationTypes": {
         "subscription": "Subscription",
@@ -584,7 +589,9 @@
         "recentTitle": "Recent Feedback",
         "recentSubtitle": "Latest submitted ratings",
         "notesTitle": "Coach Notes",
-        "notesSubtitle": "Latest comments"
+        "notesSubtitle": "Latest comments",
+        "leaderboardTitle": "Group Leaderboard",
+        "leaderboardSubtitle": "Top players in your group"
       },
       "periods": {
         "daily": "Daily",
@@ -595,9 +602,26 @@
         "averageValue": "Average value: {{value}}",
         "totalFeedback": "Total feedback: {{count}}",
         "sessionScore": "Score: {{value}}%",
-        "rating": "Rating"
+        "rating": "Rating",
+        "competitionBoard": "Competition Board",
+        "sortBy": "Sort by",
+        "overall": "Overall",
+        "avgPercent": "Avg %",
+        "feedbacks": "Feedbacks: {{count}}",
+        "feedbacksShort": "Feedbacks",
+        "name": "Name",
+        "ratingTypes": "Rating types",
+        "you": "You",
+        "showDetails": "Show details",
+        "hideDetails": "Hide details"
       },
       "empty": {
+        "pageTitle": "No performance data yet",
+        "pageDescription": "Your ratings and coach feedback will appear here once they are added.",
+        "personalTitle": "No personal performance yet",
+        "personalDescription": "Your own ratings and coach feedback will appear here once they are added.",
+        "leaderboardTitle": "No group leaderboard yet",
+        "leaderboardDescription": "The group leaderboard will appear once players receive ratings.",
         "breakdownTitle": "No rating breakdown yet",
         "breakdownDescription": "Ratings will appear after feedback is submitted.",
         "trendsTitle": "No trend data yet",
@@ -1027,6 +1051,12 @@
         "pro": "Pro"
       },
       "activeCount": "{{count}} active filters"
+    },
+    "menu": {
+      "title": "Playgrounds",
+      "myBookings": "My bookings",
+      "mapView": "Map view",
+      "close": "Close menu"
     }
   },
   "booking": {

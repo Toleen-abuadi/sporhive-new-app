@@ -1,57 +1,70 @@
-import { useMemo, useState } from 'react';
-import { Linking, Modal, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
-import { MessageCircle, Phone } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
-import { AppScreen } from '../../../components/ui/AppScreen';
-import { Button } from '../../../components/ui/Button';
-import { Chip } from '../../../components/ui/Chip';
-import { LanguageSwitch } from '../../../components/ui/LanguageSwitch';
-import { ScreenHeader } from '../../../components/ui/ScreenHeader';
-import { Surface } from '../../../components/ui/Surface';
-import { Text } from '../../../components/ui/Text';
-import { SectionLoader } from '../../../components/ui/Loader';
-import { useToast } from '../../../components/feedback/ToastHost';
+import { useMemo, useState } from "react";
+import {
+  Linking,
+  Modal,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  View,
+} from "react-native";
+import { MessageCircle, Phone, X } from "lucide-react-native";
+import { useRouter } from "expo-router";
+import { AppScreen } from "../../../components/ui/AppScreen";
+import { Button } from "../../../components/ui/Button";
+import { Chip } from "../../../components/ui/Chip";
+import { LanguageSwitch } from "../../../components/ui/LanguageSwitch";
+import { ScreenHeader } from "../../../components/ui/ScreenHeader";
+import { Surface } from "../../../components/ui/Surface";
+import { Text } from "../../../components/ui/Text";
+import { SectionLoader } from "../../../components/ui/Loader";
+import { useToast } from "../../../components/feedback/ToastHost";
 import {
   ROUTES,
   buildAuthLoginRoute,
   buildPlaygroundsRatingRoute,
-} from '../../../constants/routes';
-import { useI18n } from '../../../hooks/useI18n';
-import { useTheme } from '../../../hooks/useTheme';
-import { withAlpha } from '../../../theme/colors';
-import { borderRadius, spacing } from '../../../theme/tokens';
-import { getRowDirection } from '../../../utils/rtl';
-import { AUTH_LOGIN_MODES } from '../../../services/auth';
+} from "../../../constants/routes";
+import { useI18n } from "../../../hooks/useI18n";
+import { useTheme } from "../../../hooks/useTheme";
+import { withAlpha } from "../../../theme/colors";
+import { borderRadius, spacing } from "../../../theme/tokens";
+import { getRowDirection } from "../../../utils/rtl";
+import { AUTH_LOGIN_MODES } from "../../../services/auth";
 import {
   formatDurationMinutes,
   formatLabeledPrice,
   formatPlaygroundDate,
   formatPlaygroundTimeRange,
   resolvePlaygroundsGuardMessage,
-} from '../utils';
-import { getPlaygroundsCopy } from '../utils/playgrounds.copy';
-import { useMyBookings } from '../hooks';
+} from "../utils";
+import { getPlaygroundsCopy } from "../utils/playgrounds.copy";
+import { useMyBookings } from "../hooks";
 import {
   BookingStatusBadge,
   EmptyPlaygroundsState,
   PlaygroundsErrorState,
-} from '../components';
+} from "../components";
 
-const STATUS_FILTERS = ['all', 'pending', 'approved', 'rejected', 'cancelled'];
+const STATUS_FILTERS = ["all", "pending", "approved", "rejected", "cancelled"];
 
 const resolveStatusLabel = (status, t, copy) => {
-  if (status === 'all') {
-    return copy?.tabs?.all || '';
+  if (status === "all") {
+    return copy?.tabs?.all || "";
   }
   return t(`common.enums.status.${status}`);
 };
 
-const sanitizePhoneForDial = (value) => String(value || '').replace(/\s+/g, '').trim();
+const sanitizePhoneForDial = (value) =>
+  String(value || "")
+    .replace(/\s+/g, "")
+    .trim();
 const sanitizePhoneForWhatsapp = (value) =>
-  String(value || '').replace(/[^\d+]/g, '').trim().replace(/^\+/, '');
+  String(value || "")
+    .replace(/[^\d+]/g, "")
+    .trim()
+    .replace(/^\+/, "");
 
 async function openExternalUrl(url) {
-  const link = String(url || '').trim();
+  const link = String(url || "").trim();
   if (!link) return false;
 
   try {
@@ -83,11 +96,16 @@ function CancelContactModal({
       booking.venuePhone ||
       booking.academyProfilePhone ||
       booking.academy?.phone ||
-      ''
+      "",
   ).trim();
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <View
         style={[
           styles.modalBackdrop,
@@ -103,13 +121,18 @@ function CancelContactModal({
             },
           ]}
         >
-          <View style={[styles.modalHeaderRow, { flexDirection: getRowDirection(isRTL) }]}>
+          <View
+            style={[
+              styles.modalHeaderRow,
+              { flexDirection: getRowDirection(isRTL) },
+            ]}
+          >
             <Text variant="h3" weight="bold">
               {copy.booking.cancelContactTitle}
             </Text>
             <Pressable onPress={onClose} style={styles.modalClose}>
               <Text variant="caption" color={colors.textSecondary}>
-                {copy.actions.close}
+                <X size={20} color={colors.textSecondary} />
               </Text>
             </Pressable>
           </View>
@@ -124,20 +147,36 @@ function CancelContactModal({
             </Text>
             <Text variant="caption" color={colors.textSecondary}>
               {`${copy.labels.bookingCode}: `}
-              <Text variant="caption" color={colors.textSecondary} style={styles.ltrValue}>
+              <Text
+                variant="caption"
+                color={colors.textSecondary}
+                style={styles.ltrValue}
+              >
                 {booking.bookingCode || booking.id}
               </Text>
             </Text>
             <Text variant="caption" color={colors.textSecondary}>
               {`${copy.labels.date}: `}
-              <Text variant="caption" color={colors.textSecondary} style={styles.ltrValue}>
+              <Text
+                variant="caption"
+                color={colors.textSecondary}
+                style={styles.ltrValue}
+              >
                 {formatPlaygroundDate(booking.date, locale)}
               </Text>
             </Text>
             <Text variant="caption" color={colors.textSecondary}>
               {`${copy.labels.chooseSlot}: `}
-              <Text variant="caption" color={colors.textSecondary} style={styles.ltrValue}>
-                {formatPlaygroundTimeRange(booking.startTime, booking.endTime, locale)}
+              <Text
+                variant="caption"
+                color={colors.textSecondary}
+                style={styles.ltrValue}
+              >
+                {formatPlaygroundTimeRange(
+                  booking.startTime,
+                  booking.endTime,
+                  locale,
+                )}
               </Text>
             </Text>
           </Surface>
@@ -160,17 +199,28 @@ function CancelContactModal({
             </Text>
             {phoneNumber ? (
               <>
-                <Text variant="body" weight="semibold" style={styles.ltrValue}>
+                <Text variant="body" weight="semibold">
                   {phoneNumber}
                 </Text>
                 <Text variant="caption" color={colors.textSecondary}>
                   {copy.booking.cancelContactHint}
                 </Text>
-                <View style={[styles.modalActions, { flexDirection: getRowDirection(isRTL) }]}>
+                <View
+                  style={[
+                    styles.modalActions,
+                    { flexDirection: getRowDirection(isRTL) },
+                  ]}
+                >
                   <Button
                     variant="secondary"
                     style={styles.modalActionButton}
-                    leadingIcon={<Phone size={15} color={colors.textPrimary} strokeWidth={2.3} />}
+                    leadingIcon={
+                      <Phone
+                        size={15}
+                        color={colors.textPrimary}
+                        strokeWidth={2.3}
+                      />
+                    }
                     onPress={() => onCall?.(phoneNumber)}
                   >
                     {copy.actions.call}
@@ -178,7 +228,13 @@ function CancelContactModal({
                   <Button
                     variant="secondary"
                     style={styles.modalActionButton}
-                    leadingIcon={<MessageCircle size={15} color={colors.textPrimary} strokeWidth={2.3} />}
+                    leadingIcon={
+                      <MessageCircle
+                        size={15}
+                        color={colors.textPrimary}
+                        strokeWidth={2.3}
+                      />
+                    }
                     onPress={() => onWhatsapp?.(phoneNumber)}
                   >
                     {copy.actions.whatsapp}
@@ -197,20 +253,26 @@ function CancelContactModal({
   );
 }
 
-function BookingCard({ booking, locale = 'en', copy, onCancel}) {
+function BookingCard({ booking, locale = "en", copy, onCancel }) {
   const { colors } = useTheme();
   const { isRTL } = useI18n();
 
   return (
     <Surface variant="elevated" padding="md" style={styles.bookingCard}>
-      <View style={[styles.bookingHead, { flexDirection: getRowDirection(isRTL) }]}>
+      <View
+        style={[styles.bookingHead, { flexDirection: getRowDirection(isRTL) }]}
+      >
         <View style={styles.bookingHeadText}>
           <Text variant="body" weight="bold" numberOfLines={1}>
             {booking.venueName || copy.labels.venue}
           </Text>
           <Text variant="caption" color={colors.textSecondary}>
             {`${copy.labels.bookingCode}: `}
-            <Text variant="caption" color={colors.textSecondary} style={styles.ltrValue}>
+            <Text
+              variant="caption"
+              color={colors.textSecondary}
+              style={styles.ltrValue}
+            >
               {booking.bookingCode || booking.id}
             </Text>
           </Text>
@@ -224,7 +286,11 @@ function BookingCard({ booking, locale = 'en', copy, onCancel}) {
           {formatPlaygroundDate(booking.date, locale)}
         </Text>
         <Text variant="bodySmall" color={colors.textSecondary}>
-          {formatPlaygroundTimeRange(booking.startTime, booking.endTime, locale)}
+          {formatPlaygroundTimeRange(
+            booking.startTime,
+            booking.endTime,
+            locale,
+          )}
         </Text>
         <Text variant="bodySmall" color={colors.textSecondary}>
           {formatDurationMinutes(booking.durationMinutes, locale)}
@@ -256,9 +322,18 @@ function BookingCard({ booking, locale = 'en', copy, onCancel}) {
         ) : null}
       </View>
 
-      <View style={[styles.bookingActions, { flexDirection: getRowDirection(isRTL) }]}>
+      <View
+        style={[
+          styles.bookingActions,
+          { flexDirection: getRowDirection(isRTL) },
+        ]}
+      >
         {booking.canCancel ? (
-          <Button size="sm" variant="secondary" onPress={() => onCancel?.(booking)}>
+          <Button
+            size="sm"
+            variant="secondary"
+            onPress={() => onCancel?.(booking)}
+          >
             {copy.actions.cancelBooking}
           </Button>
         ) : null}
@@ -274,7 +349,7 @@ export function PlaygroundMyBookingsScreen() {
   const { colors } = useTheme();
   const copy = getPlaygroundsCopy(locale);
 
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState("all");
   const [cancelTarget, setCancelTarget] = useState(null);
 
   const bookingsQuery = useMyBookings({ auto: true });
@@ -288,7 +363,7 @@ export function PlaygroundMyBookingsScreen() {
       cancelled: 0,
     };
     bookingsQuery.bookings.forEach((item) => {
-      const key = String(item.status || '').toLowerCase();
+      const key = String(item.status || "").toLowerCase();
       if (seed[key] != null) {
         seed[key] += 1;
       }
@@ -297,12 +372,18 @@ export function PlaygroundMyBookingsScreen() {
   }, [bookingsQuery.bookings]);
 
   const filteredBookings = useMemo(() => {
-    if (statusFilter === 'all') return bookingsQuery.bookings;
-    return bookingsQuery.bookings.filter((item) => item.status === statusFilter);
+    if (statusFilter === "all") return bookingsQuery.bookings;
+    return bookingsQuery.bookings.filter(
+      (item) => item.status === statusFilter,
+    );
   }, [bookingsQuery.bookings, statusFilter]);
 
-  const guardMessage = resolvePlaygroundsGuardMessage(bookingsQuery.guardReason, locale);
-  const isInitialLoading = bookingsQuery.isLoading && !bookingsQuery.bookings.length;
+  const guardMessage = resolvePlaygroundsGuardMessage(
+    bookingsQuery.guardReason,
+    locale,
+  );
+  const isInitialLoading =
+    bookingsQuery.isLoading && !bookingsQuery.bookings.length;
 
   const handleCallAcademy = async (phone) => {
     const normalized = sanitizePhoneForDial(phone);
@@ -375,7 +456,11 @@ export function PlaygroundMyBookingsScreen() {
             fullWidth
             onPress={() =>
               router.push(
-                buildAuthLoginRoute(AUTH_LOGIN_MODES.PUBLIC, true, ROUTES.PLAYGROUNDS_MY_BOOKINGS)
+                buildAuthLoginRoute(
+                  AUTH_LOGIN_MODES.PUBLIC,
+                  true,
+                  ROUTES.PLAYGROUNDS_MY_BOOKINGS,
+                ),
               )
             }
           >
@@ -389,7 +474,12 @@ export function PlaygroundMyBookingsScreen() {
           <Text variant="caption" color={colors.textSecondary}>
             {copy.labels.statusFilter}
           </Text>
-          <View style={[styles.filterRow, { flexDirection: getRowDirection(isRTL) }]}>
+          <View
+            style={[
+              styles.filterRow,
+              { flexDirection: getRowDirection(isRTL) },
+            ]}
+          >
             {STATUS_FILTERS.map((statusKey) => (
               <Chip
                 key={statusKey}
@@ -402,7 +492,10 @@ export function PlaygroundMyBookingsScreen() {
         </Surface>
       ) : null}
 
-      {!isInitialLoading && bookingsQuery.canFetch && !bookingsQuery.error && !filteredBookings.length ? (
+      {!isInitialLoading &&
+      bookingsQuery.canFetch &&
+      !bookingsQuery.error &&
+      !filteredBookings.length ? (
         <EmptyPlaygroundsState
           title={copy.empty.bookingsTitle}
           description={copy.empty.bookingsDescription}
@@ -419,7 +512,11 @@ export function PlaygroundMyBookingsScreen() {
         />
       ))}
 
-      <Button fullWidth variant="secondary" onPress={() => router.push(ROUTES.PLAYGROUNDS_HOME)}>
+      <Button
+        fullWidth
+        variant="secondary"
+        onPress={() => router.push(ROUTES.PLAYGROUNDS_HOME)}
+      >
         {copy.actions.viewPlaygrounds}
       </Button>
 
@@ -439,7 +536,7 @@ export function PlaygroundMyBookingsScreen() {
 const styles = StyleSheet.create({
   container: {
     gap: spacing.md,
-    paddingBottom: spacing['3xl'],
+    paddingBottom: spacing["3xl"],
   },
   guardCard: {
     gap: spacing.sm,
@@ -448,15 +545,15 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   filterRow: {
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
     gap: spacing.sm,
   },
   bookingCard: {
     gap: spacing.sm,
   },
   bookingHead: {
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     gap: spacing.sm,
   },
   bookingHeadText: {
@@ -467,12 +564,12 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   bookingActions: {
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
     gap: spacing.sm,
   },
   modalBackdrop: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: spacing.lg,
   },
   modalCard: {
@@ -482,13 +579,13 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   modalHeaderRow: {
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: spacing.sm,
   },
   modalClose: {
     minHeight: 34,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   modalSummary: {
     gap: 2,
@@ -506,7 +603,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   ltrValue: {
-    writingDirection: 'ltr',
-    textAlign: 'left',
+    writingDirection: "ltr",
+    textAlign: "left",
   },
 });

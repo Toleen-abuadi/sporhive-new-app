@@ -8,7 +8,6 @@ import { getRowDirection } from '../../../utils/rtl';
 import {
   formatAmountLabel,
   formatDateLabel,
-  formatPaymentMethodLabel,
   formatPaymentTypeLabel,
 } from '../utils/playerPortal.formatters';
 import { PortalStatusBadge } from './PortalStatusBadge';
@@ -27,14 +26,6 @@ export function PlayerPaymentCard({ item, locale = 'en', onPress, onInvoicePress
     locale,
     fallback: t('playerPortal.payments.labels.payment'),
   });
-  const paymentMethodLabel = item.paymentMethod
-    ? formatPaymentMethodLabel(item.paymentMethod, {
-        t,
-        locale,
-        fallback: item.paymentMethod,
-      })
-    : t('playerPortal.payments.labels.notAvailable');
-
   return (
     <Pressable
       accessibilityRole="button"
@@ -55,11 +46,6 @@ export function PlayerPaymentCard({ item, locale = 'en', onPress, onInvoicePress
         <View style={styles.titleWrap}>
           <Text variant="bodySmall" weight="bold" numberOfLines={1}>
             {paymentLabel}
-          </Text>
-          <Text variant="caption" color={colors.textSecondary} numberOfLines={1}>
-            {t('playerPortal.payments.labels.method', {
-              value: paymentMethodLabel,
-            })}
           </Text>
         </View>
         <PortalStatusBadge status={item.status} domain="paymentStatus" />

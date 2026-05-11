@@ -36,7 +36,10 @@ import {
   cleanString,
   formatAcademyAgeRange,
   getAcademyDiscoveryCopy,
+  normalizeAcademySportKey,
   normalizeAcademySort,
+  resolveAcademySportLabel,
+  resolveAcademySportOptions,
   sortAcademies,
   tAcademyDiscovery,
 } from '../utils';
@@ -48,36 +51,13 @@ const DEFAULT_FILTERS = Object.freeze({
   age_group: '',
   age_from: '',
   age_to: '',
-  registration_enabled: undefined,
+  registration_open: undefined,
   is_pro: undefined,
   sort: 'recommended',
 });
 
 const PAGE_SIZE = 12;
-const EMPTY_SERVER_FILTERS = Object.freeze({});
 const MAP_ACCESS_TOKEN = String(process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || '').trim();
-
-const resolveSportOptions = (items = []) => {
-  const map = new Map();
-
-  items.forEach((academy) => {
-    (academy.sportTypes || []).forEach((sport) => {
-      const label = cleanString(sport);
-      if (!label) return;
-      const key = label.toLowerCase();
-      if (!map.has(key)) {
-        map.set(key, {
-          value: label,
-          label,
-        });
-      }
-    });
-  });
-
-  return [...map.values()].sort((left, right) =>
-    left.label.localeCompare(right.label)
-  );
-};
 
 const resolveCityOptions = (items = [], locale = 'en') => {
   const map = new Map();
@@ -168,6 +148,46 @@ const toNumberOrNull = (value) => {
   return Number.isFinite(numeric) ? numeric : null;
 };
 
+const buildServerFilters = (filters = {}) => {
+  const sport = cleanString(filters?.sport);
+  const city = cleanString(filters?.city);
+  const query = cleanString(filters?.q);
+  const ageFrom = toNumberOrNull(filters?.age_from);
+  const ageTo = toNumberOrNull(filters?.age_to);
+  const registrationOpen = filters?.registration_open == null ? undefined : Boolean(filters.registration_open);
+  const isPro = filters?.is_pro == null ? undefined : Boolean(filters.is_pro);
+  const sort = normalizeAcademySort(filters?.sort);
+
+  return {
+    ...(query ? { q: query } : {}),
+    ...(sport ? { sport } : {}),
+    ...(city ? { city } : {}),
+    ...(ageFrom != null ? { age_from: ageFrom } : {}),
+    ...(ageTo != null ? { age_to: ageTo } : {}),
+    ...(registrationOpen == null ? {} : { registration_open: registrationOpen }),
+    ...(isPro == null ? {} : { is_pro: isPro }),
+    ...(sort ? { sort } : {}),
+  };
+};
+
+const formatAgeRangeFilterLabel = ({ filters, locale, copy }) => {
+  const minAge = cleanString(filters?.age_from);
+  const maxAge = cleanString(filters?.age_to);
+  const isArabic = String(locale || '').toLowerCase().startsWith('ar');
+  const labelPrefix = copy?.labels?.ageRange || 'Age range';
+
+  if (!minAge && !maxAge) return '';
+  if (minAge && maxAge) {
+    return isArabic
+      ? `${labelPrefix}: من ${minAge} إلى ${maxAge} سنة`
+      : `${labelPrefix}: ${minAge}-${maxAge} years`;
+  }
+  if (minAge) {
+    return isArabic ? `${labelPrefix}: من ${minAge} سنة` : `${labelPrefix}: From ${minAge}`;
+  }
+  return isArabic ? `${labelPrefix}: حتى ${maxAge} سنة` : `${labelPrefix}: Up to ${maxAge}`;
+};
+
 const matchesAgeRange = (academy, ageFrom, ageTo) => {
   const userFrom = toNumberOrNull(ageFrom);
   const userTo = toNumberOrNull(ageTo);
@@ -188,7 +208,7 @@ const matchesAgeRange = (academy, ageFrom, ageTo) => {
 };
 
 const matchesExtraFilters = (academy, filters) => {
-  if (filters.registration_enabled && !academy.registrationEnabled) {
+  if (filters.registration_open && !academy.registrationOpen) {
     return false;
   }
 
@@ -228,6 +248,7 @@ export function AcademyDiscoveryScreen() {
   const copy = getAcademyDiscoveryCopy(locale);
 
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [appliedFilters, setAppliedFilters] = useState(DEFAULT_FILTERS);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [viewMode, setViewMode] = useState('list');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -235,14 +256,19 @@ export function AcademyDiscoveryScreen() {
   const [compareAcademy, setCompareAcademy] = useState(null);
   const [compareOpen, setCompareOpen] = useState(false);
 
+  const serverFilters = useMemo(
+    () => buildServerFilters(appliedFilters),
+    [appliedFilters]
+  );
+
   const academiesQuery = useAcademies({
-    filters: EMPTY_SERVER_FILTERS,
+    filters: serverFilters,
     auto: true,
     locale,
   });
 
   const mapQuery = useAcademiesMap({
-    filters: EMPTY_SERVER_FILTERS,
+    filters: serverFilters,
     auto: viewMode === 'map',
     locale,
   });
@@ -257,19 +283,29 @@ export function AcademyDiscoveryScreen() {
   );
 
   const items = useMemo(
-    () => sortAcademies(applyClientFilters(baseAcademies, filters), filters.sort),
-    [baseAcademies, filters]
+    () => sortAcademies(applyClientFilters(baseAcademies, appliedFilters), appliedFilters.sort),
+    [appliedFilters, baseAcademies]
   );
 
   const mapItems = useMemo(
-    () => sortAcademies(applyClientFilters(baseMapAcademies, filters), filters.sort),
-    [baseMapAcademies, filters]
+    () => sortAcademies(applyClientFilters(baseMapAcademies, appliedFilters), appliedFilters.sort),
+    [appliedFilters, baseMapAcademies]
   );
 
   const sportOptions = useMemo(
-    () => resolveSportOptions(academiesQuery.items),
-    [academiesQuery.items]
+    () => resolveAcademySportOptions(baseAcademies, academiesQuery.raw, locale, copy),
+    [academiesQuery.raw, baseAcademies, copy, locale]
   );
+
+  const sportLabelMap = useMemo(() => {
+    const map = new Map();
+    sportOptions.forEach((item) => {
+      const key = normalizeAcademySportKey(item?.value);
+      if (!key) return;
+      map.set(key, item?.label || item?.value || '');
+    });
+    return map;
+  }, [sportOptions]);
 
   const cityOptions = useMemo(
     () => resolveCityOptions(baseAcademies, locale),
@@ -290,13 +326,13 @@ export function AcademyDiscoveryScreen() {
   }, [ageRangeOptions]);
 
   const dynamicTogglesMeta = useMemo(() => {
-    const registrationEnabledCount = baseAcademies.filter(
-      (academy) => Boolean(academy.registrationEnabled)
+    const registrationOpenCount = baseAcademies.filter(
+      (academy) => Boolean(academy.registrationOpen)
     ).length;
     const proCount = baseAcademies.filter((academy) => Boolean(academy.isPro)).length;
 
     return {
-      registrationEnabledCount,
+      registrationOpenCount,
       proCount,
     };
   }, [baseAcademies]);
@@ -304,68 +340,76 @@ export function AcademyDiscoveryScreen() {
   const activeFilters = useMemo(() => {
     const entries = [];
 
-    if (cleanString(filters.q)) {
+    if (cleanString(appliedFilters.q)) {
       entries.push({
         key: 'q',
-        label: `${copy?.filters?.search || 'Search'}: ${filters.q}`,
+        label: `${copy?.filters?.search || 'Search'}: ${appliedFilters.q}`,
       });
     }
 
-    if (cleanString(filters.sport)) {
+    if (cleanString(appliedFilters.sport)) {
+      const sportKey = normalizeAcademySportKey(appliedFilters.sport);
       entries.push({
         key: 'sport',
-        label: `${copy?.filters?.sport || 'Sport'}: ${filters.sport}`,
+        label: `${copy?.filters?.sport || 'Sport'}: ${
+          sportLabelMap.get(sportKey) || resolveAcademySportLabel(appliedFilters.sport, locale, copy)
+        }`,
       });
     }
 
-    if (cleanString(filters.city)) {
+    if (cleanString(appliedFilters.city)) {
       entries.push({
         key: 'city',
-        label: `${copy?.filters?.city || 'City'}: ${filters.city}`,
+        label: `${copy?.filters?.city || 'City'}: ${appliedFilters.city}`,
       });
     }
 
-    if (cleanString(filters.age_group)) {
+    if (cleanString(appliedFilters.age_group)) {
       entries.push({
         key: 'age_group',
         label:
-          ageRangeLabelMap.get(cleanString(filters.age_group)) ||
-          `${copy?.labels?.ageRange || 'Age range'}: ${filters.age_group}`,
+          ageRangeLabelMap.get(cleanString(appliedFilters.age_group)) ||
+          `${copy?.labels?.ageRange || 'Age range'}: ${appliedFilters.age_group}`,
       });
     }
 
-    if (!cleanString(filters.age_group) && (cleanString(filters.age_from) || cleanString(filters.age_to))) {
+    if (
+      !cleanString(appliedFilters.age_group) &&
+      (cleanString(appliedFilters.age_from) || cleanString(appliedFilters.age_to))
+    ) {
       entries.push({
         key: 'age_range',
-        label: `${copy?.labels?.ageRange || 'Age range'}: ${
-          filters.age_from || '?'
-        }-${filters.age_to || '?'}`,
+        label: formatAgeRangeFilterLabel({
+          filters: appliedFilters,
+          locale,
+          copy,
+        }),
       });
     }
 
-    if (filters.registration_enabled) {
+    if (appliedFilters.registration_open) {
       entries.push({
-        key: 'registration_enabled',
-        label: copy?.filters?.registrationEnabled,
+        key: 'registration_open',
+        label: copy?.filters?.registrationOpen || copy?.filters?.registrationEnabled,
       });
     }
 
-    if (filters.is_pro) {
+    if (appliedFilters.is_pro) {
       entries.push({
         key: 'is_pro',
         label: copy?.filters?.proOnly,
       });
     }
 
-    if (normalizeAcademySort(filters.sort) !== 'recommended') {
+    if (normalizeAcademySort(appliedFilters.sort) !== 'recommended') {
       entries.push({
         key: 'sort',
-        label: `${copy?.filters?.sort || 'Sort'}: ${normalizeSortLabel(copy, filters.sort)}`,
+        label: `${copy?.filters?.sort || 'Sort'}: ${normalizeSortLabel(copy, appliedFilters.sort)}`,
       });
     }
 
     return entries;
-  }, [ageRangeLabelMap, copy, filters]);
+  }, [ageRangeLabelMap, appliedFilters, copy, locale, sportLabelMap]);
 
   const visibleItems = useMemo(
     () => items.slice(0, visibleCount),
@@ -382,6 +426,36 @@ export function AcademyDiscoveryScreen() {
 
   const removeFilter = (key) => {
     setVisibleCount(PAGE_SIZE);
+
+    setAppliedFilters((prev) => {
+      if (key === 'age_range' || key === 'age_group') {
+        return {
+          ...prev,
+          age_group: '',
+          age_from: '',
+          age_to: '',
+        };
+      }
+
+      if (key === 'registration_open' || key === 'is_pro') {
+        return {
+          ...prev,
+          [key]: undefined,
+        };
+      }
+
+      if (key === 'sort') {
+        return {
+          ...prev,
+          sort: 'recommended',
+        };
+      }
+
+      return {
+        ...prev,
+        [key]: '',
+      };
+    });
 
     setFilters((prev) => {
       if (key === 'age_range') {
@@ -402,7 +476,7 @@ export function AcademyDiscoveryScreen() {
         };
       }
 
-      if (key === 'registration_enabled' || key === 'is_pro') {
+      if (key === 'registration_open' || key === 'is_pro') {
         return {
           ...prev,
           [key]: undefined,
@@ -425,12 +499,28 @@ export function AcademyDiscoveryScreen() {
 
   const clearFilters = () => {
     setFilters(DEFAULT_FILTERS);
+    setAppliedFilters(DEFAULT_FILTERS);
     setVisibleCount(PAGE_SIZE);
   };
 
   const handleFiltersChange = (nextFilters) => {
     setFilters(nextFilters || DEFAULT_FILTERS);
     setVisibleCount(PAGE_SIZE);
+  };
+
+  const applyFilters = () => {
+    const nextAppliedFilters = filters || DEFAULT_FILTERS;
+    const nextServerFilters = buildServerFilters(nextAppliedFilters);
+    const nextSignature = JSON.stringify(nextServerFilters);
+    const currentSignature = JSON.stringify(serverFilters);
+    setAppliedFilters(nextAppliedFilters);
+    setVisibleCount(PAGE_SIZE);
+    if (nextSignature === currentSignature) {
+      academiesQuery.fetchAcademies({ refresh: true, nextFilters: nextServerFilters });
+      if (viewMode === 'map' || mapQuery.items.length || mapQuery.error) {
+        mapQuery.fetchAcademiesMap({ refresh: true, nextFilters: nextServerFilters });
+      }
+    }
   };
 
   const handlePin = (academy) => {
@@ -564,12 +654,7 @@ export function AcademyDiscoveryScreen() {
           ageRangeOptions={ageRangeOptions}
           dynamicTogglesMeta={dynamicTogglesMeta}
           copy={copy}
-          onRefresh={() => {
-            academiesQuery.refetch();
-            if (viewMode === 'map' || mapQuery.items.length || mapQuery.error) {
-              mapQuery.refetch();
-            }
-          }}
+          onApply={applyFilters}
         />
       ) : null}
 

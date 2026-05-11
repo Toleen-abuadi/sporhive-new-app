@@ -232,6 +232,7 @@ export function useAcademies({ filters = {}, auto = true, locale = 'en' } = {}) 
     filtersSignature,
     items: query.data?.items || [],
     total: query.data?.total || 0,
+    raw: query.data?.raw || null,
     error: query.error,
     isLoading: query.isLoading,
     isRefreshing: query.isRefreshing,
