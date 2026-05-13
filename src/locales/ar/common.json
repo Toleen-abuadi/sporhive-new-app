@@ -981,6 +981,7 @@
         "phone1Label": "الهاتف الأساسي",
         "phone2Label": "الهاتف الثانوي",
         "dateOfBirthLabel": "تاريخ الميلاد (YYYY-MM-DD)",
+        "dateOfBirth": "تاريخ الميلاد: {{value}}",
         "addressLabel": "العنوان",
         "locationLabel": "رابط Google Maps",
         "locationPlaceholder": "https://maps.google.com/...",
@@ -1065,5 +1066,8 @@
       "mapView": "عرض الخريطة",
       "close": "إغلاق القائمة"
     }
+  },
+  "errors": {
+    "imageTooLarge": "الصورة كبيرة جدًا (الحد الأقصى 2 ميغابايت)."
   }
 }

@@ -4,23 +4,39 @@ const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const OVERLAP_BLOCKING_STATUSES = new Set(['pending', 'approved', 'active', 'scheduled', 'upcoming']);
 const ACTIVE_LIKE_STATUSES = new Set(['active', 'current']);
 const UPCOMING_LIKE_STATUSES = new Set(['upcoming', 'scheduled']);
+const REQUEST_TERMINAL_STATUSES = new Set(['rejected', 'cancelled', 'canceled']);
 const ENDED_LIKE_STATUSES = new Set([
   'ended',
   'completed',
   'expired',
-  'cancelled',
-  'canceled',
-  'rejected',
 ]);
-const PENDING_LIKE_STATUSES = new Set(['pending']);
+const PENDING_LIKE_STATUSES = new Set(['pending', 'rejected', 'cancelled', 'canceled']);
+
+const STATUS_ALIASES = Object.freeze({
+  cancel: 'cancelled',
+  canceled: 'cancelled',
+  rejected_request: 'rejected',
+  decline: 'rejected',
+  declined: 'rejected',
+  deny: 'rejected',
+  denied: 'rejected',
+  in_progress: 'active',
+  inprogress: 'active',
+  current: 'active',
+  scheduled_freeze: 'scheduled',
+});
 
 const cleanString = (value) => {
   if (value == null) return '';
   return String(value).trim();
 };
 
-const shouldBlockOverlap = (status) => OVERLAP_BLOCKING_STATUSES.has(cleanString(status).toLowerCase());
-const normalizeStatus = (status) => cleanString(status).toLowerCase();
+const normalizeStatus = (status) => {
+  const normalized = cleanString(status).toLowerCase();
+  if (!normalized) return '';
+  return STATUS_ALIASES[normalized] || normalized;
+};
+const shouldBlockOverlap = (status) => OVERLAP_BLOCKING_STATUSES.has(normalizeStatus(status));
 const normalizePhase = (phase) => cleanString(phase).toLowerCase();
 
 const normalizeFreezeISODate = (value) => {
@@ -84,9 +100,10 @@ export const dateRangeOverlaps = (leftStart, leftEnd, rightStart, rightEnd) => {
 export const inferFreezePhase = (item, todayISO = toISODate(new Date())) => {
   const status = normalizeStatus(item?.status);
   const explicitPhase = normalizePhase(item?.phase);
-  if (explicitPhase === 'active' || explicitPhase === 'upcoming' || explicitPhase === 'ended') {
+  if (explicitPhase === 'active' || explicitPhase === 'upcoming' || explicitPhase === 'ended' || explicitPhase === 'pending') {
     return explicitPhase;
   }
+  if (REQUEST_TERMINAL_STATUSES.has(status)) return 'pending';
 
   if (ACTIVE_LIKE_STATUSES.has(status)) return 'active';
   if (UPCOMING_LIKE_STATUSES.has(status)) return 'upcoming';
@@ -145,6 +162,19 @@ const sortFreezes = (items) => {
   });
 };
 
+const resolveFreezeCategory = (item) => {
+  const status = normalizeStatus(item?.status);
+  const phase = normalizePhase(item?.phase);
+
+  if (REQUEST_TERMINAL_STATUSES.has(status)) return 'pending';
+  if (phase === 'active' || ACTIVE_LIKE_STATUSES.has(status)) return 'active';
+  if (phase === 'upcoming' || UPCOMING_LIKE_STATUSES.has(status)) return 'upcoming';
+  if (phase === 'ended' || ENDED_LIKE_STATUSES.has(status)) return 'ended';
+  if (phase === 'pending' || PENDING_LIKE_STATUSES.has(status)) return 'pending';
+
+  return 'pending';
+};
+
 const dedupeFreezeRows = (rows) => {
   const seen = new Set();
   const result = [];
@@ -173,22 +203,18 @@ const dedupeFreezeRows = (rows) => {
 
 export const mapFreezeRows = (rows, { todayISO = toISODate(new Date()) } = {}) => {
   const items = sortFreezes(dedupeFreezeRows(rows).map((row) => normalizeFreezeRow(row, todayISO)));
+  const categorizedItems = items.map((row) => ({
+    ...row,
+    category: resolveFreezeCategory(row),
+  }));
 
-  const active = items.filter(
-    (row) => row.phase === 'active' || ACTIVE_LIKE_STATUSES.has(normalizeStatus(row.status))
-  );
-  const upcoming = items.filter(
-    (row) => row.phase === 'upcoming' || UPCOMING_LIKE_STATUSES.has(normalizeStatus(row.status))
-  );
-  const ended = items.filter(
-    (row) => row.phase === 'ended' || ENDED_LIKE_STATUSES.has(normalizeStatus(row.status))
-  );
-  const pending = items.filter(
-    (row) => row.phase === 'pending' || PENDING_LIKE_STATUSES.has(normalizeStatus(row.status))
-  );
+  const active = categorizedItems.filter((row) => row.category === 'active');
+  const upcoming = categorizedItems.filter((row) => row.category === 'upcoming');
+  const ended = categorizedItems.filter((row) => row.category === 'ended');
+  const pending = categorizedItems.filter((row) => row.category === 'pending');
 
   return {
-    items,
+    items: categorizedItems,
     active,
     upcoming,
     ended,

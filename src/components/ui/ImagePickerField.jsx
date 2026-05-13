@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera, RotateCcw, Trash2 } from 'lucide-react-native';
+import { useToast } from '../feedback/ToastHost';
 import { useI18n } from '../../hooks/useI18n';
 import { useTheme } from '../../hooks/useTheme';
 import { borderRadius, spacing } from '../../theme/tokens';
@@ -9,6 +10,7 @@ import { Button } from './Button';
 import { Text } from './Text';
 
 const IMAGE_MEDIA_TYPES = ['images'];
+const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
 
 export function ImagePickerField({
   label = '',
@@ -27,6 +29,7 @@ export function ImagePickerField({
 }) {
   const { colors } = useTheme();
   const { t } = useI18n();
+  const toast = useToast();
 
   const [isPicking, setIsPicking] = useState(false);
 
@@ -62,10 +65,29 @@ export function ImagePickerField({
         return;
       }
 
+      const rawFileSize = asset.fileSize ?? asset.size;
+      const normalizedFileSize =
+        rawFileSize == null || Number.isNaN(Number(rawFileSize))
+          ? undefined
+          : Number(rawFileSize);
+
+      if (normalizedFileSize != null && normalizedFileSize > MAX_IMAGE_SIZE_BYTES) {
+        const message = t('errors.imageTooLarge');
+        toast.error(message);
+        onError?.({
+          code: 'IMAGE_TOO_LARGE',
+          errorId: 'errors.imageTooLarge',
+          message,
+          fileSize: normalizedFileSize,
+          maxFileSize: MAX_IMAGE_SIZE_BYTES,
+        });
+        return;
+      }
+
       onPick?.({
         uri: asset.uri,
         mimeType: asset.mimeType || asset.type || 'image/jpeg',
-        fileSize: asset.fileSize || asset.size || 0,
+        fileSize: normalizedFileSize ?? 0,
         base64: asset.base64 || '',
       });
     } catch (reason) {

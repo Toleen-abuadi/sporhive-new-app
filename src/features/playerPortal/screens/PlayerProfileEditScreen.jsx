@@ -216,6 +216,11 @@ export function PlayerProfileEditScreen() {
               }}
               onError={(reason) => {
                 const code = String(reason?.code || '').toUpperCase();
+                const errorId = String(reason?.errorId || '');
+                if (code === 'IMAGE_TOO_LARGE' || errorId === 'errors.imageTooLarge') {
+                  setPickerError({ message: reason?.message || t('errors.imageTooLarge') });
+                  return;
+                }
                 if (code === 'MEDIA_PERMISSION_DENIED') {
                   setPickerError({ message: t('playerPortal.profile.errors.imagePermission') });
                   return;

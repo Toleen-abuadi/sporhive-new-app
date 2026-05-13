@@ -1,58 +1,71 @@
-import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
-import { SlidersHorizontal, ChevronDown, ChevronUp, Search, RotateCcw } from 'lucide-react-native';
+import { useMemo, useState } from "react";
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  TextInput,
+  View,
+} from "react-native";
+import {
+  SlidersHorizontal,
+  ChevronDown,
+  ChevronUp,
+  Search,
+  RotateCcw,
+} from "lucide-react-native";
 
-import { DatePickerField } from '../../../components/ui/DatePickerField';
-import { Button } from '../../../components/ui/Button';
-import { Chip } from '../../../components/ui/Chip';
-import { Surface } from '../../../components/ui/Surface';
-import { Text } from '../../../components/ui/Text';
-import { useI18n } from '../../../hooks/useI18n';
-import { useTheme } from '../../../hooks/useTheme';
-import { borderRadius, spacing } from '../../../theme/tokens';
-import { getRowDirection } from '../../../utils/rtl';
+import { DatePickerField } from "../../../components/ui/DatePickerField";
+import { Button } from "../../../components/ui/Button";
+import { Chip } from "../../../components/ui/Chip";
+import { Surface } from "../../../components/ui/Surface";
+import { Text } from "../../../components/ui/Text";
+import { useI18n } from "../../../hooks/useI18n";
+import { useTheme } from "../../../hooks/useTheme";
+import { borderRadius, spacing } from "../../../theme/tokens";
+import { getRowDirection } from "../../../utils/rtl";
 
 const SPORTS_FILTERS = Object.freeze([
-  { id: '', labelKey: 'playgrounds.filters.sports.allSports' },
-  { id: 'football', labelKey: 'playgrounds.filters.sports.football' },
-  { id: 'basketball', labelKey: 'playgrounds.filters.sports.basketball' },
-  { id: 'tennis', labelKey: 'playgrounds.filters.sports.tennis' },
-  { id: 'swimming', labelKey: 'playgrounds.filters.sports.swimming' },
-  { id: 'gym', labelKey: 'playgrounds.filters.sports.gym' },
+  { id: "", labelKey: "playgrounds.filters.sports.allSports" },
+  { id: "football", labelKey: "playgrounds.filters.sports.football" },
+  { id: "basketball", labelKey: "playgrounds.filters.sports.basketball" },
+  { id: "tennis", labelKey: "playgrounds.filters.sports.tennis" },
+  { id: "swimming", labelKey: "playgrounds.filters.sports.swimming" },
+  { id: "gym", labelKey: "playgrounds.filters.sports.gym" },
 ]);
 
 const MARKETPLACE_TABS = Object.freeze([
-  { id: 'all', labelKey: 'playgrounds.filters.tabs.all' },
-  { id: 'offers', labelKey: 'playgrounds.filters.tabs.offers' },
-  { id: 'featured', labelKey: 'playgrounds.filters.tabs.featured' },
-  { id: 'premium', labelKey: 'playgrounds.filters.tabs.premium' },
-  { id: 'pro', labelKey: 'playgrounds.filters.tabs.pro' },
+  { id: "all", labelKey: "playgrounds.filters.tabs.all" },
+  { id: "offers", labelKey: "playgrounds.filters.tabs.offers" },
+  { id: "featured", labelKey: "playgrounds.filters.tabs.featured" },
+  { id: "premium", labelKey: "playgrounds.filters.tabs.premium" },
+  { id: "pro", labelKey: "playgrounds.filters.tabs.pro" },
 ]);
 
 const SORT_OPTIONS = Object.freeze([
-  { id: 'recommended', labelKey: 'playgrounds.filters.sort.recommended' },
-  { id: 'price_asc', labelKey: 'playgrounds.filters.sort.priceLowHigh' },
-  { id: 'price_desc', labelKey: 'playgrounds.filters.sort.priceHighLow' },
-  { id: 'distance_asc', labelKey: 'playgrounds.filters.sort.nearest' },
-  { id: 'rating_desc', labelKey: 'playgrounds.filters.sort.highestRated' },
+  { id: "recommended", labelKey: "playgrounds.filters.sort.recommended" },
+  { id: "price_asc", labelKey: "playgrounds.filters.sort.priceLowHigh" },
+  { id: "price_desc", labelKey: "playgrounds.filters.sort.priceHighLow" },
+  { id: "distance_asc", labelKey: "playgrounds.filters.sort.nearest" },
+  { id: "rating_desc", labelKey: "playgrounds.filters.sort.highestRated" },
 ]);
 
 const todayIsoDate = () => {
   const date = new Date();
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 };
 
 const safeTextInputAlign = (isRTL) => ({
-  textAlign: isRTL ? 'right' : 'left',
-  writingDirection: isRTL ? 'rtl' : 'ltr',
+  textAlign: isRTL ? "right" : "left",
+  writingDirection: isRTL ? "rtl" : "ltr",
 });
 
 const resolveTextStyle = (isRTL) => ({
-  textAlign: isRTL ? 'right' : 'left',
-  writingDirection: isRTL ? 'rtl' : 'ltr',
+  textAlign: isRTL ? "right" : "left",
+  writingDirection: isRTL ? "rtl" : "ltr",
 });
 
 export function PlaygroundsFilterForm({
@@ -72,19 +85,19 @@ export function PlaygroundsFilterForm({
   const { colors } = useTheme();
   const [expanded, setExpanded] = useState(false);
 
-  const selectedSort = String(filters?.orderBy || 'recommended');
-  const selectedSport = String(filters?.activityId || '');
+  const selectedSort = String(filters?.orderBy || "recommended");
+  const selectedSport = String(filters?.activityId || "");
   const rowDirection = getRowDirection(isRTL);
   const textStyle = resolveTextStyle(isRTL);
 
   const showDurationFilters = useMemo(
     () => Array.isArray(durationOptions) && durationOptions.length > 0,
-    [durationOptions]
+    [durationOptions],
   );
 
   const selectedSortLabel =
     SORT_OPTIONS.find((option) => option.id === selectedSort)?.labelKey ||
-    'playgrounds.filters.sort.recommended';
+    "playgrounds.filters.sort.recommended";
 
   return (
     <Surface variant="soft" padding="sm" style={styles.surface}>
@@ -101,44 +114,67 @@ export function PlaygroundsFilterForm({
               },
             ]}
           >
-            <View style={[styles.iconBadge, { backgroundColor: colors.accentOrangeSoft }]}>
-              <SlidersHorizontal size={16} color={colors.accentOrange} strokeWidth={2.4} />
+            <View
+              style={[
+                styles.iconBadge,
+                { backgroundColor: colors.accentOrangeSoft },
+              ]}
+            >
+              <SlidersHorizontal
+                size={16}
+                color={colors.accentOrange}
+                strokeWidth={2.4}
+              />
             </View>
 
             <View style={styles.titleBlock}>
               <Text variant="bodySmall" weight="bold" style={textStyle}>
-                {t('playgrounds.filters.title', { defaultValue: 'Filters' })}
+                {t("playgrounds.filters.title", { defaultValue: "Filters" })}
               </Text>
-              <Text variant="caption" color={colors.textMuted} numberOfLines={1} style={textStyle}>
+              <Text
+                variant="caption"
+                color={colors.textMuted}
+                numberOfLines={1}
+                style={textStyle}
+              >
                 {activeFiltersCount > 0
-                  ? t('playgrounds.filters.activeCount', { count: activeFiltersCount })
+                  ? t("playgrounds.filters.activeCount", {
+                      count: activeFiltersCount,
+                    })
                   : t(selectedSortLabel)}
               </Text>
             </View>
 
             {expanded ? (
-              <ChevronUp size={18} color={colors.textSecondary} strokeWidth={2.2} />
+              <ChevronUp
+                size={18}
+                color={colors.textSecondary}
+                strokeWidth={2.2}
+              />
             ) : (
-              <ChevronDown size={18} color={colors.textSecondary} strokeWidth={2.2} />
+              <ChevronDown
+                size={18}
+                color={colors.textSecondary}
+                strokeWidth={2.2}
+              />
             )}
           </Pressable>
-
-          <Button
-            size="sm"
-            style={styles.searchMiniButton}
-            loading={searching}
-            disabled={searching}
-            onPress={onSearch}
-            leadingIcon={<Search size={14} color={colors.white} strokeWidth={2.3} />}
-          >
-            {t('playgrounds.filters.actions.search')}
-          </Button>
         </View>
 
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={[styles.chipsRow, { flexDirection: rowDirection }]}
+          contentContainerStyle={[
+            styles.chipsRow,
+            { flexDirection: rowDirection },
+          ]}
+          ref={(ref) => {
+            if (ref && isRTL) {
+              requestAnimationFrame(() => {
+                ref.scrollToEnd({ animated: false });
+              });
+            }
+          }}
         >
           {MARKETPLACE_TABS.map((tab) => (
             <Chip
@@ -153,20 +189,36 @@ export function PlaygroundsFilterForm({
         {expanded ? (
           <View style={styles.expandedContent}>
             <View style={styles.section}>
-              <Text variant="caption" color={colors.textSecondary} style={textStyle}>
-                {t('playgrounds.filters.fields.sport', { defaultValue: 'Sport' })}
+              <Text
+                variant="caption"
+                color={colors.textSecondary}
+                style={textStyle}
+              >
+                {t("playgrounds.filters.fields.sport", {
+                  defaultValue: "Sport",
+                })}
               </Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={[styles.chipsRow, { flexDirection: rowDirection }]}
+                contentContainerStyle={[
+                  styles.chipsRow,
+                  { flexDirection: rowDirection },
+                ]}
+                ref={(ref) => {
+                  if (ref && isRTL) {
+                    requestAnimationFrame(() => {
+                      ref.scrollToEnd({ animated: false });
+                    });
+                  }
+                }}
               >
                 {SPORTS_FILTERS.map((sport) => (
                   <Chip
-                    key={sport.id || 'all'}
+                    key={sport.id || "all"}
                     label={t(sport.labelKey)}
                     selected={selectedSport === sport.id}
-                    onPress={() => onChange?.('activityId', sport.id)}
+                    onPress={() => onChange?.("activityId", sport.id)}
                   />
                 ))}
               </ScrollView>
@@ -175,23 +227,27 @@ export function PlaygroundsFilterForm({
             <View style={[styles.grid, { flexDirection: rowDirection }]}>
               <View style={styles.gridItem}>
                 <DatePickerField
-                  label={t('playgrounds.filters.fields.date')}
-                  value={String(filters?.date || '')}
-                  onChange={(value) => onChange?.('date', value)}
-                  placeholder={t('common.formats.isoDatePlaceholder')}
+                  label={t("playgrounds.filters.fields.date")}
+                  value={String(filters?.date || "")}
+                  onChange={(value) => onChange?.("date", value)}
+                  placeholder={t("common.formats.isoDatePlaceholder")}
                   minDate={todayIsoDate()}
                 />
               </View>
 
               <View style={styles.gridItem}>
-                <Text variant="caption" color={colors.textSecondary} style={textStyle}>
-                  {t('playgrounds.filters.fields.players')}
+                <Text
+                  variant="caption"
+                  color={colors.textSecondary}
+                  style={textStyle}
+                >
+                  {t("playgrounds.filters.fields.players")}
                 </Text>
                 <TextInput
                   keyboardType="number-pad"
-                  value={String(filters?.numberOfPlayers || '')}
-                  onChangeText={(value) => onChange?.('numberOfPlayers', value)}
-                  placeholder={t('playgrounds.filters.placeholders.players')}
+                  value={String(filters?.numberOfPlayers || "")}
+                  onChangeText={(value) => onChange?.("numberOfPlayers", value)}
+                  placeholder={t("playgrounds.filters.placeholders.players")}
                   placeholderTextColor={colors.textMuted}
                   style={[
                     styles.input,
@@ -207,13 +263,17 @@ export function PlaygroundsFilterForm({
             </View>
 
             <View style={styles.section}>
-              <Text variant="caption" color={colors.textSecondary} style={textStyle}>
-                {t('playgrounds.filters.fields.location')}
+              <Text
+                variant="caption"
+                color={colors.textSecondary}
+                style={textStyle}
+              >
+                {t("playgrounds.filters.fields.location")}
               </Text>
               <TextInput
-                value={String(filters?.baseLocation || '')}
-                onChangeText={(value) => onChange?.('baseLocation', value)}
-                placeholder={t('playgrounds.filters.placeholders.location')}
+                value={String(filters?.baseLocation || "")}
+                onChangeText={(value) => onChange?.("baseLocation", value)}
+                placeholder={t("playgrounds.filters.placeholders.location")}
                 placeholderTextColor={colors.textMuted}
                 style={[
                   styles.input,
@@ -229,20 +289,38 @@ export function PlaygroundsFilterForm({
 
             {showDurationFilters ? (
               <View style={styles.section}>
-                <Text variant="caption" color={colors.textSecondary} style={textStyle}>
-                  {t('playgrounds.filters.fields.duration')}
+                <Text
+                  variant="caption"
+                  color={colors.textSecondary}
+                  style={textStyle}
+                >
+                  {t("playgrounds.filters.fields.duration")}
                 </Text>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={[styles.chipsRow, { flexDirection: rowDirection }]}
+                  contentContainerStyle={[
+                    styles.chipsRow,
+                    { flexDirection: rowDirection },
+                  ]}
+                  ref={(ref) => {
+                    if (ref && isRTL) {
+                      requestAnimationFrame(() => {
+                        ref.scrollToEnd({ animated: false });
+                      });
+                    }
+                  }}
                 >
                   {durationOptions.map((item) => (
                     <Chip
                       key={item.id}
                       label={item.label}
-                      selected={String(filters?.durationId || '') === String(item.id)}
-                      onPress={() => onChange?.('durationId', String(item.id || ''))}
+                      selected={
+                        String(filters?.durationId || "") === String(item.id)
+                      }
+                      onPress={() =>
+                        onChange?.("durationId", String(item.id || ""))
+                      }
                     />
                   ))}
                 </ScrollView>
@@ -261,26 +339,49 @@ export function PlaygroundsFilterForm({
             >
               <View style={styles.titleBlock}>
                 <Text variant="bodySmall" weight="semibold" style={textStyle}>
-                  {t('playgrounds.filters.fields.specialOffers')}
+                  {t("playgrounds.filters.fields.specialOffers")}
                 </Text>
               </View>
 
               <Switch
                 value={Boolean(filters?.hasSpecialOffer)}
-                onValueChange={(value) => onChange?.('hasSpecialOffer', Boolean(value))}
-                trackColor={{ false: colors.border, true: colors.accentOrangeSoft }}
-                thumbColor={Boolean(filters?.hasSpecialOffer) ? colors.accentOrange : colors.surface}
+                onValueChange={(value) =>
+                  onChange?.("hasSpecialOffer", Boolean(value))
+                }
+                trackColor={{
+                  false: colors.border,
+                  true: colors.accentOrangeSoft,
+                }}
+                thumbColor={
+                  Boolean(filters?.hasSpecialOffer)
+                    ? colors.accentOrange
+                    : colors.surface
+                }
               />
             </View>
 
             <View style={styles.section}>
-              <Text variant="caption" color={colors.textSecondary} style={textStyle}>
-                {t('playgrounds.filters.fields.sort')}
+              <Text
+                variant="caption"
+                color={colors.textSecondary}
+                style={textStyle}
+              >
+                {t("playgrounds.filters.fields.sort")}
               </Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={[styles.chipsRow, { flexDirection: rowDirection }]}
+                contentContainerStyle={[
+                  styles.chipsRow,
+                  { flexDirection: rowDirection },
+                ]}
+                ref={(ref) => {
+                  if (ref && isRTL) {
+                    requestAnimationFrame(() => {
+                      ref.scrollToEnd({ animated: false });
+                    });
+                  }
+                }}
               >
                 {SORT_OPTIONS.map((option) => (
                   <Chip
@@ -300,9 +401,11 @@ export function PlaygroundsFilterForm({
                 loading={searching}
                 disabled={searching}
                 onPress={onSearch}
-                leadingIcon={<Search size={14} color={colors.white} strokeWidth={2.3} />}
+                leadingIcon={
+                  <Search size={14} color={colors.white} strokeWidth={2.3} />
+                }
               >
-                {t('playgrounds.filters.actions.search')}
+                {t("playgrounds.filters.actions.search")}
               </Button>
 
               {canReset ? (
@@ -312,9 +415,15 @@ export function PlaygroundsFilterForm({
                   style={styles.actionButton}
                   onPress={onReset}
                   disabled={searching}
-                  leadingIcon={<RotateCcw size={14} color={colors.textPrimary} strokeWidth={2.3} />}
+                  leadingIcon={
+                    <RotateCcw
+                      size={14}
+                      color={colors.textPrimary}
+                      strokeWidth={2.3}
+                    />
+                  }
                 >
-                  {t('playgrounds.filters.actions.reset')}
+                  {t("playgrounds.filters.actions.reset")}
                 </Button>
               ) : null}
             </View>
@@ -333,7 +442,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   topRow: {
-    alignItems: 'center',
+    alignItems: "center",
     gap: spacing.sm,
   },
   collapseButton: {
@@ -341,7 +450,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
     borderWidth: 1,
     borderRadius: borderRadius.lg,
-    alignItems: 'center',
+    alignItems: "center",
     gap: spacing.sm,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
@@ -350,16 +459,12 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: borderRadius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   titleBlock: {
     flex: 1,
     gap: 2,
-  },
-  searchMiniButton: {
-    minWidth: 94,
-    minHeight: 46,
   },
   expandedContent: {
     gap: spacing.sm,
@@ -373,7 +478,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 1,
   },
   grid: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.sm,
   },
   gridItem: {
@@ -394,8 +499,8 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: spacing.sm,
   },
   actionsRow: {

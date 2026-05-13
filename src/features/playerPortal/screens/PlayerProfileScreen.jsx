@@ -151,6 +151,11 @@ export function PlayerProfileScreen() {
               {t('playerPortal.profile.labels.phone2', { value: profile.phone2 || '-' })}
             </Text>
             <Text variant="bodySmall" color={colors.textSecondary}>
+              {t('playerPortal.profile.labels.dateOfBirth', {
+                value: formatDateLabel(profile.date_of_birth, { locale, fallback: '–' }),
+              })}
+            </Text>
+            <Text variant="bodySmall" color={colors.textSecondary}>
               {t('playerPortal.profile.labels.address', { value: profile.address || '-' })}
             </Text>
             <Text variant="bodySmall" color={colors.textSecondary}>

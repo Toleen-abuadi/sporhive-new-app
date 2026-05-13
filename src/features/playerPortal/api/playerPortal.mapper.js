@@ -320,8 +320,11 @@ const sortPaymentsDesc = (payments) =>
 const normalizePaymentRow = (payment) => {
   const row = toObject(payment);
   const status = normalizePaymentStatus(row.status);
-  const type = cleanString(row.type || 'payment');
-  const subType = cleanString(row.subType);
+  const rawType = cleanString(row.type || 'payment');
+  const rawSubType = cleanString(row.subType);
+  const useSubTypeAsPrimaryType = rawType.toLowerCase() === 'full' && Boolean(rawSubType);
+  const type = useSubTypeAsPrimaryType ? rawSubType : rawType;
+  const subType = useSubTypeAsPrimaryType ? '' : rawSubType;
   const invoiceId = cleanString(row.invoiceId || row.externalInvoiceNumber || row.reference);
   const amountNumber = normalizePaymentAmount(row.amount);
   const creditsUsed = normalizePaymentAmount(row.creditsUsed);

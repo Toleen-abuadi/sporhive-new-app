@@ -77,6 +77,11 @@ const resolveTextStyle = (isRTL) => ({
   writingDirection: isRTL ? 'rtl' : 'ltr',
 });
 
+const safeTextInputAlign = (isRTL) => ({
+  textAlign: isRTL ? 'right' : 'left',
+  writingDirection: isRTL ? 'rtl' : 'ltr',
+});
+
 const formatAgeRangeLabel = ({ minAge, maxAge, isRTL, copy }) => {
   const minValue = cleanString(minAge);
   const maxValue = cleanString(maxAge);
@@ -255,8 +260,8 @@ export function AcademyFilters({
             styles.searchInput,
             {
               color: colors.inputText || colors.textPrimary,
-              ...textStyle,
             },
+            safeTextInputAlign(isRTL),
           ]}
         />
       </View>
@@ -304,8 +309,8 @@ export function AcademyFilters({
               color: colors.inputText || colors.textPrimary,
               borderColor: colors.inputBorder || colors.border,
               backgroundColor: colors.inputBackground || colors.surface,
-              ...textStyle,
             },
+            safeTextInputAlign(isRTL),
           ]}
         />
 
@@ -331,7 +336,11 @@ export function AcademyFilters({
       </View>
 
       <View style={styles.block}>
-        <Text variant="caption" color={colors.textSecondary} style={textStyle}>
+        <Text
+          variant="caption"
+          color={colors.textSecondary}
+          style={[textStyle, styles.ageLabel, isRTL ? styles.alignEnd : styles.alignStart]}
+        >
           {copy?.filters?.ageGroup || 'Age group'}
         </Text>
 
@@ -349,7 +358,11 @@ export function AcademyFilters({
         ) : null}
 
         {(cleanString(filters?.age_from) || cleanString(filters?.age_to)) ? (
-          <Text variant="caption" color={colors.textMuted} style={textStyle}>
+          <Text
+            variant="caption"
+            color={colors.textMuted}
+            style={[textStyle, styles.ageLabel, isRTL ? styles.alignEnd : styles.alignStart]}
+          >
             {formatAgeRangeLabel({
               minAge: filters?.age_from,
               maxAge: filters?.age_to,
@@ -373,8 +386,8 @@ export function AcademyFilters({
                 color: colors.inputText || colors.textPrimary,
                 borderColor: colors.inputBorder || colors.border,
                 backgroundColor: colors.inputBackground || colors.surface,
-                ...textStyle,
               },
+              safeTextInputAlign(isRTL),
             ]}
           />
 
@@ -391,8 +404,8 @@ export function AcademyFilters({
                 color: colors.inputText || colors.textPrimary,
                 borderColor: colors.inputBorder || colors.border,
                 backgroundColor: colors.inputBackground || colors.surface,
-                ...textStyle,
               },
+              safeTextInputAlign(isRTL),
             ]}
           />
         </View>
@@ -466,6 +479,15 @@ const styles = StyleSheet.create({
   },
   block: {
     gap: spacing.xs,
+  },
+  ageLabel: {
+    width: '100%',
+  },
+  alignStart: {
+    alignSelf: 'flex-start',
+  },
+  alignEnd: {
+    alignSelf: 'flex-end',
   },
   rowWrap: {
     flexWrap: 'wrap',

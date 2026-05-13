@@ -974,6 +974,7 @@
         "phone1Label": "Primary Phone",
         "phone2Label": "Secondary Phone",
         "dateOfBirthLabel": "Date of Birth (YYYY-MM-DD)",
+        "dateOfBirth": "Date of Birth: {{value}}",
         "addressLabel": "Address",
         "locationLabel": "Google Maps Link",
         "locationPlaceholder": "https://maps.google.com/...",
@@ -1065,6 +1066,7 @@
     "backToPublic": "Back to Public Home"
   },
   "errors": {
-    "couldNotSaveChoice": "Could not save your choice. Please try again."
+    "couldNotSaveChoice": "Could not save your choice. Please try again.",
+    "imageTooLarge": "The image is too large (max 2 MB)."
   }
 }

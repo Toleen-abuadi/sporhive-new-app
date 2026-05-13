@@ -130,6 +130,7 @@ export function AcademyTemplateScreen() {
 
     return null;
   }, [copy?.actions?.call, copy?.actions?.email, copy?.actions?.website, copy?.template?.contactAcademy, email, primaryPhone, website]);
+  const hasPrimaryAction = Boolean(canJoin || (showContact && contactPrimary));
 
   const handlePrimaryAction = () => {
     if (!academy?.slug) return;
@@ -282,22 +283,21 @@ export function AcademyTemplateScreen() {
               ) : null}
             </ScrollView>
 
-            <View
-              style={[
-                styles.stickyBar,
-                {
-                  borderTopColor: colors.border,
-                  backgroundColor: colors.surfaceElevated,
-                },
-              ]}
-            >
-              {canJoin || contactPrimary ? (
+            {hasPrimaryAction ? (
+              <View
+                style={[
+                  styles.stickyBar,
+                  {
+                    borderTopColor: colors.border,
+                    backgroundColor: colors.surfaceElevated,
+                  },
+                ]}
+              >
                 <Button fullWidth onPress={handlePrimaryAction}>
                   {canJoin ? copy.actions.joinNow : contactUsLabel}
                 </Button>
-              ) : null}
-
-            </View>
+              </View>
+            ) : null}
           </>
         ) : null}
       </View>
