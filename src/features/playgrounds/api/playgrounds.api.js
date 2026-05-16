@@ -33,25 +33,30 @@ const isHttpUrl = (value) => /^https?:\/\//i.test(cleanString(value));
 const isHttpsUrl = (value) => /^https:\/\//i.test(cleanString(value));
 
 const resolveApiBaseUrl = () => {
-  const configuredBase = cleanString(
-    process.env.EXPO_PUBLIC_API_BASE_URL || process.env.EXPO_PUBLIC_API_URL
-  ).replace(/\/+$/, '');
+  const configuredBase = cleanString(process.env.EXPO_PUBLIC_API_BASE_URL).replace(/\/+$/, '');
 
   if (!configuredBase) {
-    console.warn(
-      `[playgroundsApi] Missing EXPO_PUBLIC_API_BASE_URL. Falling back to ${DEFAULT_API_BASE_URL}.`
-    );
-    return DEFAULT_API_BASE_URL;
-  }
-
-  if (!isHttpUrl(configuredBase)) {
-    console.error(
-      `[playgroundsApi] Invalid EXPO_PUBLIC_API_BASE_URL "${configuredBase}". Expected a full http(s) URL.`
-    );
+    if (__DEV__) {
+      const legacyDevBase = cleanString(process.env.EXPO_PUBLIC_API_URL).replace(/\/+$/, '');
+      const devFallbackBase = legacyDevBase || DEFAULT_API_BASE_URL;
+      console.warn(
+        `[playgroundsApi] Missing EXPO_PUBLIC_API_BASE_URL. Using dev fallback ${devFallbackBase}.`
+      );
+      return devFallbackBase;
+    }
     return '';
   }
 
-  if (!isHttpsUrl(configuredBase)) {
+  if (!isHttpUrl(configuredBase)) {
+    if (__DEV__) {
+      console.error(
+        `[playgroundsApi] Invalid EXPO_PUBLIC_API_BASE_URL "${configuredBase}". Expected a full http(s) URL.`
+      );
+    }
+    return '';
+  }
+
+  if (__DEV__ && !isHttpsUrl(configuredBase)) {
     console.warn(
       `[playgroundsApi] EXPO_PUBLIC_API_BASE_URL is using http (${configuredBase}). Android release builds may block clear-text requests.`
     );
@@ -413,7 +418,12 @@ export const playgroundsApi = {
     }
 
     if (!API_BASE_URL) return '';
-    console.warn(`[playgroundsApi] Received unrecognized image identifier "${raw}". Attempting to resolve as image ID, but consider updating the backend to return full URLs.`);
+    if (__DEV__) {
+      const preview = raw.length > 48 ? `${raw.slice(0, 48)}...` : raw;
+      console.warn(
+        `[playgroundsApi] Received unrecognized image identifier (len=${raw.length}, preview="${preview}"). Attempting to resolve as image ID.`
+      );
+    }
     return `${API_BASE_URL}${PLAYGROUNDS_ENDPOINTS.PUBLIC_VENUE_IMAGE(raw)}`;
   },
 

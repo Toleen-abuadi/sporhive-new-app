@@ -41,8 +41,10 @@ const resolveApiBaseUrl = () => {
   const direct = cleanString(process.env.EXPO_PUBLIC_API_BASE_URL);
   if (direct) return direct.replace(/\/+$/, '');
 
-  const fallback = cleanString(process.env.EXPO_PUBLIC_API_URL);
-  if (fallback) return fallback.replace(/\/+$/, '');
+  if (__DEV__) {
+    const fallback = cleanString(process.env.EXPO_PUBLIC_API_URL);
+    if (fallback) return fallback.replace(/\/+$/, '');
+  }
 
   return '';
 };

@@ -305,29 +305,6 @@ export function usePlayerRenewalFlow({ auto = true } = {}) {
 
   const filteredGroupOptions = visibleGroups;
 
-  useEffect(() => {
-    console.log('[renewal-flow] options.availableGroups source counts', {
-      optionsGroups: (optionsQuery.data?.groups || []).length,
-      overviewGroups: (overviewQuery.overview?.subscription?.availableGroups || []).length,
-    });
-  }, [optionsQuery.data?.groups, overviewQuery.overview?.subscription?.availableGroups]);
-
-  useEffect(() => {
-    console.log('[renewal-flow] rawGroupOptions', rawGroupOptions);
-  }, [rawGroupOptions]);
-
-  useEffect(() => {
-    console.log('[renewal-flow] subscriptionGroups', subscriptionGroups);
-  }, [subscriptionGroups]);
-
-  useEffect(() => {
-    console.log('[renewal-flow] selectedCourseGroups', selectedCourseGroups);
-  }, [selectedCourseGroups]);
-
-  useEffect(() => {
-    console.log('[renewal-flow] visibleGroups', visibleGroups);
-  }, [visibleGroups]);
-
   const selectedGroup = useMemo(
     () => filteredGroupOptions.find((item) => sameId(item.value, groupId)) || null,
     [filteredGroupOptions, groupId]

@@ -40,25 +40,30 @@ const toDataUrl = (base64, mime = 'image/jpeg') => {
 };
 
 const resolveApiBaseUrl = () => {
-  const configuredBase = cleanString(
-    process.env.EXPO_PUBLIC_API_BASE_URL || process.env.EXPO_PUBLIC_API_URL
-  ).replace(/\/+$/, '');
+  const configuredBase = cleanString(process.env.EXPO_PUBLIC_API_BASE_URL).replace(/\/+$/, '');
 
   if (!configuredBase) {
-    console.warn(
-      `[academyDiscoveryApi] Missing EXPO_PUBLIC_API_BASE_URL. Falling back to ${DEFAULT_API_BASE_URL}.`
-    );
-    return DEFAULT_API_BASE_URL;
-  }
-
-  if (!isHttpUrl(configuredBase)) {
-    console.error(
-      `[academyDiscoveryApi] Invalid EXPO_PUBLIC_API_BASE_URL "${configuredBase}". Expected a full http(s) URL.`
-    );
+    if (__DEV__) {
+      const legacyDevBase = cleanString(process.env.EXPO_PUBLIC_API_URL).replace(/\/+$/, '');
+      const devFallbackBase = legacyDevBase || DEFAULT_API_BASE_URL;
+      console.warn(
+        `[academyDiscoveryApi] Missing EXPO_PUBLIC_API_BASE_URL. Using dev fallback ${devFallbackBase}.`
+      );
+      return devFallbackBase;
+    }
     return '';
   }
 
-  if (!isHttpsUrl(configuredBase)) {
+  if (!isHttpUrl(configuredBase)) {
+    if (__DEV__) {
+      console.error(
+        `[academyDiscoveryApi] Invalid EXPO_PUBLIC_API_BASE_URL "${configuredBase}". Expected a full http(s) URL.`
+      );
+    }
+    return '';
+  }
+
+  if (__DEV__ && !isHttpsUrl(configuredBase)) {
     console.warn(
       `[academyDiscoveryApi] EXPO_PUBLIC_API_BASE_URL is using http (${configuredBase}). Android release builds may block clear-text requests.`
     );

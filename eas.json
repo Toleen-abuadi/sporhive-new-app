@@ -25,11 +25,11 @@
     "production": {
       "autoIncrement": true,
       "android": {
-        "buildType": "apk"
+        "buildType": "app-bundle"
       },
       "env": {
         "EXPO_PUBLIC_ENV_NAME": "production",
-        "EXPO_PUBLIC_API_BASE_URL": "https://backend.sporhive.com/api/v1"
+        "EXPO_PUBLIC_API_BASE_URL": "https://sporhive-admin-system-backend-production.up.railway.app/api/v1"
       }
     }
   },

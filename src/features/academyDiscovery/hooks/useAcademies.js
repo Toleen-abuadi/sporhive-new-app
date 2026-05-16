@@ -159,14 +159,6 @@ const logListResponse = (payload, normalized) => {
     : Array.isArray(nested.items)
     ? nested.items.length
     : 0;
-
-  // Safe shape log for debugging rendering flow.
-  console.log('[AcademyDiscovery] list response', {
-    receivedType: Array.isArray(payload) ? 'array' : typeof payload,
-    topKeys: Object.keys(root).slice(0, 8),
-    receivedCount,
-    normalizedCount: normalized.items.length,
-  });
 };
 
 export function useAcademies({ filters = {}, auto = true, locale = 'en' } = {}) {
@@ -189,14 +181,6 @@ export function useAcademies({ filters = {}, auto = true, locale = 'en' } = {}) 
           const result = await academyDiscoveryApi.listAcademies(nextFilters, {
             locale,
           });
-
-          if (__DEV__) {
-            console.log('[AcademyDiscovery] list result status', {
-              success: Boolean(result?.success),
-              isDataArray: Array.isArray(result?.data),
-              dataType: Array.isArray(result?.data) ? 'array' : typeof result?.data,
-            });
-          }
 
           if (!result.success) {
             throw result.error;
