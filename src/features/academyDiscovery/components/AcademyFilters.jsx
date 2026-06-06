@@ -339,7 +339,7 @@ export function AcademyFilters({
         <Text
           variant="caption"
           color={colors.textSecondary}
-          style={[textStyle, styles.ageLabel, isRTL ? styles.alignEnd : styles.alignStart]}
+          style={[textStyle, styles.ageLabel]}
         >
           {copy?.filters?.ageGroup || 'Age group'}
         </Text>
@@ -361,7 +361,7 @@ export function AcademyFilters({
           <Text
             variant="caption"
             color={colors.textMuted}
-            style={[textStyle, styles.ageLabel, isRTL ? styles.alignEnd : styles.alignStart]}
+            style={[textStyle, styles.ageLabel]}
           >
             {formatAgeRangeLabel({
               minAge: filters?.age_from,
@@ -483,14 +483,9 @@ const styles = StyleSheet.create({
   ageLabel: {
     width: '100%',
   },
-  alignStart: {
-    alignSelf: 'flex-start',
-  },
-  alignEnd: {
-    alignSelf: 'flex-end',
-  },
   rowWrap: {
     flexWrap: 'wrap',
+    alignContent: 'flex-start',
     gap: spacing.sm,
   },
   cityInput: {

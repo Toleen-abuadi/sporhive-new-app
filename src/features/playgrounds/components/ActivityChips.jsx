@@ -1,10 +1,9 @@
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Chip } from '../../../components/ui/Chip';
+import { RtlHorizontalScrollView } from '../../../components/ui/RtlHorizontalScrollView';
 import { Text } from '../../../components/ui/Text';
-import { useI18n } from '../../../hooks/useI18n';
 import { useTheme } from '../../../hooks/useTheme';
 import { spacing } from '../../../theme/tokens';
-import { getRowDirection } from '../../../utils/rtl';
 
 export function ActivityChips({
   items = [],
@@ -17,15 +16,10 @@ export function ActivityChips({
   style,
 }) {
   const { colors } = useTheme();
-  const { isRTL } = useI18n();
 
   return (
     <View style={[styles.container, style]}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={[styles.content, { flexDirection: getRowDirection(isRTL) }]}
-      >
+      <RtlHorizontalScrollView contentContainerStyle={styles.content}>
         <Chip
           label={allLabel}
           selected={!selectedId}
@@ -49,7 +43,7 @@ export function ActivityChips({
             />
           );
         })}
-      </ScrollView>
+      </RtlHorizontalScrollView>
 
       {isLoading ? (
         <Text variant="caption" color={colors.textMuted}>

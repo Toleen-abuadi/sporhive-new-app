@@ -1,29 +1,36 @@
+import { normalizeApiEnumValue } from '../../../utils/apiValueLocalization';
 import { toArray, toObject } from './playerPortal.normalizers';
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const OVERLAP_BLOCKING_STATUSES = new Set(['pending', 'approved', 'active', 'scheduled', 'upcoming']);
 const ACTIVE_LIKE_STATUSES = new Set(['active', 'current']);
 const UPCOMING_LIKE_STATUSES = new Set(['upcoming', 'scheduled']);
-const REQUEST_TERMINAL_STATUSES = new Set(['rejected', 'cancelled', 'canceled']);
+const REQUEST_TERMINAL_STATUSES = new Set(['rejected', 'cancelled']);
 const ENDED_LIKE_STATUSES = new Set([
   'ended',
   'completed',
   'expired',
 ]);
-const PENDING_LIKE_STATUSES = new Set(['pending', 'rejected', 'cancelled', 'canceled']);
+const PENDING_LIKE_STATUSES = new Set(['pending', 'rejected', 'cancelled', 'under_review']);
+const FREEZE_PHASES = new Set(['active', 'upcoming', 'ended', 'pending']);
 
 const STATUS_ALIASES = Object.freeze({
   cancel: 'cancelled',
   canceled: 'cancelled',
+  canceled_by_user: 'cancelled',
+  cancelled_by_user: 'cancelled',
   rejected_request: 'rejected',
   decline: 'rejected',
   declined: 'rejected',
   deny: 'rejected',
   denied: 'rejected',
+  underreview: 'under_review',
   in_progress: 'active',
   inprogress: 'active',
   current: 'active',
   scheduled_freeze: 'scheduled',
+  archived: 'ended',
+  old: 'ended',
 });
 
 const cleanString = (value) => {
@@ -31,13 +38,40 @@ const cleanString = (value) => {
   return String(value).trim();
 };
 
+const pickFreezeStatus = (item = {}) =>
+  cleanString(
+    item.status ||
+      item.freeze_status ||
+      item.request_status ||
+      item.approval_status ||
+      item.state
+  );
+
+const pickFreezePhase = (item = {}) =>
+  cleanString(
+    item.phase ||
+      item.freeze_phase ||
+      item.request_phase ||
+      item.status_phase
+  );
+
 const normalizeStatus = (status) => {
-  const normalized = cleanString(status).toLowerCase();
+  const normalized = normalizeApiEnumValue(status) || cleanString(status).toLowerCase();
   if (!normalized) return '';
   return STATUS_ALIASES[normalized] || normalized;
 };
 const shouldBlockOverlap = (status) => OVERLAP_BLOCKING_STATUSES.has(normalizeStatus(status));
-const normalizePhase = (phase) => cleanString(phase).toLowerCase();
+const normalizePhase = (phase) => {
+  const normalized = normalizeStatus(phase);
+  if (!normalized) return '';
+  if (normalized === 'scheduled') return 'upcoming';
+  if (normalized === 'approved') return 'pending';
+  if (REQUEST_TERMINAL_STATUSES.has(normalized) || PENDING_LIKE_STATUSES.has(normalized)) return 'pending';
+  if (ACTIVE_LIKE_STATUSES.has(normalized)) return 'active';
+  if (UPCOMING_LIKE_STATUSES.has(normalized)) return 'upcoming';
+  if (ENDED_LIKE_STATUSES.has(normalized)) return 'ended';
+  return normalized;
+};
 
 const normalizeFreezeISODate = (value) => {
   const raw = cleanString(value);
@@ -98,36 +132,35 @@ export const dateRangeOverlaps = (leftStart, leftEnd, rightStart, rightEnd) => {
 };
 
 export const inferFreezePhase = (item, todayISO = toISODate(new Date())) => {
-  const status = normalizeStatus(item?.status);
-  const explicitPhase = normalizePhase(item?.phase);
-  if (explicitPhase === 'active' || explicitPhase === 'upcoming' || explicitPhase === 'ended' || explicitPhase === 'pending') {
-    return explicitPhase;
-  }
-  if (REQUEST_TERMINAL_STATUSES.has(status)) return 'pending';
+  const status = normalizeStatus(pickFreezeStatus(item));
+  const explicitPhase = normalizePhase(pickFreezePhase(item));
 
+  if (status === 'approved') {
+    const startDate = normalizeFreezeISODate(item?.startDate || item?.start_date);
+    const endDate = normalizeFreezeISODate(item?.endDate || item?.end_date);
+    if (isISODate(startDate) && isISODate(endDate)) {
+      if (todayISO < startDate) return 'upcoming';
+      if (todayISO > endDate) return 'ended';
+      return 'active';
+    }
+  }
+
+  if (REQUEST_TERMINAL_STATUSES.has(status) || PENDING_LIKE_STATUSES.has(status)) return 'pending';
   if (ACTIVE_LIKE_STATUSES.has(status)) return 'active';
   if (UPCOMING_LIKE_STATUSES.has(status)) return 'upcoming';
   if (ENDED_LIKE_STATUSES.has(status)) return 'ended';
-  if (PENDING_LIKE_STATUSES.has(status)) return 'pending';
+  if (FREEZE_PHASES.has(explicitPhase)) return explicitPhase;
 
-  if (status !== 'approved') return explicitPhase || 'other';
-
-  const startDate = normalizeFreezeISODate(item?.startDate || item?.start_date);
-  const endDate = normalizeFreezeISODate(item?.endDate || item?.end_date);
-  if (!isISODate(startDate) || !isISODate(endDate)) return 'other';
-
-  if (todayISO < startDate) return 'upcoming';
-  if (todayISO > endDate) return 'ended';
-  return 'active';
+  return 'pending';
 };
 
 const normalizeFreezeRow = (row, todayISO = toISODate(new Date())) => {
   const source = toObject(row);
   const startDate = normalizeFreezeISODate(source.start_date || source.startDate);
   const endDate = normalizeFreezeISODate(source.end_date || source.endDate);
-  const status = normalizeStatus(source.status) || 'pending';
+  const status = normalizeStatus(pickFreezeStatus(source)) || 'pending';
   const phase = inferFreezePhase(
-    { status, startDate, endDate, phase: source.phase || source.freeze_phase },
+    { status, startDate, endDate, phase: pickFreezePhase(source) },
     todayISO
   );
 
@@ -162,16 +195,9 @@ const sortFreezes = (items) => {
   });
 };
 
-const resolveFreezeCategory = (item) => {
-  const status = normalizeStatus(item?.status);
-  const phase = normalizePhase(item?.phase);
-
-  if (REQUEST_TERMINAL_STATUSES.has(status)) return 'pending';
-  if (phase === 'active' || ACTIVE_LIKE_STATUSES.has(status)) return 'active';
-  if (phase === 'upcoming' || UPCOMING_LIKE_STATUSES.has(status)) return 'upcoming';
-  if (phase === 'ended' || ENDED_LIKE_STATUSES.has(status)) return 'ended';
-  if (phase === 'pending' || PENDING_LIKE_STATUSES.has(status)) return 'pending';
-
+const resolveFreezeCategory = (item, todayISO = toISODate(new Date())) => {
+  const category = inferFreezePhase(item, todayISO);
+  if (FREEZE_PHASES.has(category)) return category;
   return 'pending';
 };
 
@@ -205,7 +231,7 @@ export const mapFreezeRows = (rows, { todayISO = toISODate(new Date()) } = {}) =
   const items = sortFreezes(dedupeFreezeRows(rows).map((row) => normalizeFreezeRow(row, todayISO)));
   const categorizedItems = items.map((row) => ({
     ...row,
-    category: resolveFreezeCategory(row),
+    category: resolveFreezeCategory(row, todayISO),
   }));
 
   const active = categorizedItems.filter((row) => row.category === 'active');
@@ -268,8 +294,8 @@ export const mapFreezeRowsFromOverview = (overviewRaw, { todayISO = toISODate(ne
   const normalizedRows = dedupeFreezeRows(mergedRows).map((row) => {
     const item = toObject(row);
 
-    const normalizedStatus = normalizeStatus(item.status);
-    let normalizedPhase = item.phase || item.freeze_phase || '';
+    const normalizedStatus = normalizeStatus(pickFreezeStatus(item));
+    let normalizedPhase = normalizePhase(pickFreezePhase(item));
 
     if (!normalizedPhase) {
       normalizedPhase = inferFreezePhase(item, todayISO);
@@ -287,7 +313,7 @@ export const mapFreezeRowsFromOverview = (overviewRaw, { todayISO = toISODate(ne
 
 export const canCancelScheduledFreeze = (freezeRow, todayISO = toISODate(new Date())) => {
   const row = toObject(freezeRow);
-  const status = normalizeStatus(row.status);
+  const status = normalizeStatus(pickFreezeStatus(row));
   const startDate = normalizeFreezeISODate(row.startDate || row.start_date);
 
   if (!row.id) return false;

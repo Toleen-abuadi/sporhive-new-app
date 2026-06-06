@@ -78,6 +78,7 @@ const DOMAIN_KEYS = Object.freeze({
     registration: 'common.enums.paymentTypes.registration',
     installment: 'common.enums.paymentTypes.installment',
     session: 'common.enums.paymentTypes.session',
+    new: 'common.enums.paymentTypes.new',
     unknown: 'common.enums.paymentTypes.unknown',
   },
   registrationType: {

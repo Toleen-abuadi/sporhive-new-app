@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import {
   Pressable,
-  ScrollView,
   StyleSheet,
   Switch,
   TextInput,
@@ -18,6 +17,7 @@ import {
 import { DatePickerField } from "../../../components/ui/DatePickerField";
 import { Button } from "../../../components/ui/Button";
 import { Chip } from "../../../components/ui/Chip";
+import { RtlHorizontalScrollView } from "../../../components/ui/RtlHorizontalScrollView";
 import { Surface } from "../../../components/ui/Surface";
 import { Text } from "../../../components/ui/Text";
 import { useI18n } from "../../../hooks/useI18n";
@@ -161,21 +161,7 @@ export function PlaygroundsFilterForm({
           </Pressable>
         </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={[
-            styles.chipsRow,
-            { flexDirection: rowDirection },
-          ]}
-          ref={(ref) => {
-            if (ref && isRTL) {
-              requestAnimationFrame(() => {
-                ref.scrollToEnd({ animated: false });
-              });
-            }
-          }}
-        >
+        <RtlHorizontalScrollView contentContainerStyle={styles.chipsRow}>
           {MARKETPLACE_TABS.map((tab) => (
             <Chip
               key={tab.id}
@@ -184,7 +170,7 @@ export function PlaygroundsFilterForm({
               onPress={() => onTabChange?.(tab.id)}
             />
           ))}
-        </ScrollView>
+        </RtlHorizontalScrollView>
 
         {expanded ? (
           <View style={styles.expandedContent}>
@@ -198,21 +184,7 @@ export function PlaygroundsFilterForm({
                   defaultValue: "Sport",
                 })}
               </Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={[
-                  styles.chipsRow,
-                  { flexDirection: rowDirection },
-                ]}
-                ref={(ref) => {
-                  if (ref && isRTL) {
-                    requestAnimationFrame(() => {
-                      ref.scrollToEnd({ animated: false });
-                    });
-                  }
-                }}
-              >
+              <RtlHorizontalScrollView contentContainerStyle={styles.chipsRow}>
                 {SPORTS_FILTERS.map((sport) => (
                   <Chip
                     key={sport.id || "all"}
@@ -221,7 +193,7 @@ export function PlaygroundsFilterForm({
                     onPress={() => onChange?.("activityId", sport.id)}
                   />
                 ))}
-              </ScrollView>
+              </RtlHorizontalScrollView>
             </View>
 
             <View style={[styles.grid, { flexDirection: rowDirection }]}>
@@ -296,21 +268,7 @@ export function PlaygroundsFilterForm({
                 >
                   {t("playgrounds.filters.fields.duration")}
                 </Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={[
-                    styles.chipsRow,
-                    { flexDirection: rowDirection },
-                  ]}
-                  ref={(ref) => {
-                    if (ref && isRTL) {
-                      requestAnimationFrame(() => {
-                        ref.scrollToEnd({ animated: false });
-                      });
-                    }
-                  }}
-                >
+                <RtlHorizontalScrollView contentContainerStyle={styles.chipsRow}>
                   {durationOptions.map((item) => (
                     <Chip
                       key={item.id}
@@ -323,7 +281,7 @@ export function PlaygroundsFilterForm({
                       }
                     />
                   ))}
-                </ScrollView>
+                </RtlHorizontalScrollView>
               </View>
             ) : null}
 
@@ -368,21 +326,7 @@ export function PlaygroundsFilterForm({
               >
                 {t("playgrounds.filters.fields.sort")}
               </Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={[
-                  styles.chipsRow,
-                  { flexDirection: rowDirection },
-                ]}
-                ref={(ref) => {
-                  if (ref && isRTL) {
-                    requestAnimationFrame(() => {
-                      ref.scrollToEnd({ animated: false });
-                    });
-                  }
-                }}
-              >
+              <RtlHorizontalScrollView contentContainerStyle={styles.chipsRow}>
                 {SORT_OPTIONS.map((option) => (
                   <Chip
                     key={option.id}
@@ -391,7 +335,7 @@ export function PlaygroundsFilterForm({
                     onPress={() => onSortChange?.(option.id)}
                   />
                 ))}
-              </ScrollView>
+              </RtlHorizontalScrollView>
             </View>
 
             <View style={[styles.actionsRow, { flexDirection: rowDirection }]}>

@@ -5,7 +5,19 @@ import { useTheme } from '../../../hooks/useTheme';
 import { spacing } from '../../../theme/tokens';
 import { PortalStatusBadge } from './PortalStatusBadge';
 
-export function PlayerKpiCard({ label, value, hint, status, style }) {
+export function PlayerKpiCard({
+  label,
+  value,
+  hint,
+  status,
+  style,
+  valueVariant = 'h2',
+  valueWeight = 'bold',
+  valueNumberOfLines,
+  valueAdjustsFontSizeToFit = false,
+  valueMinimumFontScale = 0.9,
+  valueStyle,
+}) {
   const { colors } = useTheme();
 
   return (
@@ -13,7 +25,14 @@ export function PlayerKpiCard({ label, value, hint, status, style }) {
       <Text variant="caption" weight="semibold" color={colors.textSecondary}>
         {label}
       </Text>
-      <Text variant="h2" weight="bold">
+      <Text
+        variant={valueVariant}
+        weight={valueWeight}
+        numberOfLines={valueNumberOfLines}
+        adjustsFontSizeToFit={valueAdjustsFontSizeToFit}
+        minimumFontScale={valueMinimumFontScale}
+        style={[styles.value, valueStyle]}
+      >
         {value}
       </Text>
       <View style={styles.footer}>
@@ -34,8 +53,10 @@ const styles = StyleSheet.create({
     minWidth: 110,
     gap: spacing.xs,
   },
+  value: {
+    flexShrink: 1,
+  },
   footer: {
     gap: spacing.xs,
   },
 });
-

@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import { playerPortalApi } from '../api/playerPortal.api';
 import { usePortalQueryState } from './usePortalQueryState';
+import { usePlayerOverview } from './usePlayerOverview';
 import { usePlayerPortalSession } from './usePlayerPortalSession';
 
 const DEFAULT_LEADERBOARD_ORDER_BY = '-avg_percentage';
@@ -31,6 +32,7 @@ const DEFAULT_DATA = Object.freeze({
   leaderboard: {
     groupId: null,
     items: [],
+    types: [],
   },
   currentPlayerId: null,
   hasPerformanceData: false,
@@ -49,6 +51,41 @@ const toArray = (value) => (Array.isArray(value) ? value : []);
 const cleanString = (value) => {
   if (value == null) return '';
   return String(value).trim();
+};
+
+const createTypesPartialFailure = (message, details = {}, code = 'PERFORMANCE_TYPES_PARTIAL', status = 0) => ({
+  code,
+  status,
+  message,
+  details: toObject(details),
+});
+
+const resolveActiveGroupId = ({ payload, context, overview }) => {
+  const safePayload = toObject(payload);
+  const requestContext = toObject(context);
+  const registration = toObject(requestContext.registration);
+  const subscription = toObject(requestContext.subscription);
+  const overviewSubscription = toObject(overview?.subscription);
+
+  const candidates = [
+    safePayload.group_id,
+    safePayload.groupId,
+    requestContext.groupId,
+    requestContext.group_id,
+    requestContext.currentGroupId,
+    registration.groupId,
+    registration.group_id,
+    subscription.groupId,
+    subscription.group_id,
+    overviewSubscription.groupId,
+  ];
+
+  for (let index = 0; index < candidates.length; index += 1) {
+    const resolved = toNumber(candidates[index], null);
+    if (resolved != null) return resolved;
+  }
+
+  return null;
 };
 
 const normalizeTypePercentages = (value) => {
@@ -240,6 +277,7 @@ const hasMeaningfulPerformanceData = (summary, periods) => {
 
 export function usePlayerPerformance({ auto = false } = {}) {
   const session = usePlayerPortalSession();
+  const overviewQuery = usePlayerOverview({ auto: false });
   const query = usePortalQueryState(DEFAULT_DATA);
   const runQuery = query.run;
 
@@ -259,42 +297,85 @@ export function usePlayerPerformance({ auto = false } = {}) {
       return runQuery(
         async () => {
           const safePayload = toObject(payload);
-          const { order_by: leaderboardOrderBy, tryout_id: tryoutId, ...corePayload } = safePayload;
+          const { order_by: leaderboardOrderBy, ...corePayload } = safePayload;
+          const activeGroupId = resolveActiveGroupId({
+            payload: safePayload,
+            context: session.requestContext,
+            overview: overviewQuery.overview,
+          });
           const leaderboardPayload = leaderboardOrderBy
             ? {
                 ...corePayload,
                 order_by: leaderboardOrderBy,
               }
             : corePayload;
+          const typesPayload =
+            activeGroupId != null
+              ? {
+                  ...corePayload,
+                  group_id: activeGroupId,
+                }
+              : null;
 
           const [summaryResult, periodsResult, typesResult, leaderboardResult] = await Promise.all([
             playerPortalApi.getFeedbackPlayerSummary(session.requestContext, corePayload),
             playerPortalApi.getFeedbackPeriods(session.requestContext, corePayload),
-            playerPortalApi.getFeedbackTypes(session.requestContext, corePayload),
+            typesPayload
+              ? playerPortalApi.getFeedbackTypes(session.requestContext, typesPayload)
+              : Promise.resolve({
+                  success: true,
+                  data: {
+                    items: [],
+                    raw: {},
+                  },
+                }),
             playerPortalApi.getFeedbackLeaderboard(session.requestContext, leaderboardPayload),
           ]);
 
-          if (!summaryResult.success || !periodsResult.success || !typesResult.success) {
-            throw summaryResult.error || periodsResult.error || typesResult.error;
+          if (!summaryResult.success || !periodsResult.success) {
+            throw summaryResult.error || periodsResult.error;
           }
 
-          const partialFailures = [leaderboardResult]
-            .filter((result) => !result.success)
-            .map((result) => result.error);
+          const partialFailures = [];
+          if (!typesPayload) {
+            partialFailures.push(
+              createTypesPartialFailure(
+                'Performance types are unavailable because no active group is set.',
+                { reason: 'GROUP_ID_MISSING' },
+                'PERFORMANCE_TYPES_GROUP_MISSING'
+              )
+            );
+          } else if (!typesResult.success) {
+            partialFailures.push(typesResult.error);
+          }
+
+          if (!leaderboardResult.success) {
+            partialFailures.push(leaderboardResult.error);
+          }
 
           const summary = summaryResult.success ? summaryResult.data : DEFAULT_DATA.summary;
           const periods = periodsResult.success ? periodsResult.data : DEFAULT_DATA.periods;
-          const types = typesResult.success ? typesResult.data.items : DEFAULT_DATA.types;
+          const types =
+            typesResult.success && Array.isArray(typesResult?.data?.items)
+              ? typesResult.data.items
+              : DEFAULT_DATA.types;
           const leaderboard = leaderboardResult?.success
             ? normalizeLeaderboardData(leaderboardResult.data)
             : DEFAULT_DATA.leaderboard;
+          const leaderboardWithTypes = {
+            ...leaderboard,
+            types:
+              Array.isArray(leaderboard?.types) && leaderboard.types.length > 0
+                ? leaderboard.types
+                : types,
+          };
           const breakdown = mergeBreakdownWithTypes(summary.breakdown, types);
           const currentPlayerId = Number(
             session.requestContext?.tryoutId ?? session.requestContext?.externalPlayerId ?? 0
           ) || null;
           const hasPerformanceData = hasMeaningfulPerformanceData(summary, periods);
           const hasLeaderboardData =
-            Array.isArray(leaderboard?.items) && leaderboard.items.length > 0;
+            Array.isArray(leaderboardWithTypes?.items) && leaderboardWithTypes.items.length > 0;
 
           return {
             summary: {
@@ -303,7 +384,7 @@ export function usePlayerPerformance({ auto = false } = {}) {
             },
             periods,
             types,
-            leaderboard,
+            leaderboard: leaderboardWithTypes,
             currentPlayerId,
             hasPerformanceData,
             hasLeaderboardData,
@@ -315,7 +396,13 @@ export function usePlayerPerformance({ auto = false } = {}) {
         }
       );
     },
-    [runQuery, session.canFetchOverview, session.guardReason, session.requestContext]
+    [
+      overviewQuery.overview,
+      runQuery,
+      session.canFetchOverview,
+      session.guardReason,
+      session.requestContext,
+    ]
   );
 
   useEffect(() => {

@@ -123,6 +123,17 @@ export function PlayerHomeScreen() {
   const hasOverview = Boolean(overview);
   const isInitialLoading = isLoading && !hasOverview;
   const playerImage = resolvePlayerImage(overview);
+  const latestPaymentStatus = String(overview?.summaries?.latestPaymentStatus || '')
+    .trim()
+    .toLowerCase();
+  const isPaymentConfirmed = latestPaymentStatus === 'paid' || latestPaymentStatus === 'confirmed';
+  const paymentStatusValue = isPaymentConfirmed
+    ? t('playerPortal.home.kpis.paymentPaidShort')
+    : formatPaymentStatusLabel(overview?.summaries?.latestPaymentStatus, {
+        t,
+        locale,
+        fallback: '-',
+      });
 
   return (
     <AppScreen
@@ -237,14 +248,22 @@ export function PlayerHomeScreen() {
             />
             <PlayerKpiCard
               label={t('playerPortal.home.kpis.paymentStatus')}
-              value={formatPaymentStatusLabel(overview.summaries.latestPaymentStatus, {
-                t,
-                locale,
-                fallback: '-',
-              })}
+              value={paymentStatusValue}
               hint={t('playerPortal.home.kpis.latestPayment')}
-              status={overview.summaries.latestPaymentStatus}
-              style={styles.kpiCard}
+              status={isPaymentConfirmed ? undefined : overview.summaries.latestPaymentStatus}
+              valueVariant="h3"
+              valueWeight="semibold"
+              valueNumberOfLines={1}
+              valueAdjustsFontSizeToFit
+              valueMinimumFontScale={0.82}
+              valueStyle={[styles.paymentValue, isPaymentConfirmed ? { color: colors.success } : null]}
+              style={[
+                styles.kpiCard,
+                styles.paymentKpiCard,
+                isPaymentConfirmed
+                  ? { backgroundColor: colors.successSoft, borderColor: colors.success }
+                  : null,
+              ]}
             />
           </View>
 
@@ -375,6 +394,13 @@ const styles = StyleSheet.create({
   },
   kpiCard: {
     minWidth: '31%',
+  },
+  paymentKpiCard: {
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  paymentValue: {
+    flexShrink: 1,
   },
   statusInline: {
     alignItems: 'center',

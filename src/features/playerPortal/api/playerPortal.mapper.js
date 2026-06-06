@@ -394,20 +394,45 @@ export function mapPaymentFromOverviewById(overviewPayload, paymentId) {
 
 const mapFeedbackType = (item) => {
   const row = toObject(item);
-  const key = cleanString(row.key || row.id || row.rating_type);
+  const key = cleanString(row.key || row.id || row.value || row.rating_type);
+  if (!key) return null;
+
+  const labelEn = cleanString(
+    row.label_en || row.labelEn || row.name_en || row.nameEn || row.label || key
+  );
+  const labelAr = cleanString(
+    row.label_ar || row.labelAr || row.name_ar || row.nameAr || row.label || key
+  );
+
   return {
     key,
-    labelEn: cleanString(row.label_en || key),
-    labelAr: cleanString(row.label_ar || key),
+    labelEn: labelEn || key,
+    labelAr: labelAr || key,
+    label_en: labelEn || key,
+    label_ar: labelAr || key,
     raw: row,
   };
 };
 
 export function mapFeedbackTypesResponse(payload) {
   const root = toObject(payload);
-  const rows = toArray(root.rating_types || root.types || root.data?.rating_types)
+  const data = toObject(root.data);
+  const rows = [
+    ...toArray(root.rating_types),
+    ...toArray(data.rating_types),
+    ...toArray(data.types),
+    ...toArray(root.types),
+    ...toArray(root.criteria),
+    ...toArray(data.criteria),
+  ]
     .map(mapFeedbackType)
-    .filter((item) => item.key);
+    .filter(Boolean)
+    .reduce((acc, item) => {
+      if (acc.seen.has(item.key)) return acc;
+      acc.seen.add(item.key);
+      acc.items.push(item);
+      return acc;
+    }, { seen: new Set(), items: [] }).items;
 
   return {
     items: rows,
@@ -997,19 +1022,31 @@ const extractFreezeRows = (payload) => {
 
   const groupedRows = [
     ['pending', root.pending || data.pending],
+    ['rejected', root.rejected || data.rejected],
+    ['cancelled', root.cancelled || data.cancelled || root.canceled || data.canceled],
+    ['approved', root.approved || data.approved],
     ['active', root.active || data.active || root.current || data.current],
     ['upcoming', root.upcoming || data.upcoming || root.scheduled || data.scheduled],
     ['ended', root.ended || data.ended || root.archived || data.archived],
-    ['approved', root.approved || data.approved],
-    ['rejected', root.rejected || data.rejected],
-    ['cancelled', root.cancelled || data.cancelled || root.canceled || data.canceled],
-  ].flatMap(([status, list]) =>
+  ].flatMap(([groupKey, list]) =>
     toArray(list).map((row) => {
       const item = toObject(row);
-      if (cleanString(item.status)) return item;
+      const resolvedStatus = cleanString(
+        item.status ||
+          item.freeze_status ||
+          item.request_status ||
+          item.approval_status
+      );
+      if (resolvedStatus) return item;
+      if (groupKey === 'approved') {
+        return {
+          ...item,
+          status: 'approved',
+        };
+      }
       return {
         ...item,
-        status,
+        phase: cleanString(item.phase || item.freeze_phase) || groupKey,
       };
     })
   );
@@ -1025,7 +1062,7 @@ const extractFreezeRows = (payload) => {
     ...toArray(data.freezes),
   ];
 
-  const merged = [...groupedRows, ...directRows];
+  const merged = [...directRows, ...groupedRows];
   const seen = new Set();
 
   return merged.filter((row) => {

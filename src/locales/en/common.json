@@ -105,6 +105,7 @@
         "registration": "Registration",
         "installment": "Installment",
         "session": "Session",
+        "new": "Website New Registration",
         "unknown": "Unspecified"
       },
       "registrationTypes": {
@@ -375,6 +376,11 @@
         "status": "Subscription: {{status}}",
         "updatedAt": "Updated: {{time}}"
       },
+      "welcome": {
+        "academyLabel": "Academy",
+        "groupLabel": "Training Group",
+        "updatedLabel": "Last update"
+      },
       "kpis": {
         "remainingSessions": "Remaining sessions",
         "totalSessions": "Total: {{count}}",
@@ -382,6 +388,7 @@
         "nextExpiry": "Next expiry: {{date}}",
         "noExpiry": "No credit expiry",
         "paymentStatus": "Payment status",
+        "paymentPaidShort": "Paid",
         "latestPayment": "Latest payment"
       },
       "sections": {
@@ -433,6 +440,9 @@
       "calendar": {
         "cta": "Go to Booking Hub",
         "hint": "Manage your slots and sessions."
+      },
+      "actions": {
+        "showDetails": "Show details"
       }
     },
     "routes": {

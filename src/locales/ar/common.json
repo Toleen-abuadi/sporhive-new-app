@@ -105,6 +105,7 @@
         "registration": "تسجيل",
         "installment": "قسط",
         "session": "جلسة",
+        "new": "تسجيل جديد من الموقع",
         "unknown": "غير محدد"
       },
       "registrationTypes": {
@@ -383,6 +384,11 @@
         "status": "الاشتراك: {{status}}",
         "updatedAt": "آخر تحديث: {{time}}"
       },
+      "welcome": {
+        "academyLabel": "الأكاديمية",
+        "groupLabel": "المجموعة",
+        "updatedLabel": "آخر تحديث"
+      },
       "kpis": {
         "remainingSessions": "الجلسات المتبقية",
         "totalSessions": "الإجمالي: {{count}}",
@@ -390,6 +396,7 @@
         "nextExpiry": "أقرب انتهاء: {{date}}",
         "noExpiry": "لا يوجد انتهاء للرصيد",
         "paymentStatus": "حالة الدفع",
+        "paymentPaidShort": "تم الدفع",
         "latestPayment": "آخر دفعة"
       },
       "sections": {
@@ -441,6 +448,9 @@
       "calendar": {
         "cta": "الانتقال إلى مركز الحجز",
         "hint": "نظّم مواعيدك وجلساتك."
+      },
+      "actions": {
+        "showDetails": "عرض التفاصيل"
       }
     },
     "routes": {

@@ -1,10 +1,11 @@
-import { useCallback, useMemo, useState } from 'react';
-import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Image, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Crown, Gauge, Medal, MessageSquareText, Star, Trophy } from 'lucide-react-native';
 import { AppScreen } from '../../../components/ui/AppScreen';
 import { Chip } from '../../../components/ui/Chip';
 import { LanguageSwitch } from '../../../components/ui/LanguageSwitch';
+import { RtlHorizontalScrollView } from '../../../components/ui/RtlHorizontalScrollView';
 import { ScreenHeader } from '../../../components/ui/ScreenHeader';
 import { Text } from '../../../components/ui/Text';
 import { ROUTES } from '../../../constants/routes';
@@ -159,7 +160,11 @@ export function PlayerPerformanceScreen() {
   const recent = data?.summary?.recent || [];
   const leaderboardGroupId = data?.leaderboard?.groupId ?? null;
   const leaderboard = data?.leaderboard?.items || [];
-  const leaderboardTypes = data?.leaderboard?.types || [];
+  const leaderboardTypes = useMemo(() => {
+    const leaderboardItems = Array.isArray(data?.leaderboard?.types) ? data.leaderboard.types : [];
+    if (leaderboardItems.length > 0) return leaderboardItems;
+    return Array.isArray(data?.types) ? data.types : [];
+  }, [data?.leaderboard?.types, data?.types]);
   const currentPlayerId = Number(data?.currentPlayerId || 0) || null;
   const hasPerformanceData = Boolean(data?.hasPerformanceData);
   const hasLeaderboardData = Boolean(data?.hasLeaderboardData) && leaderboard.length > 0;
@@ -187,6 +192,13 @@ export function PlayerPerformanceScreen() {
       .map((row, index) => ({ ...row, __rank: getSafeRank(row, index) }))
       .sort((a, b) => a.__rank - b.__rank);
   }, [leaderboard]);
+
+  useEffect(() => {
+    const hasSelectedMetric = leaderboardMetricOptions.some((option) => option.key === selectedLeaderboardMetric);
+    if (!hasSelectedMetric) {
+      setSelectedLeaderboardMetric(LEADERBOARD_METRIC_OVERALL);
+    }
+  }, [leaderboardMetricOptions, selectedLeaderboardMetric]);
 
   const onToggleLeaderboardDetails = useCallback((key) => {
     setExpandedLeaderboardRows((prev) => ({
@@ -452,16 +464,7 @@ export function PlayerPerformanceScreen() {
               ) : null}
             </View>
 
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={[
-                styles.metricSelectorRow,
-                {
-                  flexDirection: getRowDirection(isRTL),
-                },
-              ]}
-            >
+            <RtlHorizontalScrollView contentContainerStyle={styles.metricSelectorRow}>
               {leaderboardMetricOptions.map((option) => {
                 return (
                   <Chip
@@ -472,7 +475,7 @@ export function PlayerPerformanceScreen() {
                   />
                 );
               })}
-            </ScrollView>
+            </RtlHorizontalScrollView>
 
             {hasLeaderboardData ? (
               <View style={styles.leaderboardList}>
@@ -747,6 +750,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingTop: spacing.xs,
     paddingBottom: 2,
+    alignItems: 'center',
   },
   leaderboardList: {
     gap: spacing.sm,
@@ -845,4 +849,3 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
 });
-

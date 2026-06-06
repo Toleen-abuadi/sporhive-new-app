@@ -25,7 +25,6 @@ export function Chip({
       backgroundColor: selected ? colors.accentOrangeSoft : colors.surface,
       borderColor: selected ? colors.accentOrange : colors.border,
       flexDirection: getRowDirection(isRTL),
-      alignSelf: isRTL ? 'flex-end' : 'flex-start',
     },
     style,
   ];
@@ -69,6 +68,7 @@ const styles = StyleSheet.create({
   base: {
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'flex-start',
     borderRadius: borderRadius.pill,
     borderWidth: 1,
     paddingHorizontal: spacing.sm,

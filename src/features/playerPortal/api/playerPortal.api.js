@@ -770,9 +770,22 @@ export const playerPortalApi = {
   },
 
   getFeedbackTypes(context, payload = {}) {
+    const safePayload = toObject(payload);
+    const groupId = toNumber(safePayload.group_id ?? safePayload.groupId);
+    const requestPayload = {
+      ...safePayload,
+    };
+
+    delete requestPayload.groupId;
+    if (groupId == null) {
+      delete requestPayload.group_id;
+    } else {
+      requestPayload.group_id = groupId;
+    }
+
     return proxyRequest(PLAYER_PORTAL_ENDPOINTS.FEEDBACK_TYPES, {
       context,
-      payload,
+      payload: requestPayload,
       includePlayerId: true,
       requirePlayerId: true,
     }).then((result) => ensureProxyResultShape(result, mapFeedbackTypesResponse));
