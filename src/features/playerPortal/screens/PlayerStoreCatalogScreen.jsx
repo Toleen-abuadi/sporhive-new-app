@@ -50,7 +50,11 @@ function ProductCard({ product, onPress, locale }) {
     >
       <View style={styles.productImageWrap}>
         {product.imageUri ? (
-          <Image source={{ uri: product.imageUri }} style={styles.productImage} resizeMode="cover" />
+          <Image
+            source={{ uri: product.imageUri }}
+            style={styles.productImage}
+            resizeMode="cover"
+          />
         ) : (
           <View style={[styles.productImageFallback, { backgroundColor: colors.surfaceSoft }]}>
             <ImageIcon size={18} color={colors.textMuted} strokeWidth={2.2} />

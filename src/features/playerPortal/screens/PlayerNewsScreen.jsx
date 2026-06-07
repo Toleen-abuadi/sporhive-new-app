@@ -11,7 +11,6 @@ import { useI18n } from '../../../hooks/useI18n';
 import { useTheme } from '../../../hooks/useTheme';
 import { getRowDirection } from '../../../utils/rtl';
 import { borderRadius, spacing } from '../../../theme/tokens';
-import { playerPortalApi } from '../api/playerPortal.api';
 import {
   NewsHeroCard,
   PortalEmptyState,
@@ -22,17 +21,7 @@ import {
 import { usePlayerNews, usePlayerPortalSession } from '../hooks';
 import { formatDateLabel } from '../utils/playerPortal.formatters';
 import { resolvePortalGuardMessage } from '../utils/playerPortal.messages';
-
-const parseIdsFromRelativeImagePath = (path = '') => {
-  const match = String(path || '')
-    .trim()
-    .match(/\/news\/([^/]+)\/images\/([^/]+)$/i);
-  if (!match) return {};
-  return {
-    newsId: match[1],
-    imageId: match[2],
-  };
-};
+import { resolvePortalImageUri } from '../utils/playerPortal.images';
 
 export function PlayerNewsScreen() {
   const router = useRouter();
@@ -46,21 +35,9 @@ export function PlayerNewsScreen() {
 
   const resolveImageUrl = useCallback(
     (item) => {
-      const firstImage = item?.image || item?.images?.[0];
-      if (!firstImage?.url) return '';
-      if (String(firstImage.url).startsWith('http')) return firstImage.url;
-
-      const ids = parseIdsFromRelativeImagePath(firstImage.url);
-      const resolvedNewsId = ids.newsId || item?.id;
-      const resolvedImageId = ids.imageId || firstImage.id;
-
-      return playerPortalApi.getNewsImageUrl({
-        academyId: session.academyId,
-        newsId: resolvedNewsId,
-        imageId: resolvedImageId,
-      });
+      return resolvePortalImageUri(item, session.requestContext);
     },
-    [session.academyId]
+    [session.requestContext]
   );
 
   const topNews = items[0] || null;

@@ -1,4 +1,12 @@
-import { normalizeOverviewData, normalizeProxyCollection, toArray, toNumber, toObject } from '../utils/playerPortal.normalizers';
+import {
+  normalizeOverviewData,
+  normalizePagination,
+  normalizeProxyCollection,
+  normalizeRatingTypes,
+  toArray,
+  toNumber,
+  toObject,
+} from '../utils/playerPortal.normalizers';
 import { mapFreezeRows } from '../utils/playerPortal.freeze';
 import {
   compareUniformStatusProgress,
@@ -6,6 +14,7 @@ import {
   normalizeUniformStatus,
   STATUS_ORDER,
 } from '../utils/playerPortal.uniform';
+import { resolvePortalImageSource, resolveUniformImageSource } from '../utils/playerPortal.images';
 
 const cleanString = (value) => {
   if (value == null) return '';
@@ -18,6 +27,208 @@ const joinName = (...parts) =>
     .filter(Boolean)
     .join(' ')
     .trim();
+
+const pickFirstString = (...values) => {
+  for (let index = 0; index < values.length; index += 1) {
+    const value = values[index];
+    if (value == null || value === '') continue;
+    if (typeof value === 'string' || typeof value === 'number') {
+      const normalized = cleanString(value);
+      if (normalized) return normalized;
+    }
+  }
+  return '';
+};
+
+const buildProfileImageFields = (source, context = {}) => {
+  const root = toObject(source);
+  const raw = toObject(root.raw);
+  const playerData = toObject(root.playerDataRaw || root.player_data || root.playerData || raw.player_data || raw.playerData);
+  const profileImage = toObject(
+    root.profileImage || playerData.profile_image || playerData.profileImage || raw.profile_image || raw.profileImage
+  );
+  const playerInfo = toObject(playerData.player_info || playerData.playerInfo || raw.player_info || raw.playerInfo);
+  const player = toObject(root.player || raw.player || playerData.player);
+  const profile = toObject(root.profile || raw.profile || raw.player || playerData.profile || playerData.player);
+
+  const image = pickFirstString(
+    root.image_proxy_url,
+    root.image_url_proxy,
+    profileImage.image_proxy_url,
+    profileImage.image_url_proxy,
+    profileImage.image_url,
+    profileImage.imageUrl,
+    profileImage.image,
+    player.image_url,
+    player.imageUrl,
+    player.image,
+    player.avatar_url,
+    player.avatar,
+    root.avatar_url,
+    root.avatarUrl,
+    root.avatar,
+    profile.avatar_url,
+    profile.avatarUrl,
+    profile.avatar,
+    playerInfo.image_url,
+    playerInfo.imageUrl,
+    playerInfo.image,
+    playerInfo.avatar_url,
+    playerInfo.avatar,
+    profileImage.url,
+    playerInfo.url,
+    player.url,
+    profile.image_url,
+    profile.imageUrl,
+    profile.image,
+    root.image_url,
+    root.imageUrl,
+    root.image
+  );
+
+  const imageType = pickFirstString(
+    profileImage.image_type,
+    profileImage.imageType,
+    playerInfo.image_type,
+    playerInfo.imageType,
+    player.image_type,
+    player.imageType,
+    profile.image_type,
+    profile.imageType,
+    root.image_type,
+    root.imageType
+  );
+
+  const imageSize = toNumber(
+    profileImage.image_size ||
+      profileImage.imageSize ||
+      playerInfo.image_size ||
+      playerInfo.imageSize ||
+      player.image_size ||
+      player.imageSize ||
+      profile.image_size ||
+      profile.imageSize ||
+      root.image_size ||
+      root.imageSize
+  );
+
+  const normalizedSource = image || profileImage || playerInfo || player || profile || root;
+  const imageSource = resolvePortalImageSource(normalizedSource, context, {
+    fallbackMimeType: imageType || 'image/jpeg',
+  });
+  const imageUri = imageSource?.uri || null;
+
+  return {
+    image,
+    imageUri,
+    imageSource,
+    imageUrl: imageUri || image || '',
+    imageType,
+    imageSize,
+  };
+};
+
+const buildUniformImageFields = (source, context = {}) => {
+  const root = toObject(source);
+  const product = toObject(root.product || root.uniform || root.item);
+  const firstImageEntry =
+    toArray(root.images)[0] || toArray(root.media)[0] || toArray(product.images)[0] || toArray(product.media)[0];
+
+  const fallbackMimeType = pickFirstString(
+    root.photo_mime,
+    root.photoMime,
+    root.image_type,
+    root.imageType,
+    product.photo_mime,
+    product.photoMime,
+    product.image_type,
+    product.imageType
+  ) || 'image/jpeg';
+
+  const thumbnail = pickFirstString(
+    root.thumbnail_proxy_url,
+    root.thumbnail_url_proxy,
+    root.thumbnail_url,
+    root.thumbnailUrl,
+    product.thumbnail_proxy_url,
+    product.thumbnail_url_proxy,
+    product.thumbnail_url,
+    product.thumbnailUrl,
+    firstImageEntry?.thumbnail_proxy_url,
+    firstImageEntry?.thumbnail_url_proxy,
+    firstImageEntry?.thumbnail_url,
+    firstImageEntry?.thumbnailUrl
+  );
+
+  const photo = pickFirstString(
+    root.photo_url,
+    root.photoUrl,
+    root.photo,
+    root.photo_base64,
+    root.photoBase64,
+    product.photo_url,
+    product.photoUrl,
+    product.photo,
+    product.photo_base64,
+    product.photoBase64,
+    firstImageEntry?.photo_url,
+    firstImageEntry?.photoUrl,
+    firstImageEntry?.photo,
+    firstImageEntry?.photo_base64,
+    firstImageEntry?.photoBase64
+  );
+
+  const image = pickFirstString(
+    thumbnail,
+    photo,
+    root.image_url,
+    root.imageUrl,
+    root.image,
+    product.image_url,
+    product.imageUrl,
+    product.image,
+    firstImageEntry?.image_url,
+    firstImageEntry?.imageUrl,
+    firstImageEntry?.image,
+    firstImageEntry?.url
+  );
+
+  const imageSource = resolveUniformImageSource(
+    image || root.imageSource || root.imageUri || firstImageEntry || root,
+    context,
+    { fallbackMimeType }
+  );
+  const thumbnailSource = resolveUniformImageSource(
+    thumbnail || root.thumbnailSource || root.thumbnailUri || firstImageEntry || root,
+    context,
+    { fallbackMimeType }
+  );
+  const photoSource = resolveUniformImageSource(photo || root.photoSource || root.photoUri || firstImageEntry || root, context, {
+    fallbackMimeType,
+  });
+  const imageUri = imageSource?.uri || null;
+  const thumbnailUri = thumbnailSource?.uri || null;
+  const photoUri = photoSource?.uri || null;
+  const imageType = fallbackMimeType;
+
+  return {
+    image,
+    imageUri,
+    imageSource,
+    imageUrl: imageUri || image || '',
+    thumbnail,
+    thumbnail_url: thumbnail,
+    thumbnailUrl: thumbnail,
+    thumbnailUri,
+    thumbnailSource,
+    photo,
+    photo_url: photo,
+    photoUrl: photo,
+    photoUri,
+    photoSource,
+    imageType,
+  };
+};
 
 const extractSubscriptionStatus = (normalized) => {
   if (normalized.registrationInfo.subscriptionStatus) return 'active';
@@ -168,14 +379,16 @@ export function mapOverviewResponse(payload) {
   };
 }
 
-export function mapProfileFromOverview(overview) {
+export function mapProfileFromOverview(overview, context = {}) {
   const source = toObject(overview);
   const player = toObject(source.player);
   const health = toObject(source.health);
-  const profileImage = toObject(source.profileImage);
-  const playerData = toObject(source.raw?.player_data);
+  const playerData = toObject(
+    source.playerDataRaw || source.raw?.player_data || source.raw?.playerData || source.player_data || source.playerData
+  );
   const playerInfo = toObject(playerData.player_info);
   const registrationInfo = toObject(playerData.registration_info);
+  const imageFields = buildProfileImageFields(source, context);
 
   return {
     id: toNumber(player.id),
@@ -197,16 +410,29 @@ export function mapProfileFromOverview(overview) {
     ),
     weight: health.weight,
     height: health.height,
-    image: cleanString(profileImage.image),
-    image_type: cleanString(profileImage.imageType),
-    image_size: toNumber(profileImage.imageSize),
+    image: imageFields.image || imageFields.imageUri || '',
+    image_url: imageFields.imageUrl,
+    imageUrl: imageFields.imageUrl,
+    imageUri: imageFields.imageUri,
+    imageSource: imageFields.imageSource,
+    image_type: imageFields.imageType,
+    imageType: imageFields.imageType,
+    image_size: imageFields.imageSize,
+    imageSize: imageFields.imageSize,
   };
 }
 
-export function mapProfileGetResponse(payload) {
+export function mapProfileGetResponse(payload, context = {}) {
   const root = toObject(payload);
   const profile = toObject(root.profile || root.data?.profile || root.data || root.player);
   const phoneNumbers = toObject(profile.phone_numbers || profile.phoneNumbers);
+  const imageFields = buildProfileImageFields(
+    {
+      ...root,
+      profile,
+    },
+    context
+  );
 
   return {
     id: toNumber(profile.id || profile.try_out || profile.tryout_id || profile.player_id),
@@ -228,9 +454,15 @@ export function mapProfileGetResponse(payload) {
     ),
     weight: profile.weight == null ? null : Number(profile.weight),
     height: profile.height == null ? null : Number(profile.height),
-    image: cleanString(profile.image),
-    image_type: cleanString(profile.image_type),
-    image_size: toNumber(profile.image_size),
+    image: imageFields.image || imageFields.imageUri || '',
+    image_url: imageFields.imageUrl,
+    imageUrl: imageFields.imageUrl,
+    imageUri: imageFields.imageUri,
+    imageSource: imageFields.imageSource,
+    image_type: imageFields.imageType || cleanString(profile.image_type),
+    imageType: imageFields.imageType || cleanString(profile.image_type),
+    image_size: imageFields.imageSize ?? toNumber(profile.image_size),
+    imageSize: imageFields.imageSize ?? toNumber(profile.image_size),
     raw: root,
   };
 }
@@ -282,16 +514,40 @@ export function mapNewsListResponse(payload) {
 
   const sourceList = scopedListCandidates.find((entries) => Array.isArray(entries) && entries.length > 0) || [];
   const items = sourceList.map(normalizeNewsItem).filter((entry) => entry.id != null || entry.title);
-  const totalCandidates = [
-    toNumber(normalized.scoped.total_count),
-    toNumber(normalized.root.total_count),
-    toNumber(normalized.scoped.total),
-    toNumber(normalized.root.total),
-  ].filter((value) => value != null);
+  const pagination = normalizePagination(payload);
 
   return {
     items,
-    total: totalCandidates[0] != null ? totalCandidates[0] : items.length,
+    total: pagination.count != null ? pagination.count : items.length,
+    pagination,
+    raw: normalized.root,
+  };
+}
+
+export function mapGenericCollectionResponse(payload) {
+  const normalized = normalizeProxyCollection(payload);
+  const pagination = normalizePagination(payload);
+  const sourceListCandidates = [
+    normalized.list,
+    toArray(normalized.scoped.rows),
+    toArray(normalized.scoped.items),
+    toArray(normalized.scoped.results),
+    toArray(normalized.scoped.history),
+    toArray(normalized.scoped.requests),
+    toArray(normalized.root.rows),
+    toArray(normalized.root.items),
+    toArray(normalized.root.results),
+    toArray(normalized.root.history),
+    toArray(normalized.root.requests),
+  ];
+
+  const sourceList = sourceListCandidates.find((entries) => Array.isArray(entries) && entries.length > 0) || [];
+  const items = sourceList.map((item) => toObject(item));
+
+  return {
+    items,
+    total: pagination.count != null ? pagination.count : items.length,
+    pagination,
     raw: normalized.root,
   };
 }
@@ -392,51 +648,14 @@ export function mapPaymentFromOverviewById(overviewPayload, paymentId) {
   };
 }
 
-const mapFeedbackType = (item) => {
-  const row = toObject(item);
-  const key = cleanString(row.key || row.id || row.value || row.rating_type);
-  if (!key) return null;
-
-  const labelEn = cleanString(
-    row.label_en || row.labelEn || row.name_en || row.nameEn || row.label || key
-  );
-  const labelAr = cleanString(
-    row.label_ar || row.labelAr || row.name_ar || row.nameAr || row.label || key
-  );
-
-  return {
-    key,
-    labelEn: labelEn || key,
-    labelAr: labelAr || key,
-    label_en: labelEn || key,
-    label_ar: labelAr || key,
-    raw: row,
-  };
-};
-
 export function mapFeedbackTypesResponse(payload) {
-  const root = toObject(payload);
-  const data = toObject(root.data);
-  const rows = [
-    ...toArray(root.rating_types),
-    ...toArray(data.rating_types),
-    ...toArray(data.types),
-    ...toArray(root.types),
-    ...toArray(root.criteria),
-    ...toArray(data.criteria),
-  ]
-    .map(mapFeedbackType)
-    .filter(Boolean)
-    .reduce((acc, item) => {
-      if (acc.seen.has(item.key)) return acc;
-      acc.seen.add(item.key);
-      acc.items.push(item);
-      return acc;
-    }, { seen: new Set(), items: [] }).items;
+  const normalized = normalizeRatingTypes(payload);
 
   return {
-    items: rows,
-    raw: root,
+    items: normalized.items,
+    types: normalized.types,
+    criteria: normalized.criteria,
+    raw: normalized.raw,
   };
 }
 
@@ -620,17 +839,6 @@ const normalizeUniformSize = (value) => {
   return raw;
 };
 
-const buildUniformImageUri = (product) => {
-  const row = toObject(product);
-  const direct = cleanString(row.image || row.photo || row.photo_url || row.image_url);
-  if (direct.startsWith('http') || direct.startsWith('data:image')) return direct;
-
-  const base64 = cleanString(row.photo_base64);
-  if (!base64) return '';
-  const mime = cleanString(row.photo_mime || row.image_type) || 'image/jpeg';
-  return `data:${mime};base64,${base64}`;
-};
-
 const mapUniformVariant = (variant) => {
   const row = toObject(variant);
   const quantity = Math.max(0, toNumber(row.quantity) || 0);
@@ -648,7 +856,7 @@ const mapUniformVariant = (variant) => {
   };
 };
 
-const mapUniformProduct = (product) => {
+const mapUniformProduct = (product, context = {}) => {
   const row = toObject(product);
   const variants = toArray(row.variants).map(mapUniformVariant).filter((item) => item.id != null);
   const sortedVariants = [...variants].sort((left, right) => {
@@ -658,13 +866,28 @@ const mapUniformProduct = (product) => {
   const prices = sortedVariants.map((item) => item.price).filter((value) => Number.isFinite(value));
   const quantities = sortedVariants.map((item) => item.quantity);
   const totalStock = quantities.reduce((sum, qty) => sum + qty, 0);
+  const imageFields = buildUniformImageFields(row, context);
 
   return {
     id: toNumber(row.id || row.product_id),
     nameEn: cleanString(row.name_en || row.name || row.type),
     nameAr: cleanString(row.name_ar || row.label_ar),
     needPrinting: Boolean(row.need_printing),
-    imageUri: buildUniformImageUri(row),
+    image: imageFields.image || imageFields.imageUri || '',
+    image_url: imageFields.imageUrl,
+    imageUrl: imageFields.imageUrl,
+    imageUri: imageFields.imageUri,
+    imageSource: imageFields.imageSource,
+    thumbnail: imageFields.thumbnail,
+    thumbnail_url: imageFields.thumbnail_url,
+    thumbnailUrl: imageFields.thumbnailUrl,
+    thumbnailUri: imageFields.thumbnailUri,
+    thumbnailSource: imageFields.thumbnailSource,
+    photo: imageFields.photo,
+    photo_url: imageFields.photo_url,
+    photoUrl: imageFields.photoUrl,
+    photoUri: imageFields.photoUri,
+    photoSource: imageFields.photoSource,
     variants: sortedVariants,
     startingPrice: prices.length ? Math.min(...prices) : 0,
     totalStock,
@@ -673,11 +896,11 @@ const mapUniformProduct = (product) => {
   };
 };
 
-export function mapUniformStoreResponse(payload) {
+export function mapUniformStoreResponse(payload, context = {}) {
   const root = toObject(payload);
   const scoped = toObject(root.data);
   const products = toArray(scoped.products || root.products)
-    .map(mapUniformProduct)
+    .map((product) => mapUniformProduct(product, context))
     .filter((item) => item.id != null);
 
   return {
@@ -689,9 +912,16 @@ export function mapUniformStoreResponse(payload) {
 
 const statusRank = (status) => getUniformStatusStepIndex(status);
 
-const mapUniformOrderRow = (order) => {
+const mapUniformOrderRow = (order, context = {}) => {
   const row = toObject(order);
   const product = toObject(row.product);
+  const imageFields = buildUniformImageFields(
+    {
+      ...row,
+      ...product,
+    },
+    context
+  );
 
   const productNameEn = cleanString(
     row.uniform_en ||
@@ -737,6 +967,21 @@ const mapUniformOrderRow = (order) => {
     paymentRef: cleanString(row.additional_payment_ref || row.payment_ref || row.payment_id || row.id),
     createdAt: cleanString(row.created_at),
     updatedAt: cleanString(row.updated_at),
+    image: imageFields.image || imageFields.imageUri || '',
+    image_url: imageFields.imageUrl,
+    imageUrl: imageFields.imageUrl,
+    imageUri: imageFields.imageUri,
+    imageSource: imageFields.imageSource,
+    thumbnail: imageFields.thumbnail,
+    thumbnail_url: imageFields.thumbnail_url,
+    thumbnailUrl: imageFields.thumbnailUrl,
+    thumbnailUri: imageFields.thumbnailUri,
+    thumbnailSource: imageFields.thumbnailSource,
+    photo: imageFields.photo,
+    photo_url: imageFields.photo_url,
+    photoUrl: imageFields.photoUrl,
+    photoUri: imageFields.photoUri,
+    photoSource: imageFields.photoSource,
     raw: row,
   };
 };
@@ -790,10 +1035,12 @@ const groupUniformOrders = (rows) => {
     });
 };
 
-export function mapUniformOrdersResponse(payload) {
+export function mapUniformOrdersResponse(payload, context = {}) {
   const root = toObject(payload);
   const scoped = toObject(root.data);
-  const items = toArray(scoped.orders || root.orders).map(mapUniformOrderRow).filter((item) => item.id != null);
+  const items = toArray(scoped.orders || root.orders)
+    .map((order) => mapUniformOrderRow(order, context))
+    .filter((item) => item.id != null);
   const groups = groupUniformOrders(items);
 
   return {
@@ -804,7 +1051,7 @@ export function mapUniformOrdersResponse(payload) {
   };
 }
 
-export function mapUniformOrderCreateResponse(payload) {
+export function mapUniformOrderCreateResponse(payload, context = {}) {
   const root = toObject(payload);
   const scoped = toObject(root.data);
   const data = toObject(scoped.data || scoped);
@@ -813,7 +1060,7 @@ export function mapUniformOrderCreateResponse(payload) {
     Array.isArray(rawOrders)
       ? rawOrders
       : toArray(toObject(rawOrders).data || toObject(rawOrders).orders);
-  const orders = ordersPayload.map(mapUniformOrderRow);
+  const orders = ordersPayload.map((order) => mapUniformOrderRow(order, context));
 
   return {
     message: cleanString(root.message || scoped.message || data.message || 'Order created'),

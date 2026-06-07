@@ -15,16 +15,18 @@ import { PortalEmptyState, PortalErrorState, PortalSectionCard, PortalSkeletonCa
 import { usePlayerProfileEditor } from '../hooks';
 import { formatDateLabel, formatNumberLabel } from '../utils/playerPortal.formatters';
 import { resolvePortalGuardMessage } from '../utils/playerPortal.messages';
+import { usePlayerPortalSession } from '../hooks/usePlayerPortalSession';
 import { resolveProfileImageUri } from '../utils/playerPortal.profile';
 
 export function PlayerProfileScreen() {
   const router = useRouter();
   const { t, locale, isRTL } = useI18n();
   const { colors } = useTheme();
+  const session = usePlayerPortalSession();
 
   const profileEditor = usePlayerProfileEditor();
   const profile = profileEditor.profile;
-  const imageUri = resolveProfileImageUri(profile);
+  const imageUri = resolveProfileImageUri(profile, session.requestContext);
 
   const showLoading = profileEditor.isFetchingProfile || (!profile && !profileEditor.profileError);
 
@@ -83,7 +85,11 @@ export function PlayerProfileScreen() {
           >
             <View style={[styles.headerRow, { flexDirection: getRowDirection(isRTL) }]}>
               {imageUri ? (
-                <Image source={{ uri: imageUri }} style={styles.avatar} resizeMode="cover" />
+                <Image
+                  source={{ uri: imageUri }}
+                  style={styles.avatar}
+                  resizeMode="cover"
+                />
               ) : (
                 <View style={[styles.avatar, { backgroundColor: colors.surfaceSoft }]}> 
                   <Text variant="caption" color={colors.textMuted}>

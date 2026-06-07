@@ -78,8 +78,8 @@ export function usePlayerProfileEditor() {
 
   const imageUri = useMemo(() => {
     if (imageDraft?.uri) return imageDraft.uri;
-    return resolveProfileImageUri(draft);
-  }, [draft, imageDraft?.uri]);
+    return resolveProfileImageUri(draft, session.requestContext);
+  }, [draft, imageDraft?.uri, session.requestContext]);
 
   const setFieldValue = useCallback((field, value) => {
     setDraft((prev) => {

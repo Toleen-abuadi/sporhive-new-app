@@ -39,15 +39,6 @@ const REQUEST_STEPS = Object.freeze({
 const DEFAULT_RANGE_DAYS = 2;
 const SAFE_DEFAULT_LOOKAHEAD_DAYS = 365;
 
-const debugFreeze = (stage, payload = {}) => {
-  if (!__DEV__) return;
-  try {
-    console.log(`[playerPortal][freeze] ${stage}`, payload);
-  } catch {
-    // no-op
-  }
-};
-
 const resolveNextValidRange = ({
   rows = [],
   maxDays = 90,
@@ -292,14 +283,6 @@ export function PlayerFreezeScreen() {
 
   const shouldShowValidationWarning = !validation.valid && (dateTouched || showValidationError);
 
-  useEffect(() => {
-    debugFreeze('validation-visibility', {
-      validationValid: Boolean(validation.valid),
-      dateTouched,
-      showValidationError,
-    });
-  }, [dateTouched, showValidationError, validation.valid]);
-
   const submitRequest = async () => {
     if (isSubmittingRequest) {
       return;
@@ -357,13 +340,6 @@ export function PlayerFreezeScreen() {
       todayISO: toISODate(new Date()),
       preferredDurationDays,
     });
-    debugFreeze('reset-after-success', {
-      oldStartDate,
-      oldEndDate,
-      nextStartDate: nextRange.startDate,
-      nextEndDate: nextRange.endDate,
-    });
-
     setSubmitError(null);
     setReason('');
     setRequestStep(REQUEST_STEPS.FORM);

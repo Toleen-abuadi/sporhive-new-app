@@ -11,6 +11,8 @@ export {
   mapFeedbackTypesResponse,
   mapFeedbackPlayerSummaryResponse,
   mapFeedbackPeriodsResponse,
+  mapFeedbackLeaderboardResponse,
+  mapGenericCollectionResponse,
   mapUniformStoreResponse,
   mapUniformOrderCreateResponse,
   mapUniformOrdersResponse,

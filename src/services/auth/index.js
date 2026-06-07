@@ -26,6 +26,7 @@ export {
   isLikelyAppAccessToken,
   mergeSessionUpdates,
   normalizeLoginMode,
+  normalizeLoginResponse,
   normalizeSessionPayload,
   shouldRefreshAccessToken,
 } from './auth.session';

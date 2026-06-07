@@ -30,7 +30,10 @@ export function PlayerHeaderCard({
       <LinearGradient colors={gradientColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.gradient}>
         <View style={[styles.topRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
           {imageUri ? (
-            <Image source={{ uri: imageUri }} style={styles.avatar} />
+            <Image
+              source={{ uri: imageUri }}
+              style={styles.avatar}
+            />
           ) : (
             <View style={[styles.iconBadge, { backgroundColor: withAlpha(colors.accentOrange, 0.15) }]}>
               <ShieldCheck size={20} color={colors.accentOrange} strokeWidth={2.4} />

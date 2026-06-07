@@ -1,3 +1,5 @@
+import { resolvePortalImageSource, resolvePortalImageUri } from './playerPortal.images';
+
 const BASE64_TABLE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
 const cleanString = (value) => {
@@ -173,15 +175,19 @@ export const readImageUriAsPayload = async (uri, fallbackMimeType = 'image/jpeg'
   };
 };
 
-export const resolveProfileImageUri = (profileImage) => {
-  const image = cleanString(profileImage?.image || profileImage?.uri);
-  if (!image) return '';
+export const resolveProfileImageUri = (profileImage, context = {}, options = {}) =>
+  resolvePortalImageUri(profileImage, context, {
+    ...options,
+    fallbackMimeType:
+      cleanString(profileImage?.image_type || profileImage?.imageType || options.fallbackMimeType) || 'image/jpeg',
+  });
 
-  if (image.startsWith('http') || image.startsWith('data:image')) return image;
-
-  const type = cleanString(profileImage?.image_type || profileImage?.imageType) || 'image/jpeg';
-  return `data:${type};base64,${image}`;
-};
+export const resolveProfileImageSource = (profileImage, context = {}, options = {}) =>
+  resolvePortalImageSource(profileImage, context, {
+    ...options,
+    fallbackMimeType:
+      cleanString(profileImage?.image_type || profileImage?.imageType || options.fallbackMimeType) || 'image/jpeg',
+  });
 
 export const getProfileDirtyKeys = (initialState, nextState) => {
   const keys = Object.keys({

@@ -191,7 +191,11 @@ export function PlayerStoreProductScreen() {
         <>
           <PortalSectionCard title={productName} subtitle={t('playerPortal.store.product.detailsTitle')}>
             {product.imageUri ? (
-              <Image source={{ uri: product.imageUri }} style={styles.heroImage} resizeMode="cover" />
+              <Image
+                source={{ uri: product.imageUri }}
+                style={styles.heroImage}
+                resizeMode="cover"
+              />
             ) : (
               <View style={[styles.heroImageFallback, { backgroundColor: colors.surfaceSoft }]}>
                 <Text variant="caption" color={colors.textMuted}>

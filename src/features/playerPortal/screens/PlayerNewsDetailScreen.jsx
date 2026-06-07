@@ -9,23 +9,12 @@ import { ROUTES } from '../../../constants/routes';
 import { useI18n } from '../../../hooks/useI18n';
 import { useTheme } from '../../../hooks/useTheme';
 import { borderRadius, spacing } from '../../../theme/tokens';
-import { playerPortalApi } from '../api/playerPortal.api';
 import { PortalEmptyState, PortalErrorState, PortalSectionCard, PortalSkeletonCard } from '../components';
 import { usePlayerNews, usePlayerPortalSession } from '../hooks';
 import { formatDateLabel, formatNumberLabel } from '../utils/playerPortal.formatters';
+import { resolvePortalImageUri } from '../utils/playerPortal.images';
 
 const resolveParam = (value) => (Array.isArray(value) ? value[0] : value);
-
-const parseIdsFromRelativeImagePath = (path = '') => {
-  const match = String(path || '')
-    .trim()
-    .match(/\/news\/([^/]+)\/images\/([^/]+)$/i);
-  if (!match) return {};
-  return {
-    newsId: match[1],
-    imageId: match[2],
-  };
-};
 
 export function PlayerNewsDetailScreen() {
   const router = useRouter();
@@ -44,17 +33,9 @@ export function PlayerNewsDetailScreen() {
 
   const resolveImageUrl = useCallback(
     (imageItem) => {
-      if (!imageItem?.url) return '';
-      if (String(imageItem.url).startsWith('http')) return imageItem.url;
-
-      const ids = parseIdsFromRelativeImagePath(imageItem.url);
-      return playerPortalApi.getNewsImageUrl({
-        academyId: session.academyId,
-        newsId: ids.newsId || newsId,
-        imageId: ids.imageId || imageItem.id,
-      });
+      return resolvePortalImageUri(imageItem, session.requestContext);
     },
-    [newsId, session.academyId]
+    [session.requestContext]
   );
 
   const loadNewsItem = useCallback(async () => {
@@ -142,20 +123,23 @@ export function PlayerNewsDetailScreen() {
                   setActiveIndex(nextIndex);
                 }}
               >
-                {images.map((imageItem) => (
-                  <Image
-                    key={imageItem.id || imageItem.url}
-                    source={{ uri: resolveImageUrl(imageItem) }}
-                    style={[
-                      styles.carouselImage,
-                      {
-                        width: Math.max(220, width - spacing.lg * 2),
-                        backgroundColor: colors.surfaceSoft,
-                      },
-                    ]}
-                    resizeMode="cover"
-                  />
-                ))}
+                {images.map((imageItem) => {
+                  const imageUri = resolveImageUrl(imageItem);
+                  return (
+                    <Image
+                      key={imageItem.id || imageItem.url}
+                      source={imageUri ? { uri: imageUri } : undefined}
+                      style={[
+                        styles.carouselImage,
+                        {
+                          width: Math.max(220, width - spacing.lg * 2),
+                          backgroundColor: colors.surfaceSoft,
+                        },
+                      ]}
+                      resizeMode="cover"
+                    />
+                  );
+                })}
               </ScrollView>
               {images.length > 1 ? (
                 <View style={styles.dotsRow}>

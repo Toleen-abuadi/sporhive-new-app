@@ -19,6 +19,7 @@ export function usePlayerPortalSession(options = {}) {
       refreshToken: auth.refreshToken,
       portalTokens: auth.portalTokens,
       academyId: auth.academyId,
+      customerId: auth.customerId,
       externalPlayerId: auth.externalPlayerId,
       user: auth.user,
     };
@@ -45,6 +46,7 @@ export function usePlayerPortalSession(options = {}) {
     auth.refreshToken,
     auth.portalTokens,
     auth.academyId,
+    auth.customerId,
     auth.externalPlayerId,
     auth.user,
     locale,

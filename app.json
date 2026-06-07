@@ -102,10 +102,7 @@
       "expo-secure-store",
 
       [
-        "@rnmapbox/maps",
-        {
-          "RNMapboxMapsVersion": "11.18.2"
-        }
+        "@rnmapbox/maps"
       ],
 
       [

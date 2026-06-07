@@ -1,5 +1,6 @@
 import { AUTH_API_PATHS, AUTH_LOGIN_MODES, AUTH_REFRESH_BUFFER_SECONDS, AUTH_REQUEST_TIMEOUT_MS } from './auth.constants';
 import { createAuthError, normalizeAuthError } from './auth.errors';
+import { PLAYER_PORTAL_ENDPOINTS, PLAYER_PORTAL_PROXY_BASE_PATH } from '../../features/playerPortal/api/playerPortal.keys';
 import {
   extractAuthToken,
   extractRefreshToken,
@@ -295,7 +296,6 @@ const buildRefreshPayload = (session) => {
   const refreshToken = cleanString(session?.refreshToken || session?.portalTokens?.refresh);
   if (!refreshToken) return null;
 
-  const academyAccess = cleanString(session?.portalTokens?.academy_access);
   const payload = {
     refresh: refreshToken,
     tokens: {
@@ -305,11 +305,6 @@ const buildRefreshPayload = (session) => {
       refresh: refreshToken,
     },
   };
-
-  if (academyAccess) {
-    payload.academy_access = academyAccess;
-    payload.portal_tokens.academy_access = academyAccess;
-  }
 
   return payload;
 };
@@ -337,17 +332,6 @@ const mergeRefreshedSession = (currentSession, refreshPayload) => {
     access: nextAccessToken,
     refresh: nextRefreshToken || undefined,
   };
-
-  const nextAcademyAccess =
-    cleanString(incomingPortalTokens.academy_access) ||
-    cleanString(refreshPayload?.academy_access) ||
-    cleanString(mergedPortalTokens.academy_access);
-
-  if (nextAcademyAccess) {
-    mergedPortalTokens.academy_access = nextAcademyAccess;
-  } else {
-    delete mergedPortalTokens.academy_access;
-  }
 
   return mergeSessionUpdates(normalizedCurrent, {
     token: nextAccessToken,
@@ -647,13 +631,12 @@ export const authApi = {
   },
 
   loginPlayer({ academyId, username, password }) {
-    return request(AUTH_API_PATHS.LOGIN, {
+    return request(`${PLAYER_PORTAL_PROXY_BASE_PATH}${PLAYER_PORTAL_ENDPOINTS.login}`, {
       method: 'POST',
       data: {
-        login_as: AUTH_LOGIN_MODES.PLAYER,
         academy_id: Number(academyId),
         username: cleanString(username),
-        player_password: cleanString(password),
+        password: cleanString(password),
       },
     });
   },
@@ -745,9 +728,6 @@ export const authApi = {
           tokens: { refresh: refreshToken },
           portal_tokens: {
             refresh: refreshToken,
-            ...(cleanString(activeSession?.portalTokens?.academy_access)
-              ? { academy_access: cleanString(activeSession?.portalTokens?.academy_access) }
-              : {}),
           },
         },
       });

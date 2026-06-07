@@ -18,11 +18,190 @@ export const toNumber = (value) => {
   return Number.isFinite(numeric) ? numeric : null;
 };
 
+const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+
+const isNumericString = (value) => {
+  if (typeof value !== 'string') return false;
+  const normalized = toEnglishDigits(value).trim();
+  return normalized !== '' && /^-?\d+(\.\d+)?$/.test(normalized);
+};
+
+const normalizePortalFieldValue = (key, value) => {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+
+  const fieldName = String(key || '').toLowerCase();
+  const numericFieldPattern = /(^id$|_id$|(^|_)id(_|$)|tryout|player_id|external_player_id|academy_id|customer_id|limit|offset|count)$/;
+  if (numericFieldPattern.test(fieldName) && isNumericString(value)) {
+    const numeric = Number(toEnglishDigits(value));
+    return Number.isFinite(numeric) ? numeric : value;
+  }
+
+  return value;
+};
+
+const stripUndefinedDeep = (value) => {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => stripUndefinedDeep(item))
+      .filter((item) => item !== undefined);
+  }
+
+  if (!isPlainObject(value)) return value;
+
+  return Object.entries(value).reduce((acc, [key, entry]) => {
+    const normalized = stripUndefinedDeep(entry);
+    if (normalized !== undefined) {
+      acc[key] = normalized;
+    }
+    return acc;
+  }, {});
+};
+
 export const toBoolean = (value) => {
   if (typeof value === 'boolean') return value;
   const normalized = cleanString(value).toLowerCase();
   if (!normalized) return false;
   return ['1', 'true', 'yes', 'active'].includes(normalized);
+};
+
+export const buildPortalPayload = (payload = {}, context = {}, options = {}) => {
+  const { includePlayerId = true } = options;
+  const basePayload = stripUndefinedDeep(toObject(payload));
+  const academyId = toNumber(context?.academyId ?? context?.customerId);
+
+  if (academyId != null) {
+    if (!Object.prototype.hasOwnProperty.call(basePayload, 'academy_id')) {
+      basePayload.academy_id = academyId;
+    }
+    if (!Object.prototype.hasOwnProperty.call(basePayload, 'customer_id')) {
+      basePayload.customer_id = academyId;
+    }
+  }
+
+  if (includePlayerId !== false) {
+    const tryoutId = toNumber(context?.tryoutId ?? context?.externalPlayerId);
+    if (tryoutId != null) {
+      ['tryout_id', 'try_out', 'player_id', 'external_player_id'].forEach((field) => {
+        if (!Object.prototype.hasOwnProperty.call(basePayload, field)) {
+          basePayload[field] = tryoutId;
+        }
+      });
+    }
+  }
+
+  return stripUndefinedDeep(
+    Object.entries(basePayload).reduce((acc, [key, value]) => {
+      if (value === undefined) return acc;
+      const normalized = normalizePortalFieldValue(key, value);
+      if (normalized !== undefined) {
+        acc[key] = normalized;
+      }
+      return acc;
+    }, {})
+  );
+};
+
+export const normalizePagination = (payload = {}) => {
+  const root = toObject(payload);
+  const data = toObject(root.data);
+  const pagination = toObject(root.pagination || data.pagination || root.meta || data.meta);
+  const rows =
+    toArray(root.rows).length > 0
+      ? toArray(root.rows)
+      : toArray(data.rows).length > 0
+      ? toArray(data.rows)
+      : toArray(root.items).length > 0
+      ? toArray(root.items)
+      : toArray(data.items).length > 0
+      ? toArray(data.items)
+      : toArray(root.results).length > 0
+      ? toArray(root.results)
+      : toArray(data.results);
+
+  const countCandidates = [
+    root.count,
+    data.count,
+    pagination.count,
+    root.total,
+    data.total,
+    pagination.total,
+    root.total_count,
+    data.total_count,
+    root.totalCount,
+    data.totalCount,
+  ]
+    .map(toNumber)
+    .filter((value) => value != null);
+
+  const limitCandidates = [root.limit, data.limit, pagination.limit, root.page_size, data.page_size]
+    .map(toNumber)
+    .filter((value) => value != null);
+  const offsetCandidates = [root.offset, data.offset, pagination.offset, root.skip, data.skip]
+    .map(toNumber)
+    .filter((value) => value != null);
+
+  return {
+    count: countCandidates[0] != null ? countCandidates[0] : rows.length,
+    limit: limitCandidates[0] != null ? limitCandidates[0] : null,
+    offset: offsetCandidates[0] != null ? offsetCandidates[0] : null,
+    next: cleanString(root.next || data.next || pagination.next) || null,
+    previous: cleanString(root.previous || data.previous || pagination.previous) || null,
+  };
+};
+
+const normalizeRatingTypeRow = (item) => {
+  const row = toObject(item);
+  const key = cleanString(row.key || row.id || row.value || row.rating_type);
+  if (!key) return null;
+
+  const labelEn = cleanString(row.label_en || row.labelEn || row.name_en || row.nameEn || row.label || key);
+  const labelAr = cleanString(row.label_ar || row.labelAr || row.name_ar || row.nameAr || row.label || key);
+
+  return {
+    key,
+    labelEn: labelEn || key,
+    labelAr: labelAr || key,
+    label_en: labelEn || key,
+    label_ar: labelAr || key,
+    raw: row,
+  };
+};
+
+export const normalizeRatingTypes = (payload = {}) => {
+  const root = toObject(payload);
+  const data = toObject(root.data);
+  const source = [
+    ...toArray(root.rating_types),
+    ...toArray(data.rating_types),
+    ...toArray(root.types),
+    ...toArray(data.types),
+    ...toArray(root.criteria),
+    ...toArray(data.criteria),
+  ];
+
+  const items = source
+    .map(normalizeRatingTypeRow)
+    .filter(Boolean)
+    .reduce(
+      (acc, item) => {
+        if (acc.seen.has(item.key)) return acc;
+        acc.seen.add(item.key);
+        acc.items.push(item);
+        return acc;
+      },
+      { seen: new Set(), items: [] }
+    ).items;
+
+  return {
+    items,
+    types: items,
+    criteria: items,
+    raw: root,
+  };
 };
 
 const normalizeIsoDate = (value) => {

@@ -114,15 +114,6 @@ export function PlayerPaymentInvoiceScreen() {
           throw new Error("Invoice payment reference is invalid.");
         }
 
-        if (__DEV__) {
-          console.log("[playerPortal][invoice-screen] selected-payment", {
-            id: payment?.id ?? null,
-            invoice_id: payment?.invoiceId || payment?.externalInvoiceNumber || null,
-            amount: payment?.amountNumber ?? payment?.amount ?? null,
-            status: payment?.status || null,
-          });
-        }
-
         const result = await playerPortalApi.printInvoice(
           session.requestContext,
           {

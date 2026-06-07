@@ -22,6 +22,7 @@ const INITIAL_STATE = {
   mode: null,
   role: null,
   academyId: null,
+  customerId: null,
   externalPlayerId: null,
   lastSelectedAcademyId: null,
   welcomeSeen: false,
@@ -56,6 +57,7 @@ const stateFromSession = (session) => {
       mode: null,
       role: null,
       academyId: null,
+      customerId: null,
       externalPlayerId: null,
     };
   }
@@ -72,6 +74,7 @@ const stateFromSession = (session) => {
     mode: normalized.mode || null,
     role: normalized.mode || null,
     academyId: normalized.academyId || null,
+    customerId: normalized.customerId || normalized.customer_id || normalized.academyId || null,
     externalPlayerId: normalized.externalPlayerId || null,
   };
 };

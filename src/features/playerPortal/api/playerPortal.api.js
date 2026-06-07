@@ -1,7 +1,7 @@
 import { authApi } from '../../../services/auth';
 import { mapFreezeRowsFromOverview } from '../utils/playerPortal.freeze';
 import { assertPlayerPortalContext } from '../utils/playerPortal.guards';
-import { toArray, toNumber, toObject } from '../utils/playerPortal.normalizers';
+import { buildPortalPayload, toArray, toNumber, toObject } from '../utils/playerPortal.normalizers';
 import { PLAYER_PORTAL_ENDPOINTS, PLAYER_PORTAL_PROXY_BASE_PATH } from './playerPortal.keys';
 import {
   mapFeedbackPeriodsResponse,
@@ -10,6 +10,7 @@ import {
   mapFeedbackTypesResponse,
   mapFreezeCancelResponse,
   mapFreezeListResponse,
+  mapGenericCollectionResponse,
   mapNewsListResponse,
   mapOverviewResponse,
   mapPaymentFromOverviewById,
@@ -41,7 +42,7 @@ const resolveApiBaseUrl = () => {
   const direct = cleanString(process.env.EXPO_PUBLIC_API_BASE_URL);
   if (direct) return direct.replace(/\/+$/, '');
 
-  if (__DEV__) {
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
     const fallback = cleanString(process.env.EXPO_PUBLIC_API_URL);
     if (fallback) return fallback.replace(/\/+$/, '');
   }
@@ -167,15 +168,6 @@ const readPdfHeaderText = (arrayBuffer) => {
   }
 };
 
-const debugInvoice = (stage, payload = {}) => {
-  if (!__DEV__) return;
-  try {
-    console.log(`[playerPortal][invoice] ${stage}`, payload);
-  } catch {
-    // no-op
-  }
-};
-
 const safeReadPayload = async (response, { expectBinary = false } = {}) => {
   const contentTypeHeader = cleanString(response.headers.get('content-type'));
   const contentType = contentTypeHeader.toLowerCase();
@@ -241,43 +233,6 @@ const inferMessageFromPayload = (payload, fallback) =>
   cleanString(payload?.detail) ||
   fallback;
 
-const injectContextFields = (payload, context, { includePlayerId = true } = {}) => {
-  const body = {
-    ...toObject(payload),
-  };
-
-  const academyId = toNumber(context?.academyId || context?.customerId);
-  if (academyId != null) {
-    if (body.academy_id == null && body.customer_id == null) {
-      body.academy_id = academyId;
-    }
-    if (body.customer_id == null && body.academy_id != null) {
-      body.customer_id = body.academy_id;
-    }
-  }
-
-  if (includePlayerId) {
-    const tryoutId = toNumber(context?.tryoutId || context?.externalPlayerId);
-    if (tryoutId != null) {
-      const hasPlayerIdentity =
-        body.try_out != null ||
-        body.tryout_id != null ||
-        body.player_id != null ||
-        body.external_player_id != null;
-
-      if (!hasPlayerIdentity) {
-        body.try_out = tryoutId;
-      }
-
-      if (body.external_player_id == null) {
-        body.external_player_id = tryoutId;
-      }
-    }
-  }
-
-  return body;
-};
-
 const buildProxyUrl = (endpoint) =>
   `${API_BASE_URL}${normalizePath(PLAYER_PORTAL_PROXY_BASE_PATH)}${normalizePath(endpoint)}`;
 
@@ -300,10 +255,13 @@ const buildAuthSessionHint = (context) => {
     mode: 'player',
     roles: ['player'],
     academyId,
+    customerId: academyId,
     externalPlayerId: externalPlayerId == null ? null : String(externalPlayerId),
     user: {
       type: 'player',
       academy_id: academyId,
+      customer_id: academyId,
+      customerId: academyId,
       external_player_id: externalPlayerId == null ? null : String(externalPlayerId),
     },
   };
@@ -349,20 +307,17 @@ async function proxyRequest(endpoint, {
     'X-Academy-Id': String(normalizedContext.academyId),
     'X-Customer-Id': String(normalizedContext.customerId),
     'Accept-Language': cleanString(normalizedContext.locale) || 'en',
+    'Content-Type': 'application/json',
     ...extraHeaders,
   };
 
   const upperMethod = cleanString(method).toUpperCase() || 'POST';
   const bodyPayload = injectContext
-    ? injectContextFields(payload, normalizedContext, {
+    ? buildPortalPayload(payload, normalizedContext, {
         includePlayerId,
       })
     : toObject(payload);
   const hasBody = upperMethod !== 'GET' && upperMethod !== 'HEAD';
-
-  if (hasBody) {
-    requestHeaders['Content-Type'] = 'application/json';
-  }
 
   try {
     const authResult = await authApi.authenticatedRequest({
@@ -420,6 +375,73 @@ async function proxyRequest(endpoint, {
         status: Number(response.status) || 200,
         endpoint,
         retried: Boolean(authResult.retried),
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: normalizePortalError(error, 'Unable to reach player portal service.'),
+    };
+  }
+}
+
+async function publicProxyRequest(endpoint, {
+  payload = {},
+  method = 'POST',
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+  extraHeaders = {},
+  expectBinary = false,
+  locale = '',
+} = {}) {
+  if (!API_BASE_URL) {
+    return {
+      success: false,
+      error: createPortalError({
+        code: 'CONFIG_ERROR',
+        message: 'EXPO_PUBLIC_API_BASE_URL is not configured.',
+      }),
+    };
+  }
+
+  const url = buildProxyUrl(endpoint);
+  const upperMethod = cleanString(method).toUpperCase() || 'POST';
+  const hasBody = upperMethod !== 'GET' && upperMethod !== 'HEAD';
+  const acceptLanguage = cleanString(locale || payload?.locale || payload?.acceptLanguage) || 'en';
+  const requestHeaders = {
+    Accept: expectBinary ? 'application/pdf, application/json;q=0.9, */*;q=0.8' : 'application/json',
+    'Content-Type': 'application/json',
+    'Accept-Language': acceptLanguage,
+    ...extraHeaders,
+  };
+
+  try {
+    const response = await withTimeout(url, {
+      method: upperMethod,
+      headers: requestHeaders,
+      body: hasBody ? JSON.stringify(toObject(payload)) : undefined,
+      timeoutMs,
+    });
+
+    const parsedPayload = await safeReadPayload(response, { expectBinary });
+    if (!response.ok) {
+      return {
+        success: false,
+        error: createPortalError({
+          code: response.status === 401 ? 'UNAUTHORIZED' : 'HTTP_ERROR',
+          status: Number(response.status) || 0,
+          message: inferMessageFromPayload(parsedPayload, 'Player portal request failed.'),
+          details: parsedPayload,
+        }),
+      };
+    }
+
+    return {
+      success: true,
+      data: parsedPayload || {},
+      meta: {
+        status: Number(response.status) || 200,
+        endpoint,
+        retried: false,
       },
     };
   } catch (error) {
@@ -507,8 +529,38 @@ export const playerPortalApi = {
     return API_BASE_URL;
   },
 
+  login(context, payload = {}) {
+    const academyId = toNumber(payload.academyId ?? payload.academy_id ?? context?.academyId ?? context?.customerId);
+    const requestPayload = {
+      academy_id: academyId,
+      username: cleanString(payload.username),
+      password: cleanString(payload.password),
+    };
+
+    return publicProxyRequest(PLAYER_PORTAL_ENDPOINTS.login, {
+      payload: requestPayload,
+      locale: cleanString(context?.locale || payload.locale),
+    });
+  },
+
+  me(context, payload = {}) {
+    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.me, {
+      context,
+      payload,
+      includePlayerId: false,
+      requirePlayerId: false,
+    });
+  },
+
+  passwordResetRequest(context, payload = {}) {
+    return publicProxyRequest(PLAYER_PORTAL_ENDPOINTS.passwordResetRequest, {
+      payload: toObject(payload),
+      locale: cleanString(context?.locale || payload.locale),
+    });
+  },
+
   getOverview(context, payload = {}) {
-    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.OVERVIEW, {
+    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.overview, {
       context,
       payload,
       includePlayerId: true,
@@ -517,7 +569,7 @@ export const playerPortalApi = {
   },
 
   async getPayments(context, payload = {}) {
-    const result = await proxyRequest(PLAYER_PORTAL_ENDPOINTS.OVERVIEW, {
+    const result = await proxyRequest(PLAYER_PORTAL_ENDPOINTS.overview, {
       context,
       payload,
       includePlayerId: true,
@@ -528,7 +580,7 @@ export const playerPortalApi = {
   },
 
   async getPaymentById(context, paymentId, payload = {}) {
-    const result = await proxyRequest(PLAYER_PORTAL_ENDPOINTS.OVERVIEW, {
+    const result = await proxyRequest(PLAYER_PORTAL_ENDPOINTS.overview, {
       context,
       payload,
       includePlayerId: true,
@@ -552,7 +604,7 @@ export const playerPortalApi = {
   },
 
   async getProfile(context, payload = {}) {
-    const profileResult = await proxyRequest(PLAYER_PORTAL_ENDPOINTS.PROFILE_GET, {
+    const profileResult = await proxyRequest(PLAYER_PORTAL_ENDPOINTS.profileGet, {
       context,
       payload,
       includePlayerId: true,
@@ -560,7 +612,7 @@ export const playerPortalApi = {
     });
 
     if (profileResult.success) {
-      return ensureProxyResultShape(profileResult, mapProfileGetResponse);
+      return ensureProxyResultShape(profileResult, (data) => mapProfileGetResponse(data, context));
     }
 
     if (!shouldFallbackToOverview(profileResult.error)) {
@@ -572,7 +624,7 @@ export const playerPortalApi = {
 
     return {
       success: true,
-      data: mapProfileFromOverview(overview.data),
+      data: mapProfileFromOverview(overview.data, context),
       meta: {
         ...(overview.meta || {}),
         fallback: 'overview',
@@ -581,7 +633,7 @@ export const playerPortalApi = {
   },
 
   updateProfile(context, payload = {}) {
-    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.PROFILE_UPDATE, {
+    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.profileUpdate, {
       context,
       payload,
       includePlayerId: true,
@@ -589,8 +641,35 @@ export const playerPortalApi = {
     }).then((result) => ensureProxyResultShape(result, mapProfileUpdateResponse));
   },
 
+  getProfileLeaderboard(context, payload = {}) {
+    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.profileLeaderboard, {
+      context,
+      payload,
+      includePlayerId: true,
+      requirePlayerId: true,
+    }).then((result) => ensureProxyResultShape(result, mapFeedbackLeaderboardResponse));
+  },
+
+  getSubscriptionHistory(context, payload = {}) {
+    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.subscriptionHistory, {
+      context,
+      payload,
+      includePlayerId: true,
+      requirePlayerId: true,
+    }).then((result) => ensureProxyResultShape(result, mapGenericCollectionResponse));
+  },
+
+  getSubscriptionRequests(context, payload = {}) {
+    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.subscriptionRequests, {
+      context,
+      payload,
+      includePlayerId: true,
+      requirePlayerId: true,
+    }).then((result) => ensureProxyResultShape(result, mapGenericCollectionResponse));
+  },
+
   getRenewalEligibility(context, payload = {}) {
-    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.RENEWAL_ELIGIBILITY, {
+    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.renewalsEligibility, {
       context,
       payload,
       includePlayerId: true,
@@ -598,8 +677,12 @@ export const playerPortalApi = {
     }).then((result) => ensureProxyResultShape(result, mapRenewalEligibilityResponse));
   },
 
+  getRenewalsEligibility(context, payload = {}) {
+    return this.getRenewalEligibility(context, payload);
+  },
+
   createRenewalRequest(context, payload = {}) {
-    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.RENEWAL_REQUEST, {
+    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.renewalsRequest, {
       context,
       payload,
       includePlayerId: true,
@@ -607,8 +690,12 @@ export const playerPortalApi = {
     }).then((result) => ensureProxyResultShape(result, mapSimpleResponse));
   },
 
+  createRenewalsRequest(context, payload = {}) {
+    return this.createRenewalRequest(context, payload);
+  },
+
   async getRenewalOptions(context, payload = {}) {
-    const optionsResult = await proxyRequest(PLAYER_PORTAL_ENDPOINTS.RENEWAL_OPTIONS, {
+    const optionsResult = await proxyRequest(PLAYER_PORTAL_ENDPOINTS.renewalsOptions, {
       context,
       payload,
       includePlayerId: true,
@@ -623,7 +710,7 @@ export const playerPortalApi = {
       return optionsResult;
     }
 
-    const overviewResult = await proxyRequest(PLAYER_PORTAL_ENDPOINTS.OVERVIEW, {
+    const overviewResult = await proxyRequest(PLAYER_PORTAL_ENDPOINTS.overview, {
       context,
       payload,
       includePlayerId: true,
@@ -642,8 +729,12 @@ export const playerPortalApi = {
     };
   },
 
+  getRenewalsOptions(context, payload = {}) {
+    return this.getRenewalOptions(context, payload);
+  },
+
   createFreezeRequest(context, payload = {}) {
-    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.FREEZE_REQUEST, {
+    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.freezesRequest, {
       context,
       payload,
       includePlayerId: true,
@@ -652,7 +743,7 @@ export const playerPortalApi = {
   },
 
   cancelFreezeRequest(context, payload = {}) {
-    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.FREEZE_CANCEL, {
+    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.freezesCancel, {
       context,
       payload,
       includePlayerId: true,
@@ -661,7 +752,7 @@ export const playerPortalApi = {
   },
 
   async getFreezeHistory(context, payload = {}) {
-    const listResult = await proxyRequest(PLAYER_PORTAL_ENDPOINTS.FREEZE_LIST, {
+    const listResult = await proxyRequest(PLAYER_PORTAL_ENDPOINTS.freezesList, {
       context,
       payload,
       includePlayerId: true,
@@ -676,7 +767,7 @@ export const playerPortalApi = {
       return listResult;
     }
 
-    const overviewResult = await proxyRequest(PLAYER_PORTAL_ENDPOINTS.OVERVIEW, {
+    const overviewResult = await proxyRequest(PLAYER_PORTAL_ENDPOINTS.overview, {
       context,
       payload,
       includePlayerId: true,
@@ -706,7 +797,7 @@ export const playerPortalApi = {
   },
 
   listNews(context, payload = {}) {
-    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.NEWS_LIST, {
+    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.newsList, {
       context,
       payload,
       includePlayerId: true,
@@ -783,7 +874,7 @@ export const playerPortalApi = {
       requestPayload.group_id = groupId;
     }
 
-    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.FEEDBACK_TYPES, {
+    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.feedbackTypes, {
       context,
       payload: requestPayload,
       includePlayerId: true,
@@ -792,7 +883,7 @@ export const playerPortalApi = {
   },
 
   getFeedbackPeriods(context, payload = {}) {
-    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.FEEDBACK_PERIODS, {
+    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.feedbackPeriods, {
       context,
       payload,
       includePlayerId: true,
@@ -801,7 +892,25 @@ export const playerPortalApi = {
   },
 
   getFeedbackPlayerSummary(context, payload = {}) {
-    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.FEEDBACK_PLAYER_SUMMARY, {
+    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.feedbackPlayerSummary, {
+      context,
+      payload,
+      includePlayerId: true,
+      requirePlayerId: true,
+    }).then((result) => ensureProxyResultShape(result, mapFeedbackPlayerSummaryResponse));
+  },
+
+  getFeedbackSearch(context, payload = {}) {
+    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.feedbackSearch, {
+      context,
+      payload,
+      includePlayerId: true,
+      requirePlayerId: true,
+    }).then((result) => ensureProxyResultShape(result, mapGenericCollectionResponse));
+  },
+
+  getFeedbackSessionSummary(context, payload = {}) {
+    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.feedbackSessionSummary, {
       context,
       payload,
       includePlayerId: true,
@@ -810,7 +919,7 @@ export const playerPortalApi = {
   },
 
   async getFeedbackLeaderboard(context, payload = {}) {
-    const result = await proxyRequest(PLAYER_PORTAL_ENDPOINTS.FEEDBACK_LEADERBOARD, {
+    const result = await proxyRequest(PLAYER_PORTAL_ENDPOINTS.feedbackLeaderboard, {
       context,
       payload,
       includePlayerId: true,
@@ -827,11 +936,12 @@ export const playerPortalApi = {
         data: {
           groupId: null,
           items: [],
+          types: [],
           raw: {},
         },
         meta: {
           status: Number(result.error?.status) || 200,
-          endpoint: PLAYER_PORTAL_ENDPOINTS.FEEDBACK_LEADERBOARD,
+          endpoint: PLAYER_PORTAL_ENDPOINTS.feedbackLeaderboard,
           fallback: 'empty',
           empty: true,
         },
@@ -842,30 +952,30 @@ export const playerPortalApi = {
   },
 
   getUniformStore(context, payload = {}) {
-    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.UNIFORM_STORE, {
+    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.uniformsStore, {
       context,
       payload,
       includePlayerId: true,
       requirePlayerId: true,
-    }).then((result) => ensureProxyResultShape(result, mapUniformStoreResponse));
+    }).then((result) => ensureProxyResultShape(result, (data) => mapUniformStoreResponse(data, context)));
   },
 
   createUniformOrder(context, payload = {}) {
-    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.UNIFORM_ORDER, {
+    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.uniformsOrder, {
       context,
       payload,
       includePlayerId: true,
       requirePlayerId: true,
-    }).then((result) => ensureProxyResultShape(result, mapUniformOrderCreateResponse));
+    }).then((result) => ensureProxyResultShape(result, (data) => mapUniformOrderCreateResponse(data, context)));
   },
 
   getUniformOrders(context, payload = {}) {
-    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.UNIFORM_ORDERS, {
+    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.uniformsMyOrders, {
       context,
       payload,
       includePlayerId: true,
       requirePlayerId: true,
-    }).then((result) => ensureProxyResultShape(result, mapUniformOrdersResponse));
+    }).then((result) => ensureProxyResultShape(result, (data) => mapUniformOrdersResponse(data, context)));
   },
 
   async printInvoice(context, payload = {}) {
@@ -886,14 +996,6 @@ export const playerPortalApi = {
       };
     }
 
-    debugInvoice('request', {
-      endpoint: PLAYER_PORTAL_ENDPOINTS.PRINT_INVOICE,
-      paymentId,
-      language,
-      hasCustomerId: customerId != null,
-      hasAcademyId: academyId != null,
-    });
-
     const requestPayload = {
       id: paymentId,
       language,
@@ -906,7 +1008,7 @@ export const playerPortalApi = {
       requestPayload.player_name = playerName;
     }
 
-    const result = await proxyRequest(PLAYER_PORTAL_ENDPOINTS.PRINT_INVOICE, {
+    const result = await proxyRequest(PLAYER_PORTAL_ENDPOINTS.printInvoice, {
       context,
       payload: requestPayload,
       includePlayerId: false,
@@ -919,14 +1021,6 @@ export const playerPortalApi = {
     });
 
     if (!result.success) {
-      debugInvoice('response-error', {
-        endpoint: PLAYER_PORTAL_ENDPOINTS.PRINT_INVOICE,
-        paymentId,
-        language,
-        status: Number(result.error?.status) || 0,
-        code: cleanString(result.error?.code) || 'PLAYER_PORTAL_ERROR',
-        message: cleanString(result.error?.message) || 'Invoice request failed.',
-      });
       return result;
     }
 
@@ -938,18 +1032,6 @@ export const playerPortalApi = {
     const byteLength = arrayBuffer?.byteLength || 0;
     const headerText = readPdfHeaderText(arrayBuffer);
     const hasPdfHeader = startsWithPdfHeader(arrayBuffer);
-
-    debugInvoice('response-meta', {
-      endpoint: PLAYER_PORTAL_ENDPOINTS.PRINT_INVOICE,
-      paymentId,
-      language,
-      status: Number(result.meta?.status) || 0,
-      contentType: contentType || 'unknown',
-      contentDisposition: contentDisposition || '',
-      byteLength,
-      headerText: headerText || '',
-      hasPdfHeader,
-    });
 
     const isStructuredText =
       normalizedContentType.includes('application/json') ||

@@ -20,10 +20,11 @@ import {
   PortalSectionCard,
   PortalSkeletonCard,
 } from '../components';
-import { playerPortalApi } from '../api/playerPortal.api';
 import { usePlayerPerformance } from '../hooks';
+import { usePlayerPortalSession } from '../hooks/usePlayerPortalSession';
 import { formatNumberLabel } from '../utils/playerPortal.formatters';
 import { resolvePortalGuardMessage } from '../utils/playerPortal.messages';
+import { resolvePortalImageUri } from '../utils/playerPortal.images';
 
 const PERIOD_KEYS = Object.freeze({
   DAILY: 'daily',
@@ -56,34 +57,7 @@ const cleanString = (value) => {
   return String(value).trim();
 };
 
-const isRawBase64 = (value) => {
-  const normalized = cleanString(value).replace(/\s+/g, '');
-  if (!normalized || normalized.length < 24) return false;
-  return /^[A-Za-z0-9+/]+={0,2}$/.test(normalized);
-};
-
-const resolveLeaderboardImageUri = (image, imageType, baseUrl) => {
-  const raw = cleanString(image);
-  if (!raw) return '';
-
-  if (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('data:image')) {
-    return raw;
-  }
-
-  if (isRawBase64(raw)) {
-    const type = cleanString(imageType) || 'image/jpeg';
-    return `data:${type};base64,${raw.replace(/\s+/g, '')}`;
-  }
-
-  const normalizedBaseUrl = cleanString(baseUrl).replace(/\/+$/, '');
-  if (!normalizedBaseUrl) return raw;
-
-  if (raw.startsWith('/')) {
-    return `${normalizedBaseUrl}${raw}`;
-  }
-
-  return `${normalizedBaseUrl}/${raw.replace(/^\/+/, '')}`;
-};
+const resolveLeaderboardImageUri = (row, context) => resolvePortalImageUri(row, context);
 
 const LEADERBOARD_METRIC_OVERALL = 'overall';
 
@@ -145,6 +119,7 @@ export function PlayerPerformanceScreen() {
   const router = useRouter();
   const { t, locale, isRTL } = useI18n();
   const { colors } = useTheme();
+  const session = usePlayerPortalSession();
   const [period, setPeriod] = useState(PERIOD_KEYS.WEEKLY);
   const [selectedLeaderboardMetric, setSelectedLeaderboardMetric] = useState(LEADERBOARD_METRIC_OVERALL);
   const [expandedLeaderboardRows, setExpandedLeaderboardRows] = useState({});
@@ -152,7 +127,6 @@ export function PlayerPerformanceScreen() {
     auto: true,
   });
 
-  const apiBaseUrl = playerPortalApi.getApiBaseUrl();
   const periodItems = useMemo(() => buildPeriodItems(t), [t]);
   const trendItems = data?.periods?.[period] || [];
   const breakdown = data?.summary?.breakdown || [];
@@ -489,7 +463,7 @@ export function PlayerPerformanceScreen() {
                   const rank = getSafeRank(row, index);
                   const medal = getMedalMeta(rank, colors);
                   const MedalIcon = medal.icon;
-                  const imageUri = resolveLeaderboardImageUri(row.image, row.imageType, apiBaseUrl);
+                  const imageUri = resolveLeaderboardImageUri(row, session.requestContext);
                   const englishName = cleanString(row?.playerNameEn);
                   const arabicName = cleanString(row?.playerNameAr);
                   const fallbackName = resolveDisplayName(row, locale);

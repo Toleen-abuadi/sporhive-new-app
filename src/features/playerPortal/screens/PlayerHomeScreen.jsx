@@ -31,6 +31,7 @@ import {
   PortalStatusBadge,
 } from '../components';
 import { usePlayerOverview } from '../hooks';
+import { usePlayerPortalSession } from '../hooks/usePlayerPortalSession';
 import {
   formatAmountLabel,
   formatDateLabel,
@@ -40,6 +41,8 @@ import {
   formatStatusLabel,
 } from '../utils/playerPortal.formatters';
 import { resolvePortalGuardMessage } from '../utils/playerPortal.messages';
+
+import { resolvePortalImageUri } from '../utils/playerPortal.images';
 
 const resolveLastUpdated = (value, locale) => {
   if (!value) return '';
@@ -57,22 +60,11 @@ const resolveLastUpdated = (value, locale) => {
   }
 };
 
-const resolvePlayerImage = (overview) => {
-  const image = String(overview?.profileImage?.image || '').trim();
-  if (!image) return '';
-
-  if (image.startsWith('http') || image.startsWith('data:image')) {
-    return image;
-  }
-
-  const type = String(overview?.profileImage?.imageType || 'image/jpeg').trim();
-  return `data:${type};base64,${image}`;
-};
-
 export function PlayerHomeScreen() {
   const router = useRouter();
   const { t, locale, isRTL } = useI18n();
   const { colors } = useTheme();
+  const session = usePlayerPortalSession();
   const {
     overview,
     error,
@@ -122,7 +114,7 @@ export function PlayerHomeScreen() {
   const guardDescription = resolvePortalGuardMessage(guardReason, t);
   const hasOverview = Boolean(overview);
   const isInitialLoading = isLoading && !hasOverview;
-  const playerImage = resolvePlayerImage(overview);
+  const playerImage = resolvePortalImageUri(overview, session.requestContext);
   const latestPaymentStatus = String(overview?.summaries?.latestPaymentStatus || '')
     .trim()
     .toLowerCase();

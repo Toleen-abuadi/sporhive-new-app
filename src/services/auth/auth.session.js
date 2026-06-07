@@ -289,17 +289,9 @@ const normalizePortalTokens = (payloadPortalTokens, accessToken, refreshToken, p
     cleanString(tokens.refresh) ||
     cleanString(tokens.refresh_token);
 
-  const academyAccess =
-    cleanString(portalTokens.academy_access) ||
-    cleanString(portalTokens.academyAccess) ||
-    cleanString(portalTokens.external_access) ||
-    cleanString(tokens.academy_access) ||
-    cleanString(root.academy_access);
-
   const normalized = {};
   if (access) normalized.access = access;
   if (refresh) normalized.refresh = refresh;
-  if (academyAccess) normalized.academy_access = academyAccess;
   return normalized;
 };
 
@@ -311,6 +303,8 @@ const normalizeUser = ({ user, mode, academyId, externalPlayerId, username }) =>
   const normalizedAcademyId =
     normalizeNumber(source.academy_id) ||
     normalizeNumber(source.academyId) ||
+    normalizeNumber(source.customer_id) ||
+    normalizeNumber(source.customerId) ||
     normalizeNumber(academyId);
 
   const normalizedExternalPlayerId =
@@ -341,6 +335,8 @@ const normalizeUser = ({ user, mode, academyId, externalPlayerId, username }) =>
       cleanString(phoneNumbers['1']) ||
       cleanString(phoneNumbers[1]),
     academy_id: resolvedMode === AUTH_LOGIN_MODES.PLAYER ? normalizedAcademyId : null,
+    customer_id: resolvedMode === AUTH_LOGIN_MODES.PLAYER ? normalizedAcademyId : null,
+    customerId: resolvedMode === AUTH_LOGIN_MODES.PLAYER ? normalizedAcademyId : null,
     external_player_id: resolvedMode === AUTH_LOGIN_MODES.PLAYER ? normalizedExternalPlayerId : null,
     player_username:
       resolvedMode === AUTH_LOGIN_MODES.PLAYER
@@ -358,6 +354,8 @@ const inferAcademyId = (payload, user, mode, fallbackAcademyId) => {
     normalizeNumber(user?.academy_id) ||
     normalizeNumber(payload?.academy_id) ||
     normalizeNumber(payload?.academyId) ||
+    normalizeNumber(payload?.customer_id) ||
+    normalizeNumber(payload?.customerId) ||
     normalizeNumber(payload?.academy?.id) ||
     normalizeNumber(fallbackAcademyId)
   );
@@ -366,6 +364,7 @@ const inferAcademyId = (payload, user, mode, fallbackAcademyId) => {
 const inferExternalPlayerId = (payload, user, mode) => {
   if (mode !== AUTH_LOGIN_MODES.PLAYER) return null;
   return (
+    normalizeNumber(user?.external_player_id) ||
     cleanString(user?.external_player_id) ||
     cleanString(payload?.external_player_id) ||
     cleanString(payload?.externalPlayerId) ||
@@ -377,34 +376,132 @@ const inferExternalPlayerId = (payload, user, mode) => {
   );
 };
 
+export const normalizeLoginResponse = (rawResponse, { submittedAcademyId = null } = {}) => {
+  const payload = normalizeObject(rawResponse) || {};
+  const tokens = normalizeObject(payload.tokens) || {};
+  const portalTokens = normalizeObject(payload.portal_tokens) || normalizeObject(payload.portalTokens) || {};
+  const playerData =
+    normalizeObject(payload.player_data) ||
+    normalizeObject(payload.playerData) ||
+    normalizeObject(payload.data?.player_data) ||
+    normalizeObject(payload.data?.playerData) ||
+    {};
+  const player =
+    normalizeObject(payload.player) ||
+    normalizeObject(payload.data?.player) ||
+    normalizeObject(payload.profile) ||
+    normalizeObject(payload.data?.profile) ||
+    {};
+  const user = normalizeObject(payload.user) || normalizeObject(payload.data?.user) || {};
+  const resolvedMode = inferModeFromPayload(payload, AUTH_LOGIN_MODES.PLAYER) || AUTH_LOGIN_MODES.PLAYER;
+  const token =
+    cleanString(extractAuthToken(payload)) ||
+    cleanString(tokens.access) ||
+    cleanString(tokens.token) ||
+    cleanString(payload.token) ||
+    cleanString(portalTokens.access);
+  const refreshToken =
+    cleanString(extractRefreshToken(payload)) ||
+    cleanString(tokens.refresh) ||
+    cleanString(payload.refresh) ||
+    cleanString(portalTokens.refresh);
+  const academyId =
+    normalizeNumber(payload?.academy?.id) ||
+    normalizeNumber(payload?.academy_id) ||
+    normalizeNumber(payload?.customer_id) ||
+    normalizeNumber(payload?.customerId) ||
+    normalizeNumber(submittedAcademyId);
+  const tryoutId =
+    normalizeNumber(payload?.tryout_id) ||
+    normalizeNumber(player?.tryout_id) ||
+    normalizeNumber(player?.external_player_id) ||
+    normalizeNumber(playerData?.id) ||
+    normalizeNumber(payload?.external_player_id);
+
+  const mergedUser = {
+    ...playerData,
+    ...player,
+    ...user,
+  };
+
+  if (academyId != null) {
+    mergedUser.academy_id = academyId;
+    mergedUser.academyId = academyId;
+    mergedUser.customer_id = academyId;
+    mergedUser.customerId = academyId;
+  }
+
+  if (tryoutId != null) {
+    mergedUser.tryout_id = tryoutId;
+    mergedUser.player_id = tryoutId;
+    mergedUser.external_player_id = tryoutId;
+    mergedUser.externalPlayerId = tryoutId;
+  }
+
+  return {
+    token,
+    refreshToken,
+    portalTokens: {
+      access: token,
+      refresh: refreshToken,
+    },
+    academyId,
+    tryoutId,
+    playerData,
+    player,
+    user: mergedUser,
+    roles: normalizeRoles(payload.roles, resolvedMode),
+    raw: payload,
+  };
+};
+
 export function buildSessionFromLoginResponse({ mode, data, academyId, username } = {}) {
   const payload = normalizeObject(data) || {};
   const resolvedMode = inferModeFromPayload(payload, mode);
-  const token = extractAuthToken(payload);
+  const playerLogin = resolvedMode === AUTH_LOGIN_MODES.PLAYER ? normalizeLoginResponse(payload, { submittedAcademyId: academyId }) : null;
+  const token = cleanString(playerLogin?.token) || extractAuthToken(payload);
   if (!token) return null;
 
-  const refreshToken = extractRefreshToken(payload);
-  const userPayload = pickUserPayload(payload);
+  const refreshToken =
+    cleanString(playerLogin?.refreshToken) || extractRefreshToken(payload);
+  const userPayload = resolvedMode === AUTH_LOGIN_MODES.PLAYER
+    ? normalizeObject(playerLogin?.user) || pickUserPayload(payload)
+    : pickUserPayload(payload);
+  const fallbackExternalPlayerId =
+    cleanString(payload?.external_player_id) ||
+    cleanString(payload?.tryout_id) ||
+    cleanString(payload?.player_data?.id);
   const user = normalizeUser({
     user: userPayload,
     mode: resolvedMode,
-    academyId,
-    externalPlayerId:
-      cleanString(payload?.external_player_id) ||
-      cleanString(payload?.tryout_id) ||
-      cleanString(payload?.player_data?.id),
+    academyId: playerLogin?.academyId ?? academyId,
+    externalPlayerId: playerLogin?.tryoutId ?? fallbackExternalPlayerId,
     username,
   });
 
-  const roles = normalizeRoles(payload.roles, resolvedMode);
-  const portalTokens = normalizePortalTokens(
-    payload.portal_tokens || payload.portalTokens,
-    token,
-    refreshToken,
-    payload
-  );
-  const resolvedAcademyId = inferAcademyId(payload, user, resolvedMode, academyId);
-  const resolvedExternalPlayerId = inferExternalPlayerId(payload, user, resolvedMode);
+  const roles = resolvedMode === AUTH_LOGIN_MODES.PLAYER ? normalizeRoles(playerLogin?.roles, resolvedMode) : normalizeRoles(payload.roles, resolvedMode);
+  const portalTokens =
+    resolvedMode === AUTH_LOGIN_MODES.PLAYER
+      ? {
+          access: token,
+          refresh: refreshToken || undefined,
+        }
+      : normalizePortalTokens(
+          payload.portal_tokens || payload.portalTokens,
+          token,
+          refreshToken,
+          payload
+        );
+  const resolvedAcademyId =
+    resolvedMode === AUTH_LOGIN_MODES.PLAYER
+      ? normalizeNumber(playerLogin?.academyId) ||
+        inferAcademyId(payload, user, resolvedMode, academyId)
+      : inferAcademyId(payload, user, resolvedMode, academyId);
+  const resolvedExternalPlayerId =
+    resolvedMode === AUTH_LOGIN_MODES.PLAYER
+      ? cleanString(playerLogin?.tryoutId) ||
+        inferExternalPlayerId(payload, user, resolvedMode)
+      : inferExternalPlayerId(payload, user, resolvedMode);
 
   const nowIso = new Date().toISOString();
   return {
@@ -416,6 +513,7 @@ export function buildSessionFromLoginResponse({ mode, data, academyId, username 
     roles,
     mode: resolvedMode,
     academyId: resolvedAcademyId,
+    customerId: resolvedAcademyId,
     externalPlayerId: resolvedExternalPlayerId,
     username:
       resolvedMode === AUTH_LOGIN_MODES.PLAYER
@@ -459,7 +557,7 @@ const ensureSessionShape = (session) => {
     source,
     user,
     mode,
-    source.academyId || source.academy_id || source.academy?.id
+    source.academyId || source.academy_id || source.customerId || source.customer_id || source.academy?.id
   );
   const externalPlayerId =
     inferExternalPlayerId(source, user, mode) ||
@@ -476,6 +574,7 @@ const ensureSessionShape = (session) => {
     roles,
     mode,
     academyId,
+    customerId: academyId,
     externalPlayerId,
     username:
       mode === AUTH_LOGIN_MODES.PLAYER

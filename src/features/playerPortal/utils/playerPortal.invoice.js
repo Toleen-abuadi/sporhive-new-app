@@ -10,15 +10,6 @@ const DEFAULT_FILE_NAME = 'invoice.pdf';
 const DEFAULT_CONTENT_TYPE = 'application/pdf';
 const BASE64_CHUNK_SIZE = 0x8000;
 
-const debugInvoiceDownload = (stage, payload = {}) => {
-  if (!__DEV__) return;
-  try {
-    console.log(`[invoice][download] ${stage}`, payload);
-  } catch {
-    // no-op
-  }
-};
-
 const createInvoiceFileError = (code, message, details = null) => {
   const error = new Error(message);
   error.code = code;
@@ -243,44 +234,29 @@ export async function downloadInvoiceDocument(docRef) {
     throw new Error('Invoice URI is missing.');
   }
 
-  debugInvoiceDownload('platform', { platform: Platform.OS });
-
   if (Platform.OS === 'android') {
     const fileName = normalizeFileName(docRef?.fileName || DEFAULT_FILE_NAME);
 
     try {
       const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
-      debugInvoiceDownload('android-saf-permission', {
-        granted: Boolean(permissions?.granted),
-        directoryUri: permissions?.directoryUri || null,
-      });
-
       if (!permissions?.granted || !permissions?.directoryUri) {
         throw createInvoiceFileError('STORAGE_PERMISSION_DENIED', 'Storage permission denied');
       }
 
       const sourceFileInfo = await FileSystem.getInfoAsync(uri);
-      debugInvoiceDownload('source-file-info', {
-        exists: Boolean(sourceFileInfo?.exists),
-        size: sourceFileInfo?.size ?? null,
-      });
-
       const base64 = await FileSystem.readAsStringAsync(uri, {
         encoding: FileSystem.EncodingType.Base64,
       });
-      debugInvoiceDownload('base64-length', { length: base64.length });
 
       const safFileUri = await FileSystem.StorageAccessFramework.createFileAsync(
         permissions.directoryUri,
         fileName,
         DEFAULT_CONTENT_TYPE
       );
-      debugInvoiceDownload('saf-file-created', { safFileUri });
 
       await FileSystem.writeAsStringAsync(safFileUri, base64, {
         encoding: FileSystem.EncodingType.Base64,
       });
-      debugInvoiceDownload('write-complete', { safFileUri });
 
       return {
         uri: safFileUri,

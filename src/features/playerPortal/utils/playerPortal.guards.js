@@ -45,8 +45,11 @@ export function resolvePlayerPortalToken(authState) {
 export function resolveAcademyId(authState) {
   return (
     toNumber(authState?.academyId) ||
+    toNumber(authState?.customerId) ||
     toNumber(authState?.user?.academy_id) ||
-    toNumber(authState?.user?.academyId)
+    toNumber(authState?.user?.academyId) ||
+    toNumber(authState?.user?.customer_id) ||
+    toNumber(authState?.user?.customerId)
   );
 }
 
