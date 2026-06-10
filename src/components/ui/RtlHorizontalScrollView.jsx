@@ -56,7 +56,6 @@ export const RtlHorizontalScrollView = forwardRef(function RtlHorizontalScrollVi
         {
           flexDirection: getRowDirection(isRTL),
           flexGrow: 1,
-          justifyContent: isRTL ? 'flex-end' : 'flex-start',
         },
       ]}
     >

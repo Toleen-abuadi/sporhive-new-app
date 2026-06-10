@@ -8,10 +8,13 @@ import { usePortalQueryState } from './usePortalQueryState';
 
 const DEFAULT_FREEZE_DATA = Object.freeze({
   items: [],
+  pending: [],
+  approved: [],
+  rejected: [],
+  canceled: [],
+  ended: [],
   active: [],
   upcoming: [],
-  ended: [],
-  pending: [],
   current: null,
   raw: null,
 });
@@ -92,7 +95,7 @@ const getFreezePolicy = (overview) => {
   };
 };
 
-const YEAR_LIMIT_STATUSES = new Set(['pending', 'approved', 'active', 'upcoming', 'scheduled']);
+const YEAR_LIMIT_STATUSES = new Set(['pending', 'approved']);
 
 const countByYear = (rows, startDate) => {
   const targetDate = String(startDate || '').slice(0, 10);
@@ -255,10 +258,13 @@ export function usePlayerFreeze({ auto = true } = {}) {
     ...query,
     data: query.data || DEFAULT_FREEZE_DATA,
     items: query.data?.items || [],
+    pending: query.data?.pending || [],
+    approved: query.data?.approved || [],
+    rejected: query.data?.rejected || [],
+    canceled: query.data?.canceled || [],
+    ended: query.data?.ended || [],
     active: query.data?.active || [],
     upcoming: query.data?.upcoming || [],
-    ended: query.data?.ended || [],
-    pending: query.data?.pending || [],
     current: query.data?.current || null,
     policy,
     canFetch: session.canFetchOverview,

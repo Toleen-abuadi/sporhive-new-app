@@ -68,7 +68,7 @@ const resolveAgeRangeOption = (item) => {
     key,
     from,
     to,
-    label: cleanString(item.label) || `${from || '?'}-${to || '?'}`,
+    label: from && to ? `${from}-${to}` : cleanString(item.label) || `${from || '?'}-${to || '?'}`,
   };
 };
 
@@ -90,15 +90,25 @@ const formatAgeRangeLabel = ({ minAge, maxAge, isRTL, copy }) => {
 
   if (!minValue && !maxValue) return '';
   if (minValue && maxValue) {
-    if (isRTL) return `من ${minValue} إلى ${maxValue} ${ageUnitAr}`;
+    if (isRTL) return `\u2066${minValue}-${maxValue}\u2069 ${ageUnitAr}`;
     return `${minValue}-${maxValue} ${yearsEn}`;
   }
   if (minValue) {
-    if (isRTL) return `من ${minValue} ${ageUnitAr}`;
+    if (isRTL) return `\u2066${minValue}\u2069 ${ageUnitAr}`;
     return `${cleanString(copy?.filters?.ageFromLabel || 'From')} ${minValue}`;
   }
-  if (isRTL) return `حتى ${maxValue} ${ageUnitAr}`;
+  if (isRTL) return `\u2066${maxValue}\u2069 ${ageUnitAr}`;
   return `${cleanString(copy?.filters?.ageUpToLabel || 'Up to')} ${maxValue}`;
+};
+
+const formatAgeRangeOptionLabel = (item, isRTL, copy) => {
+  if (!item) return '';
+  return formatAgeRangeLabel({
+    minAge: item.from,
+    maxAge: item.to,
+    isRTL,
+    copy,
+  }) || cleanString(item.label);
 };
 
 export function AcademyFilters({
@@ -349,7 +359,7 @@ export function AcademyFilters({
             {availableAgeRanges.map((item) => (
               <Chip
                 key={item.key}
-                label={item.label}
+                label={formatAgeRangeOptionLabel(item, isRTL, copy)}
                 selected={cleanString(filters?.age_group) === item.key}
                 onPress={() => applyAgeRangeOption(item)}
               />
@@ -481,7 +491,6 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   ageLabel: {
-    width: '100%',
   },
   rowWrap: {
     flexWrap: 'wrap',

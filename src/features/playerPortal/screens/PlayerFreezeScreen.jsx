@@ -87,6 +87,19 @@ const getPhaseStatus = (item) => {
   return status || phase || 'inactive';
 };
 
+const getFreezeSectionLabel = (sectionKey, t) => {
+  if (sectionKey === 'canceled') return t('common.enums.status.cancelled');
+  return t(`common.enums.status.${sectionKey}`);
+};
+
+const getFreezeRowKey = (item, sectionKey, index) => {
+  const id = item?.id ?? item?.registrationId ?? '';
+  const startDate = item?.startDate || item?.start_date || '';
+  const endDate = item?.endDate || item?.end_date || '';
+  const createdAt = item?.createdAt || item?.created_at || '';
+  return [sectionKey, id, startDate, endDate, createdAt, index].filter((value) => value !== '').join('-');
+};
+
 const resolveFreezeSubmitErrorMessage = (error, t) => {
   const code = String(error?.code || '').toLowerCase();
   const message = String(error?.message || '').toLowerCase();
@@ -189,6 +202,11 @@ export function PlayerFreezeScreen() {
   const {
     data,
     items,
+    pending,
+    approved,
+    rejected,
+    canceled,
+    ended,
     policy,
     error,
     isLoading,
@@ -352,6 +370,13 @@ export function PlayerFreezeScreen() {
 
   const showInitialLoading = isLoading && !error && items.length === 0;
   const isEmptyLikeError = isFreezeHistoryEmptyLikeError(error);
+  const freezeSections = [
+    { key: 'pending', rows: pending },
+    { key: 'approved', rows: approved },
+    { key: 'rejected', rows: rejected },
+    { key: 'canceled', rows: canceled },
+    { key: 'ended', rows: ended },
+  ].filter((section) => (section.rows || []).length > 0);
 
   return (
     <AppScreen
@@ -597,62 +622,26 @@ export function PlayerFreezeScreen() {
 
           {!showInitialLoading && items.length > 0 ? (
             <View style={styles.historyList}>
-              <View style={[styles.historyTitleRow, { flexDirection: getRowDirection(isRTL) }]}>
-                <History size={14} color={colors.accentOrange} strokeWidth={2.2} />
-                <Text variant="bodySmall" weight="semibold">
-                  {t('playerPortal.freeze.sections.currentAndUpcoming')}
-                </Text>
-              </View>
+              {freezeSections.map((section) => (
+                <View key={section.key} style={styles.historySection}>
+                  <View style={[styles.historyTitleRow, { flexDirection: getRowDirection(isRTL) }]}>
+                    <History size={14} color={colors.accentOrange} strokeWidth={2.2} />
+                    <Text variant="bodySmall" weight="semibold">
+                      {getFreezeSectionLabel(section.key, t)}
+                    </Text>
+                  </View>
 
-              {(data.active || []).map((item) => (
-                <FreezeHistoryCard
-                  key={`active-${item.id}`}
-                  item={item}
-                  locale={locale}
-                  t={t}
-                  colors={colors}
-                  isRTL={isRTL}
-                />
-              ))}
-
-              {(data.upcoming || []).map((item) => (
-                <FreezeHistoryCard
-                  key={`upcoming-${item.id}`}
-                  item={item}
-                  locale={locale}
-                  t={t}
-                  colors={colors}
-                  isRTL={isRTL}
-                />
-              ))}
-
-              {(data.pending || []).map((item) => (
-                <FreezeHistoryCard
-                  key={`pending-${item.id}`}
-                  item={item}
-                  locale={locale}
-                  t={t}
-                  colors={colors}
-                  isRTL={isRTL}
-                />
-              ))}
-
-              <View style={[styles.historyTitleRow, { flexDirection: getRowDirection(isRTL) }]}>
-                <History size={14} color={colors.accentOrange} strokeWidth={2.2} />
-                <Text variant="bodySmall" weight="semibold">
-                  {t('playerPortal.freeze.sections.ended')}
-                </Text>
-              </View>
-
-              {(data.ended || []).slice(0, 8).map((item) => (
-                <FreezeHistoryCard
-                  key={`ended-${item.id}`}
-                  item={item}
-                  locale={locale}
-                  t={t}
-                  colors={colors}
-                  isRTL={isRTL}
-                />
+                  {section.rows.map((item, index) => (
+                    <FreezeHistoryCard
+                      key={getFreezeRowKey(item, section.key, index)}
+                      item={item}
+                      locale={locale}
+                      t={t}
+                      colors={colors}
+                      isRTL={isRTL}
+                    />
+                  ))}
+                </View>
               ))}
             </View>
           ) : null}
@@ -735,6 +724,9 @@ const styles = StyleSheet.create({
   },
   historyList: {
     gap: spacing.sm,
+  },
+  historySection: {
+    gap: spacing.xs,
   },
   historyTitleRow: {
     alignItems: 'center',

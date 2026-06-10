@@ -1,4 +1,5 @@
 import { toEnglishDigits } from '../../../utils/numbering';
+import { normalizeFreezePhase, normalizeFreezeStatus } from './playerPortal.freezeStatus';
 
 const cleanString = (value) => {
   if (value == null) return '';
@@ -415,8 +416,8 @@ const normalizeFreeze = (source) => {
   const data = toObject(source);
   return {
     id: toNumber(data.id),
-    status: pickFirstString(data.status),
-    phase: pickFirstString(data.phase),
+    status: normalizeFreezeStatus(data.status, data.phase),
+    phase: normalizeFreezePhase(data.phase) || normalizeFreezePhase(data.status),
     startDate: normalizeIsoDate(data.start_date),
     endDate: normalizeIsoDate(data.end_date),
     reason: pickFirstString(data.reason),

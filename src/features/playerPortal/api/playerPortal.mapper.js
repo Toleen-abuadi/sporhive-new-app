@@ -1269,12 +1269,12 @@ const extractFreezeRows = (payload) => {
 
   const groupedRows = [
     ['pending', root.pending || data.pending],
-    ['rejected', root.rejected || data.rejected],
-    ['cancelled', root.cancelled || data.cancelled || root.canceled || data.canceled],
     ['approved', root.approved || data.approved],
+    ['rejected', root.rejected || data.rejected],
+    ['canceled', root.canceled || data.canceled || root.cancelled || data.cancelled],
+    ['ended', root.ended || data.ended || root.archived || data.archived],
     ['active', root.active || data.active || root.current || data.current],
     ['upcoming', root.upcoming || data.upcoming || root.scheduled || data.scheduled],
-    ['ended', root.ended || data.ended || root.archived || data.archived],
   ].flatMap(([groupKey, list]) =>
     toArray(list).map((row) => {
       const item = toObject(row);
@@ -1291,9 +1291,22 @@ const extractFreezeRows = (payload) => {
           status: 'approved',
         };
       }
+      if (groupKey === 'pending' || groupKey === 'rejected' || groupKey === 'canceled' || groupKey === 'ended') {
+        return {
+          ...item,
+          status: groupKey,
+        };
+      }
+      if (groupKey === 'active' || groupKey === 'upcoming') {
+        return {
+          ...item,
+          status: 'approved',
+          phase: cleanString(item.phase || item.freeze_phase) || groupKey,
+        };
+      }
       return {
         ...item,
-        phase: cleanString(item.phase || item.freeze_phase) || groupKey,
+        status: 'pending',
       };
     })
   );

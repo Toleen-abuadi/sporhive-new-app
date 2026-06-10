@@ -105,7 +105,7 @@
         "registration": "Registration",
         "installment": "Installment",
         "session": "Session",
-        "new": "Website New Registration",
+        "new": "New Registration",
         "unknown": "Unspecified"
       },
       "registrationTypes": {
