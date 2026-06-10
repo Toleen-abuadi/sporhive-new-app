@@ -1,7 +1,6 @@
 import { useCallback, useMemo } from 'react';
-import { Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { RefreshControl, StyleSheet, View } from 'react-native';
 import {
-  CalendarClock,
   CreditCard,
   HandCoins,
   ShoppingBasket,

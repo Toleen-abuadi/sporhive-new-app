@@ -215,12 +215,14 @@ export function PlaygroundBookingScreen() {
 
     const defaultDuration =
       durations.find((item) => item.isDefault) || durations[0];
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedDurationId(defaultDuration?.id || "");
   }, [durations, selectedDurationId]);
 
   useEffect(() => {
     if (!venue) return;
     if (playersCount > 0) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPlayersCount(Math.max(venue.minPlayers || 1, 1));
   }, [playersCount, venue]);
 
@@ -277,6 +279,7 @@ export function PlaygroundBookingScreen() {
 
   useEffect(() => {
     if (!availableSlots.length) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (selectedSlot) setSelectedSlot(null);
       return;
     }
@@ -306,6 +309,7 @@ export function PlaygroundBookingScreen() {
   useEffect(() => {
     if (paymentType === "cliq" && !allowCliq) {
       if (allowCash) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setPaymentType("cash");
       } else {
         setPaymentType("");

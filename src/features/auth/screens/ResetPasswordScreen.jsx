@@ -218,6 +218,7 @@ export function ResetPasswordScreen() {
   const [academiesLoading, setAcademiesLoading] = useState(false);
   const [academyError, setAcademyError] = useState('');
   const requestInFlightRef = useRef(false);
+  const [requestInFlight, setRequestInFlight] = useState(false);
   const isRequestLocked = requestAttemptCount >= MAX_REQUEST_ATTEMPTS;
 
   const modeOptions = [
@@ -327,6 +328,7 @@ export function ResetPasswordScreen() {
 
   const onModeChange = (nextMode) => {
     requestInFlightRef.current = false;
+    setRequestInFlight(false);
     setMode(nextMode);
     setStep(STEPS.IDENTIFY);
     setPhone(defaultPhonePayload());
@@ -364,6 +366,7 @@ export function ResetPasswordScreen() {
     }
 
     requestInFlightRef.current = true;
+    setRequestInFlight(true);
     setLoading(true);
     let result;
     try {
@@ -381,6 +384,7 @@ export function ResetPasswordScreen() {
             });
     } finally {
       requestInFlightRef.current = false;
+      setRequestInFlight(false);
       setLoading(false);
     }
 
@@ -618,6 +622,7 @@ export function ResetPasswordScreen() {
     if (step !== STEPS.OTP || !resetContext) return;
     const remaining = getContextCooldownSeconds(resetContext);
     if (remaining > resendIn) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setResendIn(remaining);
     }
   }, [getContextCooldownSeconds, resendIn, resetContext, step]);
@@ -695,7 +700,7 @@ export function ResetPasswordScreen() {
               <Button
                 onPress={requestOtp}
                 loading={loading}
-                disabled={loading || requestInFlightRef.current || isRequestLocked || !identifyFormValid}
+                disabled={loading || requestInFlight || isRequestLocked || !identifyFormValid}
                 fullWidth
               >
                 {t('auth.actions.sendCode')}

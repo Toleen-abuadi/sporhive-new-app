@@ -205,20 +205,6 @@ const normalizeAcademiesCollection = (payload, locale) => {
 
 const logListResponse = (payload, normalized) => {
   if (!__DEV__) return;
-
-  const root = toObject(payload);
-  const nested = toObject(root.data);
-  const receivedCount = Array.isArray(payload)
-    ? payload.length
-    : Array.isArray(root.data)
-    ? root.data.length
-    : Array.isArray(root.items)
-    ? root.items.length
-    : Array.isArray(nested.data)
-    ? nested.data.length
-    : Array.isArray(nested.items)
-    ? nested.items.length
-    : 0;
 };
 
 export function useAcademies({ filters = {}, auto = true, locale = 'en' } = {}) {

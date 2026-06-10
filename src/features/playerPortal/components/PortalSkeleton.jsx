@@ -1,11 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 import { useTheme } from '../../../hooks/useTheme';
 import { borderRadius, spacing } from '../../../theme/tokens';
 
 export function PortalSkeletonBlock({ height = 12, width = '100%', radius = borderRadius.md, style }) {
   const { colors } = useTheme();
-  const opacity = useRef(new Animated.Value(0.35)).current;
+  const [opacity] = useState(() => new Animated.Value(0.35));
 
   useEffect(() => {
     const loop = Animated.loop(

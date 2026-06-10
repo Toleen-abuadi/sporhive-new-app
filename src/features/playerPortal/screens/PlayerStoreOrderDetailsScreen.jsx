@@ -16,21 +16,15 @@ import {
   PortalErrorState,
   PortalSectionCard,
   PortalSkeletonCard,
-  PortalStatusBadge,
   UniformCartHeaderActions,
-  UniformStatusTimeline,
 } from '../components';
 import { usePlayerUniformOrders } from '../hooks';
 import { usePlayerUniformCart } from '../state';
-import { formatDateLabel, formatNumberLabel, formatOrderStatusLabel } from '../utils/playerPortal.formatters';
+import { formatDateLabel, formatNumberLabel } from '../utils/playerPortal.formatters';
 import { resolvePortalGuardMessage } from '../utils/playerPortal.messages';
-import { getUniformProductName, normalizeUniformStatus } from '../utils/playerPortal.uniform';
+import { getUniformProductName } from '../utils/playerPortal.uniform';
 
 const resolveParam = (value) => (Array.isArray(value) ? value[0] : value);
-
-function resolveOrderStatusLabel(status, t, locale) {
-  return formatOrderStatusLabel(normalizeUniformStatus(status), { t, locale, fallback: '-' });
-}
 
 function OrderItemCard({ item, locale, t, colors, isRTL }) {
   const hasPrinting = Boolean(item.playerNumber || item.nickname);
@@ -94,9 +88,6 @@ export function PlayerStoreOrderDetailsScreen() {
     [groups, orderRef]
   );
   const showLoading = canFetch && (isLoading || (!lastUpdatedAt && !error)) && !orderGroup;
-  const normalizedOrderStatus = normalizeUniformStatus(orderGroup?.status);
-  const statusLabel = resolveOrderStatusLabel(normalizedOrderStatus, t, locale);
-
   return (
     <AppScreen
       scroll

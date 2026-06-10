@@ -209,12 +209,14 @@ export function PlaygroundsMapScreen() {
     mapQuery.isLoading && !mapQuery.items.length && !mapQuery.error;
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setViewportFilters({});
     clearAppliedViewport();
   }, [baseFiltersSignature, clearAppliedViewport]);
 
   useEffect(() => {
     if (!mapVenues.length) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedVenueId('');
       return;
     }
@@ -232,6 +234,7 @@ export function PlaygroundsMapScreen() {
     if (!mapQuery.lastUpdatedAt) return;
     if (!mapVenues.length) return;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFitToResultsVersion((prev) => prev + 1);
 
     const bounds = buildBoundsFromVenues(mapVenues);

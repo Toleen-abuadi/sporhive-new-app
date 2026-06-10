@@ -200,7 +200,6 @@ export function PlayerFreezeScreen() {
   const overviewQuery = usePlayerOverview({ auto: true, enabled: true });
 
   const {
-    data,
     items,
     pending,
     approved,
@@ -238,6 +237,7 @@ export function PlayerFreezeScreen() {
       preferredDurationDays: DEFAULT_RANGE_DAYS,
     });
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStartDate(nextRange.startDate);
     setEndDate(nextRange.endDate);
     if (!nextRange.startDate || !nextRange.endDate) {

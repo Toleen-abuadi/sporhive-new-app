@@ -21,7 +21,6 @@ import { useToast } from "../../../components/feedback/ToastHost";
 import {
   ROUTES,
   buildAuthLoginRoute,
-  buildPlaygroundsRatingRoute,
 } from "../../../constants/routes";
 import { useI18n } from "../../../hooks/useI18n";
 import { useTheme } from "../../../hooks/useTheme";

@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -155,19 +155,6 @@ export function PlaygroundVenueScreen() {
   const venueRaw = venue?.raw || {};
   const marketplaceTier = toCleanText(venue?.marketplace?.tier || venueRaw.marketplace_tier);
   const tierLabel = resolveTierLabel(marketplaceTier, copy);
-
-  const description = useMemo(
-    () =>
-      toCleanText(
-        venueRaw.description_en ||
-          venueRaw.description ||
-          venueRaw.description_ar ||
-          venueRaw.short_description ||
-          venueRaw.short_desc ||
-          venueRaw.note
-      ),
-    [venueRaw]
-  );
 
   const notes = useMemo(
     () =>

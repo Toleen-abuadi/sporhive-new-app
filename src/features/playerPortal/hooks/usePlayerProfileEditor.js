@@ -60,26 +60,32 @@ export function usePlayerProfileEditor() {
       const shouldSyncDraft = getProfileDirtyKeys(draft, next).length > 0;
       const shouldSyncInitial = getProfileDirtyKeys(initialDraft, next).length > 0;
       if (!shouldSyncDraft && !shouldSyncInitial) return;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDraft(next);
       setInitialDraft(next);
       setImageDraft(null);
     }
   }, [draft, initialDraft, profileQuery.profile]);
 
+  const imageUriValue = imageDraft?.uri;
+  const imageBase64 = imageDraft?.base64;
+  const imageMime = imageDraft?.mimeType;
+  const imageSize = imageDraft?.fileSize;
+
   const dirtyKeys = useMemo(() => {
     const keys = getProfileDirtyKeys(initialDraft, draft);
-    if (imageDraft?.uri) {
+    if (imageUriValue) {
       return Array.from(new Set([...keys, 'image']));
     }
     return keys;
-  }, [draft, imageDraft?.uri, initialDraft]);
+  }, [draft, imageUriValue, initialDraft]);
 
   const isDirty = dirtyKeys.length > 0;
 
   const imageUri = useMemo(() => {
-    if (imageDraft?.uri) return imageDraft.uri;
+    if (imageUriValue) return imageUriValue;
     return resolveProfileImageUri(draft, session.requestContext);
-  }, [draft, imageDraft?.uri, session.requestContext]);
+  }, [draft, imageUriValue, session.requestContext]);
 
   const setFieldValue = useCallback((field, value) => {
     setDraft((prev) => {
@@ -191,17 +197,17 @@ export function usePlayerProfileEditor() {
     setSubmitError(null);
 
     let imagePayload = null;
-    if (imageDraft?.uri) {
+    if (imageUriValue) {
       try {
-        const inlineBase64 = String(imageDraft.base64 || '').replace(/\s+/g, '').trim();
+        const inlineBase64 = String(imageBase64 || '').replace(/\s+/g, '').trim();
         if (inlineBase64) {
           imagePayload = {
             image: inlineBase64,
-            image_type: imageDraft.mimeType || 'image/jpeg',
-            image_size: imageDraft.fileSize || Math.max(0, Math.floor(inlineBase64.length * 0.75)),
+            image_type: imageMime || 'image/jpeg',
+            image_size: imageSize || Math.max(0, Math.floor(inlineBase64.length * 0.75)),
           };
         } else {
-          imagePayload = await readImageUriAsPayload(imageDraft.uri, imageDraft.mimeType);
+          imagePayload = await readImageUriAsPayload(imageUriValue, imageMime);
         }
       } catch (reason) {
         const error = {
@@ -237,7 +243,7 @@ export function usePlayerProfileEditor() {
     setFieldErrors({});
     setSubmitError(null);
     return result;
-  }, [draft, imageDraft?.base64, imageDraft?.fileSize, imageDraft?.mimeType, imageDraft?.uri, profileQuery]);
+  }, [draft, imageBase64, imageMime, imageSize, imageUriValue, profileQuery]);
 
   return {
     canFetch: session.canFetchOverview,

@@ -133,12 +133,15 @@ export function PlayerPerformanceScreen() {
   const notes = data?.summary?.notes || [];
   const recent = data?.summary?.recent || [];
   const leaderboardGroupId = data?.leaderboard?.groupId ?? null;
-  const leaderboard = data?.leaderboard?.items || [];
+  const leaderboardRaw = data?.leaderboard?.items;
+  const leaderboard = useMemo(() => (Array.isArray(leaderboardRaw) ? leaderboardRaw : []), [leaderboardRaw]);
+  const leaderboardTypesRaw = data?.leaderboard?.types;
+  const typesRaw = data?.types;
   const leaderboardTypes = useMemo(() => {
-    const leaderboardItems = Array.isArray(data?.leaderboard?.types) ? data.leaderboard.types : [];
+    const leaderboardItems = Array.isArray(leaderboardTypesRaw) ? leaderboardTypesRaw : [];
     if (leaderboardItems.length > 0) return leaderboardItems;
-    return Array.isArray(data?.types) ? data.types : [];
-  }, [data?.leaderboard?.types, data?.types]);
+    return Array.isArray(typesRaw) ? typesRaw : [];
+  }, [leaderboardTypesRaw, typesRaw]);
   const currentPlayerId = Number(data?.currentPlayerId || 0) || null;
   const hasPerformanceData = Boolean(data?.hasPerformanceData);
   const hasLeaderboardData = Boolean(data?.hasLeaderboardData) && leaderboard.length > 0;
@@ -170,6 +173,7 @@ export function PlayerPerformanceScreen() {
   useEffect(() => {
     const hasSelectedMetric = leaderboardMetricOptions.some((option) => option.key === selectedLeaderboardMetric);
     if (!hasSelectedMetric) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedLeaderboardMetric(LEADERBOARD_METRIC_OVERALL);
     }
   }, [leaderboardMetricOptions, selectedLeaderboardMetric]);

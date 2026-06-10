@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Animated, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/ui/Text';
 import { useI18n } from '../../../hooks/useI18n';
@@ -11,7 +11,7 @@ export function SegmentedToggle({ value, onChange, options = [], disabled = fals
   const { colors } = useTheme();
   const { isRTL } = useI18n();
   const [layoutWidth, setLayoutWidth] = useState(0);
-  const translate = useRef(new Animated.Value(0)).current;
+  const [translate] = useState(() => new Animated.Value(0));
 
   const count = Math.max(1, options.length);
   const innerWidth = Math.max(0, layoutWidth - OUTER_PADDING * 2);

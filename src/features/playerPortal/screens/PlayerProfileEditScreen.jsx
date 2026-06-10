@@ -109,6 +109,7 @@ export function PlayerProfileEditScreen() {
   }, [profileEditor.draft.google_maps_location, t, toast]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPickerError(null);
   }, [profileEditor.imageUri]);
 

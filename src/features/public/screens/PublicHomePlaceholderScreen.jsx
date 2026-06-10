@@ -55,6 +55,7 @@ export function PublicHomeScreen() {
   const { colors, isDark } = useTheme();
   const router = useRouter();
   const { user } = useAuth();
+  const firstName = user?.first_name;
   const academyCopy = getAcademyDiscoveryCopy(locale);
   const playgroundsCopy = getPlaygroundsCopy(locale);
 
@@ -65,8 +66,8 @@ export function PublicHomeScreen() {
             headerTitle: 'الرئيسية',
             headerSubtitle: 'ابدأ من هنا واكتشف خدمات سبور هايف',
             heroBadge: 'تجربة عامة ذكية',
-            heroWelcome: user?.first_name
-              ? `مرحباً ${user.first_name}، جاهز للانطلاق؟`
+            heroWelcome: firstName
+              ? `مرحباً ${firstName}، جاهز للانطلاق؟`
               : 'مرحباً بك في سبور هايف',
             heroDescription:
               'اكتشف الأكاديميات المناسبة واحجز الملاعب بخطوات بسيطة من شاشة واحدة.',
@@ -81,8 +82,8 @@ export function PublicHomeScreen() {
             headerTitle: 'Home',
             headerSubtitle: 'Start from here and explore SporHive services',
             heroBadge: 'Smart Public Experience',
-            heroWelcome: user?.first_name
-              ? `Welcome back ${user.first_name}, ready to play?`
+            heroWelcome: firstName
+              ? `Welcome back ${firstName}, ready to play?`
               : 'Welcome to SporHive',
             heroDescription:
               'Discover academies and book playgrounds from one clear, fast starting point.',
@@ -93,7 +94,7 @@ export function PublicHomeScreen() {
             playgroundDescription:
               'Browse venues, pick your preferred slot, and confirm bookings smoothly.',
           },
-    [locale, user?.first_name]
+    [locale, firstName]
   );
 
   const gradientColors = isDark

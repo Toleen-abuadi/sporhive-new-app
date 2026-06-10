@@ -155,8 +155,6 @@ export async function createInvoiceDocument({
 
   const fileUri = buildNativeFileUri(safeName);
   const base64 = encodeBase64(safeBuffer);
-  const byteLength = safeBuffer.byteLength;
-
 
   await FileSystem.writeAsStringAsync(fileUri, base64, {
     encoding: FileSystem.EncodingType.Base64,
@@ -243,7 +241,6 @@ export async function downloadInvoiceDocument(docRef) {
         throw createInvoiceFileError('STORAGE_PERMISSION_DENIED', 'Storage permission denied');
       }
 
-      const sourceFileInfo = await FileSystem.getInfoAsync(uri);
       const base64 = await FileSystem.readAsStringAsync(uri, {
         encoding: FileSystem.EncodingType.Base64,
       });

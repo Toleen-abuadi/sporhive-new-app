@@ -214,6 +214,13 @@ export function usePlayerRenewalFlow({ auto = true } = {}) {
   });
 
   const todayISO = toLocalISODate(new Date());
+  const optionsData = optionsQuery.data;
+  const optionCourses = optionsData?.courses;
+  const optionGroups = optionsData?.groups;
+  const optionLevels = optionsData?.levels;
+  const availableCourses = overviewQuery.overview?.subscription?.availableCourses;
+  const availableGroups = overviewQuery.overview?.subscription?.availableGroups;
+  const overviewLevels = overviewQuery.overview?.levels;
   const currentRegistration = useMemo(
     () => pickCurrentRegistration(overviewQuery.overview, optionsQuery.data),
     [optionsQuery.data, overviewQuery.overview]
@@ -237,20 +244,20 @@ export function usePlayerRenewalFlow({ auto = true } = {}) {
   }, [anchorISO, overviewQuery.overview?.subscription?.status]);
 
   const rawCourseOptions = useMemo(() => {
-    if ((optionsQuery.data?.courses || []).length > 0) {
-      return optionsQuery.data.courses.map(normalizeCourseOption);
+    if ((optionCourses || []).length > 0) {
+      return optionCourses.map(normalizeCourseOption);
     }
 
-    return (overviewQuery.overview?.subscription?.availableCourses || []).map(normalizeCourseOption);
-  }, [optionsQuery.data?.courses, overviewQuery.overview?.subscription?.availableCourses]);
+    return (availableCourses || []).map(normalizeCourseOption);
+  }, [availableCourses, optionCourses]);
 
   const rawGroupOptions = useMemo(() => {
-    if ((optionsQuery.data?.groups || []).length > 0) {
-      return dedupeGroups(optionsQuery.data.groups.map(normalizeGroupOption));
+    if ((optionGroups || []).length > 0) {
+      return dedupeGroups(optionGroups.map(normalizeGroupOption));
     }
 
-    return dedupeGroups((overviewQuery.overview?.subscription?.availableGroups || []).map(normalizeGroupOption));
-  }, [optionsQuery.data?.groups, overviewQuery.overview?.subscription?.availableGroups]);
+    return dedupeGroups((availableGroups || []).map(normalizeGroupOption));
+  }, [availableGroups, optionGroups]);
 
   const strictSubscriptionGroups = useMemo(
     () => rawGroupOptions.filter((group) => group.course_id === null),
@@ -268,12 +275,12 @@ export function usePlayerRenewalFlow({ auto = true } = {}) {
   );
 
   const levelOptions = useMemo(() => {
-    if ((optionsQuery.data?.levels || []).length > 0) {
-      return optionsQuery.data.levels.map(normalizeLevelOption);
+    if ((optionLevels || []).length > 0) {
+      return optionLevels.map(normalizeLevelOption);
     }
 
-    return (overviewQuery.overview?.levels || []).map(normalizeLevelOption);
-  }, [optionsQuery.data?.levels, overviewQuery.overview?.levels]);
+    return (overviewLevels || []).map(normalizeLevelOption);
+  }, [optionLevels, overviewLevels]);
 
   const filteredCourseOptions = useMemo(
     () => filterCoursesAfterActiveSubscription(rawCourseOptions, overlapAnchorISO),
@@ -453,13 +460,19 @@ export function usePlayerRenewalFlow({ auto = true } = {}) {
   useEffect(() => {
     if (!courseId) return;
     const valid = filteredCourseOptions.some((item) => sameId(item.value, courseId));
-    if (!valid) setCourseIdState('');
+    if (!valid) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCourseIdState('');
+    }
   }, [courseId, filteredCourseOptions]);
 
   useEffect(() => {
     if (!groupId) return;
     const valid = filteredGroupOptions.some((item) => sameId(item.value, groupId));
-    if (!valid) setGroupId('');
+    if (!valid) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setGroupId('');
+    }
   }, [filteredGroupOptions, groupId]);
 
   useEffect(() => {
@@ -468,7 +481,10 @@ export function usePlayerRenewalFlow({ auto = true } = {}) {
 
     const startOk = isISODate(startDate);
     const startISO = startOk ? startDate : todayISO;
-    if (!startOk) setStartDate(startISO);
+    if (!startOk) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setStartDate(startISO);
+    }
 
     if (!endDate) {
       const nextEndISO = addMonthsISODate(startISO, 1);
@@ -481,7 +497,10 @@ export function usePlayerRenewalFlow({ auto = true } = {}) {
 
     const startOk = isISODate(startDate);
     const nextStartISO = startOk ? maxISODate(startDate, anchorStartISO) : anchorStartISO || todayISO;
-    if (!startOk) setStartDate(nextStartISO);
+    if (!startOk) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setStartDate(nextStartISO);
+    }
 
     if (!endDate) {
       const seededEndDate = addMonthsISODate(nextStartISO, 1);
@@ -587,6 +606,7 @@ export function usePlayerRenewalFlow({ auto = true } = {}) {
       }
 
       if (boundedStartISO && boundedStartISO !== startDate) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setStartDate(boundedStartISO);
       }
 

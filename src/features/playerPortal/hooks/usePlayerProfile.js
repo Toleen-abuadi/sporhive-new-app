@@ -30,6 +30,7 @@ export function usePlayerProfile() {
 
   useEffect(() => {
     if (!profileFromOverview) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setProfileSnapshot(profileFromOverview);
   }, [profileFromOverview]);
 
@@ -64,6 +65,7 @@ export function usePlayerProfile() {
     if (!session.canFetchOverview || !session.requestContext) return;
     if (profile || isFetchingProfile || isUpdatingProfile) return;
     if (profileError) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchProfile();
   }, [
     fetchProfile,

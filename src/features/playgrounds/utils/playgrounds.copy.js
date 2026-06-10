@@ -1,4 +1,4 @@
-﻿const EN = {
+const EN = {
   title: 'Playgrounds',
   subtitle: 'Discover venues, choose your slot, and book in a few taps',
   searchHint: 'Browse by activity, date, players, and location',

@@ -122,6 +122,7 @@ export function LoginScreen() {
   }, [academies, lastSelectedAcademyId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMode(requestedMode);
   }, [requestedMode]);
 

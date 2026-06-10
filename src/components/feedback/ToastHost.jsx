@@ -25,16 +25,18 @@ const ToastContext = createContext(null);
 
 const makeId = () => `${Date.now()}_${Math.random().toString(16).slice(2)}`;
 
-function getIconComponent(variant) {
+function renderToastIcon(variant, color) {
+  const iconProps = { size: 16, color, strokeWidth: 2.4 };
+
   switch (variant) {
     case 'success':
-      return CircleCheck;
+      return <CircleCheck {...iconProps} />;
     case 'error':
-      return CircleX;
+      return <CircleX {...iconProps} />;
     case 'warning':
-      return CircleAlert;
+      return <CircleAlert {...iconProps} />;
     default:
-      return Info;
+      return <Info {...iconProps} />;
   }
 }
 
@@ -134,11 +136,11 @@ function ToastItem({ toast, onRemove }) {
   const { colors, isDark } = useTheme();
   const { isRTL, t } = useI18n();
 
-  const translateY = useRef(new Animated.Value(-14)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
+  const [translateY] = useState(() => new Animated.Value(-14));
+  const [opacity] = useState(() => new Animated.Value(0));
 
-  const Icon = getIconComponent(toast.variant);
   const accent = getVariantColor(toast.variant, colors);
+  const icon = useMemo(() => renderToastIcon(toast.variant, accent), [toast.variant, accent]);
 
   const dismiss = useCallback(() => {
     Animated.parallel([
@@ -185,7 +187,7 @@ function ToastItem({ toast, onRemove }) {
 
       <View style={[styles.toastBody, { flexDirection: getRowDirection(isRTL) }]}>
         <View style={[styles.iconWrap, { backgroundColor: colors.surfaceSoft }]}>
-          <Icon size={16} color={accent} strokeWidth={2.4} />
+          {icon}
         </View>
 
         <View style={styles.messageWrap}>

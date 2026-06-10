@@ -1,4 +1,4 @@
-﻿// durations are per VENUE now
+// durations are per VENUE now
 export const VENUE_DURATION_OPTIONS = [
   { id: '', minutes: null, labelEn: 'Any duration', labelAr: 'أي مدة' },
   { id: '30min', minutes: 30, labelEn: '30 minutes', labelAr: '30 دقيقة' },

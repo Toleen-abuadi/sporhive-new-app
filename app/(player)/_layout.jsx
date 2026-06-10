@@ -100,19 +100,27 @@ function PlayerMenuDrawer({ visible, onClose, onNavigate }) {
   const { t, isRTL, locale } = useI18n();
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
-  const animation = useRef(new Animated.Value(0)).current;
+  const [animation] = useState(() => new Animated.Value(0));
   const drawerWidth = Math.min(Math.max(width * 0.82, 280), 360);
   const hiddenOffset = isRTL ? drawerWidth + 20 : -(drawerWidth + 20);
 
-  const translateX = animation.interpolate({
-    inputRange: [0, 1],
-    outputRange: [hiddenOffset, 0],
-  });
+  const translateX = useMemo(
+    () =>
+      animation.interpolate({
+        inputRange: [0, 1],
+        outputRange: [hiddenOffset, 0],
+      }),
+    [animation, hiddenOffset]
+  );
 
-  const overlayOpacity = animation.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 1],
-  });
+  const overlayOpacity = useMemo(
+    () =>
+      animation.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0, 1],
+      }),
+    [animation]
+  );
 
   useEffect(() => {
     Animated.timing(animation, {

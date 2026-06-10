@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { AppScreen } from '../../../components/ui/AppScreen';
@@ -19,25 +18,19 @@ import {
   PortalErrorState,
   PortalSectionCard,
   PortalSkeletonCard,
-  PortalStatusBadge,
   UniformCartHeaderActions,
   UniformStatusTimeline,
 } from '../components';
 import { usePlayerUniformOrders } from '../hooks';
 import { usePlayerUniformCart } from '../state';
-import { formatDateLabel, formatNumberLabel, formatOrderStatusLabel } from '../utils/playerPortal.formatters';
+import { formatDateLabel, formatNumberLabel } from '../utils/playerPortal.formatters';
 import { resolvePortalGuardMessage } from '../utils/playerPortal.messages';
 import { getUniformProductName, normalizeUniformStatus } from '../utils/playerPortal.uniform';
-
-function resolveOrderStatusLabel(status, t, locale) {
-  return formatOrderStatusLabel(normalizeUniformStatus(status), { t, locale, fallback: '-' });
-}
 
 function OrderGroupCard({ group, locale, t, colors, onPress, isRTL }) {
   const latestItems = (group.items || []).slice(0, 2);
   const hiddenCount = Math.max(0, (group.items || []).length - latestItems.length);
   const normalizedStatus = normalizeUniformStatus(group.status);
-  const statusLabel = resolveOrderStatusLabel(normalizedStatus, t, locale);
 
   return (
     <Pressable
@@ -120,10 +113,6 @@ export function PlayerStoreOrdersScreen() {
   } = usePlayerUniformOrders({ auto: true });
 
   const showLoading = (isLoading || (!lastUpdatedAt && !error)) && groups.length === 0;
-  const statusPreview = useMemo(
-    () => groups.slice(0, 3).map((item) => item.status),
-    [groups]
-  );
 
   return (
     <AppScreen

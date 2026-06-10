@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Image, Pressable, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ChevronRight, Image as ImageIcon, PackageCheck, Search } from 'lucide-react-native';
+import { Image as ImageIcon, Search } from 'lucide-react-native';
 import { AppScreen } from '../../../components/ui/AppScreen';
 import { Button } from '../../../components/ui/Button';
 import { LanguageSwitch } from '../../../components/ui/LanguageSwitch';

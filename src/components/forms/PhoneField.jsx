@@ -77,6 +77,7 @@ export function PhoneField({
 
   useEffect(() => {
     const next = toValueObject(value, options, defaultCountryCode);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (next.countryCode !== countryCode) setCountryCode(next.countryCode);
     if (next.nationalNumber !== nationalNumber) setNationalNumber(next.nationalNumber);
   }, [countryCode, defaultCountryCode, nationalNumber, options, value]);

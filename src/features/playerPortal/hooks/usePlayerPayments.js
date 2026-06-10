@@ -35,16 +35,17 @@ const applyPaymentFilter = (items, filterKey) => {
 export function usePlayerPayments({ enabled = true } = {}) {
   const [filter, setFilter] = useState(PLAYER_PAYMENT_FILTERS.ALL);
   const overviewQuery = usePlayerOverview({ auto: enabled, enabled });
+  const overviewRaw = overviewQuery.overview?.raw;
 
   const payments = useMemo(() => {
-    if (!overviewQuery.overview?.raw) return DEFAULT_PAYMENTS;
+    if (!overviewRaw) return DEFAULT_PAYMENTS;
 
     try {
-      return mapPaymentsFromOverview(overviewQuery.overview.raw);
+      return mapPaymentsFromOverview(overviewRaw);
     } catch {
       return DEFAULT_PAYMENTS;
     }
-  }, [overviewQuery.overview?.raw]);
+  }, [overviewRaw]);
 
   const items = useMemo(
     () => applyPaymentFilter(payments.items, filter),

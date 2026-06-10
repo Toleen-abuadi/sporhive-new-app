@@ -983,7 +983,6 @@ export const playerPortalApi = {
     const paymentId = toNumber(safePayload.id);
     const language = cleanString(safePayload.language).toLowerCase() === 'ar' ? 'ar' : 'en';
     const customerId = toNumber(context?.customerId || context?.academyId);
-    const academyId = toNumber(context?.academyId);
 
     if (paymentId == null) {
       return {
@@ -1030,8 +1029,7 @@ export const playerPortalApi = {
     const normalizedContentType = contentType.toLowerCase();
     const contentDisposition = cleanString(responseData.contentDisposition);
     const byteLength = arrayBuffer?.byteLength || 0;
-    const headerText = readPdfHeaderText(arrayBuffer);
-    const hasPdfHeader = startsWithPdfHeader(arrayBuffer);
+    const hasPdfHeader = startsWithPdfHeader(arrayBuffer) || readPdfHeaderText(arrayBuffer).startsWith('%PDF-');
 
     const isStructuredText =
       normalizedContentType.includes('application/json') ||

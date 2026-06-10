@@ -257,6 +257,7 @@ export function JoinAcademyScreen() {
 
   useEffect(() => {
     if (!attempted) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setErrors(validateJoinForm(form, copy));
   }, [attempted, copy, form]);
 
