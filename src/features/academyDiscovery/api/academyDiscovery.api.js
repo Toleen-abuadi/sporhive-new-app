@@ -314,7 +314,12 @@ const resolveImageUrl = (path) => {
     return API_ORIGIN ? `${API_ORIGIN}${raw}` : '';
   }
   if (raw.startsWith('/public/')) {
-    return API_BASE_URL ? `${API_BASE_URL}${raw}` : '';
+    const apiBaseWithVersion = /\/api\/v1$/i.test(API_BASE_URL)
+      ? API_BASE_URL
+      : API_ORIGIN
+      ? `${API_ORIGIN}/api/v1`
+      : API_BASE_URL;
+    return apiBaseWithVersion ? `${apiBaseWithVersion}${raw}` : '';
   }
   if (raw.startsWith('/')) {
     return API_ORIGIN || API_BASE_URL ? `${API_ORIGIN || API_BASE_URL}${raw}` : '';

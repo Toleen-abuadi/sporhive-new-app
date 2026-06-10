@@ -14,6 +14,13 @@ const DEFAULT_DATA = Object.freeze({
   items: [],
   markers: [],
   total: 0,
+  meta: {
+    page: null,
+    pageSize: null,
+    total: 0,
+    hasNext: false,
+    raw: null,
+  },
   raw: null,
 });
 
@@ -23,6 +30,7 @@ const extractCollectionList = (payload) => {
   if (Array.isArray(payload)) return payload;
 
   const root = toObject(payload);
+  const payloadRoot = toObject(root.payload);
   if (Array.isArray(root.items)) return root.items;
   if (Array.isArray(root.data)) return root.data;
   if (Array.isArray(root.results)) return root.results;
@@ -33,6 +41,10 @@ const extractCollectionList = (payload) => {
   if (Array.isArray(nested.data)) return nested.data;
   if (Array.isArray(nested.results)) return nested.results;
   if (Array.isArray(nested.academies)) return nested.academies;
+  if (Array.isArray(payloadRoot.items)) return payloadRoot.items;
+  if (Array.isArray(payloadRoot.data)) return payloadRoot.data;
+  if (Array.isArray(payloadRoot.results)) return payloadRoot.results;
+  if (Array.isArray(payloadRoot.academies)) return payloadRoot.academies;
 
   return [];
 };
@@ -49,15 +61,51 @@ const extractProvidedMarkers = (payload) => {
 const extractCollectionTotal = (payload, fallbackCount) => {
   const root = toObject(payload);
   const nested = toObject(root.data);
+  const payloadRoot = toObject(root.payload);
+  const meta = toObject(root.meta || nested.meta || payloadRoot.meta);
 
   return (
+    toNumber(meta.total) ||
     toNumber(root.total) ||
     toNumber(root.count) ||
     toNumber(nested.total) ||
+    toNumber(payloadRoot.total) ||
     toNumber(nested.count) ||
+    toNumber(payloadRoot.count) ||
     Number(fallbackCount) ||
     0
   );
+};
+
+const extractCollectionMeta = (payload) => {
+  const root = toObject(payload);
+  const nested = toObject(root.data);
+  const payloadRoot = toObject(root.payload);
+  const meta = toObject(root.meta || nested.meta || payloadRoot.meta);
+  const page = toNumber(meta.page || root.page || nested.page || payloadRoot.page);
+  const pageSize = toNumber(
+    meta.page_size ||
+      meta.pageSize ||
+      root.page_size ||
+      root.pageSize ||
+      nested.page_size ||
+      nested.pageSize ||
+      payloadRoot.page_size ||
+      payloadRoot.pageSize
+  );
+  const hasNextRaw = meta.has_next == null ? meta.hasNext : meta.has_next;
+
+  return {
+    page: page == null ? null : page,
+    pageSize: pageSize == null ? null : pageSize,
+    hasNext:
+      hasNextRaw == null
+        ? null
+        : typeof hasNextRaw === 'boolean'
+        ? hasNextRaw
+        : ['1', 'true', 'yes', 'y', 'on'].includes(cleanString(hasNextRaw).toLowerCase()),
+    raw: meta,
+  };
 };
 
 const normalizePreMappedAcademy = (academy = {}) => {
@@ -119,6 +167,7 @@ const normalizeMapCollection = (payload, locale) => {
   const root = toObject(payload);
   const hasMappedItems = Array.isArray(root.items);
   const source = extractCollectionList(payload);
+  const meta = extractCollectionMeta(payload);
 
   const items = (hasMappedItems
     ? source.map(normalizePreMappedAcademy)
@@ -134,6 +183,13 @@ const normalizeMapCollection = (payload, locale) => {
     items,
     markers,
     total: extractCollectionTotal(payload, items.length),
+    meta: {
+      page: meta.page,
+      pageSize: meta.pageSize,
+      total: extractCollectionTotal(payload, items.length),
+      hasNext: meta.hasNext,
+      raw: meta.raw,
+    },
     raw: payload,
   };
 };
@@ -229,6 +285,7 @@ export function useAcademiesMap({ filters = {}, auto = true, locale = 'en' } = {
     items: query.data?.items || [],
     markers: query.data?.markers || [],
     total: query.data?.total || 0,
+    meta: query.data?.meta || DEFAULT_DATA.meta,
     error: query.error,
     isLoading: query.isLoading,
     isRefreshing: query.isRefreshing,

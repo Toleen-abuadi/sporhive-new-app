@@ -84,6 +84,17 @@ export const normalizeAcademyDiscoveryFilters = (filters = {}) => {
       ? pickFirst(source.registrationOpen, source.is_registration_open)
       : source.registration_open;
   const proOnlyRaw = source.is_pro == null ? pickFirst(source.pro_only, source.proOnly) : source.is_pro;
+  const sortRaw = cleanString(pickFirst(source.sort, source.order_by, source.orderBy)).toLowerCase();
+  const sort =
+    sortRaw === 'newest'
+      ? 'newest'
+      : sortRaw === 'nearest' || sortRaw === 'distanceasc' || sortRaw === 'distance_asc'
+      ? 'nearest'
+      : sortRaw === 'price_low' || sortRaw === 'priceasc' || sortRaw === 'price_asc'
+      ? 'price_low'
+      : sortRaw === 'price_high' || sortRaw === 'pricedesc' || sortRaw === 'price_desc'
+      ? 'price_high'
+      : 'recommended';
 
   return removeEmptyValues({
     q: cleanString(pickFirst(source.q, source.query, source.search)),
@@ -98,7 +109,7 @@ export const normalizeAcademyDiscoveryFilters = (filters = {}) => {
     is_pro: proOnlyRaw == null ? undefined : toBoolean(proOnlyRaw),
     lat: toNumber(source.lat),
     lng: toNumber(source.lng),
-    sort: cleanString(pickFirst(source.sort, source.order_by, source.orderBy)),
+    sort,
     page: toNumber(source.page),
     page_size: toNumber(source.page_size || source.pageSize),
   });

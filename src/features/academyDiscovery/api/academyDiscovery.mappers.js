@@ -73,8 +73,11 @@ const resolveImageUrl = ({ slug, kind, direct, hasImage }, options = {}) => {
   }
 
   if (raw.startsWith('/public/')) {
-    if (apiBaseUrl) return joinUrl(apiBaseUrl, raw);
-    return joinUrl(`${apiOrigin}/api/v1`, raw) || raw;
+    const apiBaseWithVersion = /\/api\/v1$/i.test(apiBaseUrl)
+      ? apiBaseUrl
+      : joinUrl(apiOrigin || apiBaseUrl, '/api/v1');
+    if (apiBaseWithVersion) return joinUrl(apiBaseWithVersion, raw) || raw;
+    return raw;
   }
 
   if (raw.startsWith('/')) {
@@ -90,6 +93,56 @@ const resolveImageUrl = ({ slug, kind, direct, hasImage }, options = {}) => {
   }
 
   return '';
+};
+
+const extractCollectionList = (payload) => {
+  if (Array.isArray(payload)) return payload;
+
+  const root = toObject(payload);
+  const nestedData = toObject(root.data);
+  const payloadData = toObject(root.payload);
+
+  if (Array.isArray(root.data)) return root.data;
+  if (Array.isArray(nestedData.data)) return nestedData.data;
+  if (Array.isArray(payloadData.data)) return payloadData.data;
+  if (Array.isArray(root.items)) return root.items;
+  if (Array.isArray(nestedData.items)) return nestedData.items;
+  if (Array.isArray(payloadData.items)) return payloadData.items;
+  if (Array.isArray(root.results)) return root.results;
+  if (Array.isArray(nestedData.results)) return nestedData.results;
+  if (Array.isArray(payloadData.results)) return payloadData.results;
+  if (Array.isArray(root.academies)) return root.academies;
+  if (Array.isArray(nestedData.academies)) return nestedData.academies;
+  if (Array.isArray(payloadData.academies)) return payloadData.academies;
+  return [];
+};
+
+const extractCollectionMeta = (payload) => {
+  const root = toObject(payload);
+  const nestedData = toObject(root.data);
+  const payloadData = toObject(root.payload);
+  const meta = toObject(root.meta || nestedData.meta || payloadData.meta);
+
+  const page = toNumber(meta.page || root.page || nestedData.page || payloadData.page);
+  const pageSize = toNumber(
+    meta.page_size || meta.pageSize || root.page_size || root.pageSize || nestedData.page_size || nestedData.pageSize
+  );
+  const total = toNumber(meta.total || root.total || nestedData.total || payloadData.total || root.count || nestedData.count);
+  const hasNextRaw =
+    meta.has_next == null ? meta.hasNext : meta.has_next;
+
+  return {
+    page: page == null ? null : page,
+    pageSize: pageSize == null ? null : pageSize,
+    total: total == null ? null : total,
+    hasNext:
+      hasNextRaw == null
+        ? null
+        : typeof hasNextRaw === 'boolean'
+        ? hasNextRaw
+        : ['1', 'true', 'yes', 'y', 'on'].includes(cleanString(hasNextRaw).toLowerCase()),
+    raw: meta,
+  };
 };
 
 export function mapAcademyDiscoveryRow(row, options = {}) {
@@ -246,16 +299,22 @@ export function mapAcademyCardPayload(row, options = {}) {
 
 const mapAcademyCollection = (payload, options = {}) => {
   const root = toObject(payload);
-  const source = Array.isArray(root.data)
-    ? root.data
-    : toArray(root.items || root.academies || root.results || payload);
+  const source = extractCollectionList(payload);
+  const meta = extractCollectionMeta(payload);
 
   const items = source.map((row) => mapAcademyCardPayload(row, options));
-  const total = toNumber(root.total || root.count) || items.length;
+  const total = meta.total == null ? toNumber(root.total || root.count) || items.length : meta.total;
 
   return {
     items,
     total,
+    meta: {
+      page: meta.page,
+      pageSize: meta.pageSize,
+      total,
+      hasNext: meta.hasNext,
+      raw: meta.raw,
+    },
     message: cleanString(root.message),
     raw: root,
   };
@@ -424,6 +483,7 @@ export function mapAcademyTemplateResponse(payload, options = {}) {
       logoSource: toDataUrl({ base64: logoBase64, mime: logoMeta.mime }) || academy.logoUrl,
     },
     sections: toObject(data.template_sections),
+    templateSections: toObject(data.template_sections),
     courses,
     mediaByType,
     gallery,

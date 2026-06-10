@@ -12,8 +12,17 @@ import { useAcademyDiscoveryQueryState } from './useAcademyDiscoveryQueryState';
 const DEFAULT_DATA = Object.freeze({
   items: [],
   total: 0,
+  meta: {
+    page: null,
+    pageSize: null,
+    total: 0,
+    hasNext: false,
+    raw: null,
+  },
   raw: null,
 });
+
+const DEFAULT_PAGE_SIZE = 24;
 
 const toArraySafe = (value) => (Array.isArray(value) ? value : []);
 
@@ -31,6 +40,11 @@ const extractCollectionList = (payload) => {
   if (Array.isArray(nested.data)) return nested.data;
   if (Array.isArray(nested.results)) return nested.results;
   if (Array.isArray(nested.academies)) return nested.academies;
+  const payloadRoot = toObject(root.payload);
+  if (Array.isArray(payloadRoot.items)) return payloadRoot.items;
+  if (Array.isArray(payloadRoot.data)) return payloadRoot.data;
+  if (Array.isArray(payloadRoot.results)) return payloadRoot.results;
+  if (Array.isArray(payloadRoot.academies)) return payloadRoot.academies;
 
   return [];
 };
@@ -38,15 +52,51 @@ const extractCollectionList = (payload) => {
 const extractCollectionTotal = (payload, fallbackCount) => {
   const root = toObject(payload);
   const nested = toObject(root.data);
+  const payloadRoot = toObject(root.payload);
+  const meta = toObject(root.meta || nested.meta || payloadRoot.meta);
 
   return (
+    toNumber(meta.total) ||
     toNumber(root.total) ||
     toNumber(root.count) ||
     toNumber(nested.total) ||
+    toNumber(payloadRoot.total) ||
     toNumber(nested.count) ||
+    toNumber(payloadRoot.count) ||
     Number(fallbackCount) ||
     0
   );
+};
+
+const extractCollectionMeta = (payload) => {
+  const root = toObject(payload);
+  const nested = toObject(root.data);
+  const payloadRoot = toObject(root.payload);
+  const meta = toObject(root.meta || nested.meta || payloadRoot.meta);
+  const page = toNumber(meta.page || root.page || nested.page || payloadRoot.page);
+  const pageSize = toNumber(
+    meta.page_size ||
+      meta.pageSize ||
+      root.page_size ||
+      root.pageSize ||
+      nested.page_size ||
+      nested.pageSize ||
+      payloadRoot.page_size ||
+      payloadRoot.pageSize
+  );
+  const hasNextRaw = meta.has_next == null ? meta.hasNext : meta.has_next;
+
+  return {
+    page: page == null ? null : page,
+    pageSize: pageSize == null ? null : pageSize,
+    hasNext:
+      hasNextRaw == null
+        ? null
+        : typeof hasNextRaw === 'boolean'
+        ? hasNextRaw
+        : ['1', 'true', 'yes', 'y', 'on'].includes(cleanString(hasNextRaw).toLowerCase()),
+    raw: meta,
+  };
 };
 
 const normalizePreMappedAcademy = (academy = {}) => {
@@ -130,15 +180,25 @@ const normalizeAcademiesCollection = (payload, locale) => {
   const root = toObject(payload);
   const hasMappedItems = Array.isArray(root.items);
   const source = extractCollectionList(payload);
+  const meta = extractCollectionMeta(payload);
 
   const items = (hasMappedItems
     ? source.map(normalizePreMappedAcademy)
     : source.map((row) => mapAcademyCardPayload(row, { locale }))
   ).filter(Boolean);
 
+  const total = extractCollectionTotal(payload, items.length);
+
   return {
     items,
-    total: extractCollectionTotal(payload, items.length),
+    total,
+    meta: {
+      page: meta.page,
+      pageSize: meta.pageSize,
+      total,
+      hasNext: meta.hasNext == null ? items.length < total : meta.hasNext,
+      raw: meta.raw,
+    },
     raw: payload,
   };
 };
@@ -175,22 +235,70 @@ export function useAcademies({ filters = {}, auto = true, locale = 'en' } = {}) 
   );
 
   const fetchAcademies = useCallback(
-    async ({ refresh = false, nextFilters = normalizedFilters } = {}) =>
-      query.run(
+    async ({
+      refresh = false,
+      append = false,
+      nextPage = null,
+      nextFilters = normalizedFilters,
+    } = {}) => {
+      const currentData = query.data || DEFAULT_DATA;
+      const requestedPage = append
+        ? Math.max(1, Number(nextPage) || Number(currentData?.meta?.page || 1) + 1)
+        : Math.max(1, Number(nextFilters.page) || 1);
+      const requestedPageSize = Math.max(
+        1,
+        Number(nextFilters.page_size) || Number(currentData?.meta?.pageSize) || DEFAULT_PAGE_SIZE
+      );
+
+      return query.run(
         async () => {
-          const result = await academyDiscoveryApi.listAcademies(nextFilters, {
-            locale,
-          });
+          const result = await academyDiscoveryApi.listAcademies(
+            {
+              ...nextFilters,
+              page: requestedPage,
+              page_size: requestedPageSize,
+            },
+            {
+              locale,
+            }
+          );
 
           if (!result.success) {
             throw result.error;
           }
+
           const normalized = normalizeAcademiesCollection(result.data, locale);
-          logListResponse(result.data, normalized);
-          return normalized;
+          const mergedItems = append
+            ? [...(currentData.items || []), ...(normalized.items || [])].filter((item, index, list) => {
+                const key = cleanString(item?.slug) || cleanString(item?.id);
+                if (!key) return index === list.findIndex((row) => row === item);
+                return list.findIndex((row) => {
+                  const rowKey = cleanString(row?.slug) || cleanString(row?.id);
+                  return rowKey === key;
+                }) === index;
+              })
+            : normalized.items;
+          const total = normalized.total || mergedItems.length;
+          const merged = {
+            ...normalized,
+            items: mergedItems,
+            total,
+            meta: {
+              ...normalized.meta,
+              page: requestedPage,
+              pageSize: normalized.meta?.pageSize || requestedPageSize,
+              total,
+              hasNext:
+                normalized.meta?.hasNext == null ? mergedItems.length < total : Boolean(normalized.meta.hasNext),
+            },
+          };
+
+          logListResponse(result.data, merged);
+          return merged;
         },
         { refresh }
-      ),
+      );
+    },
     [locale, normalizedFilters, query]
   );
 
@@ -216,6 +324,10 @@ export function useAcademies({ filters = {}, auto = true, locale = 'en' } = {}) 
     filtersSignature,
     items: query.data?.items || [],
     total: query.data?.total || 0,
+    meta: query.data?.meta || DEFAULT_DATA.meta,
+    page: query.data?.meta?.page || 1,
+    pageSize: query.data?.meta?.pageSize || DEFAULT_PAGE_SIZE,
+    hasNext: Boolean(query.data?.meta?.hasNext),
     raw: query.data?.raw || null,
     error: query.error,
     isLoading: query.isLoading,

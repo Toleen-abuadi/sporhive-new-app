@@ -237,6 +237,8 @@ const normalizeSortLabel = (copy, sort) => {
   const normalized = normalizeAcademySort(sort);
   if (normalized === 'newest') return copy?.filters?.sortNewest;
   if (normalized === 'nearest') return copy?.filters?.sortNearest;
+  if (normalized === 'price_low') return copy?.filters?.priceLowHigh || 'Price: Low to High';
+  if (normalized === 'price_high') return copy?.filters?.priceHighLow || 'Price: High to Low';
   return copy?.filters?.sortRecommended;
 };
 
@@ -416,7 +418,7 @@ export function AcademyDiscoveryScreen() {
     [items, visibleCount]
   );
 
-  const hasMore = visibleCount < items.length;
+  const hasMore = visibleCount < items.length || academiesQuery.hasNext;
 
   const isInitialLoading =
     academiesQuery.isLoading && !academiesQuery.items.length && !academiesQuery.error;
@@ -520,6 +522,27 @@ export function AcademyDiscoveryScreen() {
       if (viewMode === 'map' || mapQuery.items.length || mapQuery.error) {
         mapQuery.fetchAcademiesMap({ refresh: true, nextFilters: nextServerFilters });
       }
+    }
+  };
+
+  const handleLoadMore = async () => {
+    if (visibleCount < items.length) {
+      setVisibleCount((prev) => prev + PAGE_SIZE);
+      return;
+    }
+
+    if (!academiesQuery.hasNext) {
+      return;
+    }
+
+    const result = await academiesQuery.fetchAcademies({
+      nextFilters: serverFilters,
+      append: true,
+      nextPage: (academiesQuery.page || 1) + 1,
+    });
+
+    if (result?.success) {
+      setVisibleCount((prev) => prev + PAGE_SIZE);
     }
   };
 
@@ -721,7 +744,7 @@ export function AcademyDiscoveryScreen() {
               {hasMore ? (
                 <Button
                   variant="secondary"
-                  onPress={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
+                  onPress={handleLoadMore}
                 >
                   {copy?.actions?.loadMore || 'Load more'}
                 </Button>

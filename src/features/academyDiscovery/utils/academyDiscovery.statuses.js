@@ -4,6 +4,8 @@ export const ACADEMY_DISCOVERY_SORT = Object.freeze({
   RECOMMENDED: 'recommended',
   NEWEST: 'newest',
   NEAREST: 'nearest',
+  PRICE_LOW: 'price_low',
+  PRICE_HIGH: 'price_high',
 });
 
 export const ACADEMY_JOIN_TYPES = Object.freeze({
@@ -26,8 +28,30 @@ export const ACADEMY_TIERS = Object.freeze({
 
 export function normalizeAcademySort(value) {
   const normalized = cleanString(value).toLowerCase();
-  if (normalized === ACADEMY_DISCOVERY_SORT.NEWEST) return ACADEMY_DISCOVERY_SORT.NEWEST;
-  if (normalized === ACADEMY_DISCOVERY_SORT.NEAREST) return ACADEMY_DISCOVERY_SORT.NEAREST;
+  if (
+    normalized === ACADEMY_DISCOVERY_SORT.NEWEST ||
+    normalized === 'newest'
+  )
+    return ACADEMY_DISCOVERY_SORT.NEWEST;
+  if (
+    normalized === ACADEMY_DISCOVERY_SORT.NEAREST ||
+    normalized === 'nearest' ||
+    normalized === 'distanceasc' ||
+    normalized === 'distance_asc'
+  )
+    return ACADEMY_DISCOVERY_SORT.NEAREST;
+  if (
+    normalized === ACADEMY_DISCOVERY_SORT.PRICE_LOW ||
+    normalized === 'priceasc' ||
+    normalized === 'price_asc'
+  )
+    return ACADEMY_DISCOVERY_SORT.PRICE_LOW;
+  if (
+    normalized === ACADEMY_DISCOVERY_SORT.PRICE_HIGH ||
+    normalized === 'pricedesc' ||
+    normalized === 'price_desc'
+  )
+    return ACADEMY_DISCOVERY_SORT.PRICE_HIGH;
   return ACADEMY_DISCOVERY_SORT.RECOMMENDED;
 }
 
@@ -95,6 +119,30 @@ export function sortAcademies(items = [], sort = ACADEMY_DISCOVERY_SORT.RECOMMEN
 
   if (normalizedSort === ACADEMY_DISCOVERY_SORT.NEAREST) {
     return rows.sort(compareNearest);
+  }
+
+  if (normalizedSort === ACADEMY_DISCOVERY_SORT.PRICE_LOW) {
+    return rows.sort((left, right) => {
+      const leftPrice = toNumber(left.subscriptionFeeAmount ?? left.subscription_fee_amount);
+      const rightPrice = toNumber(right.subscriptionFeeAmount ?? right.subscription_fee_amount);
+      if (leftPrice == null && rightPrice == null) return compareNewest(left, right);
+      if (leftPrice == null) return 1;
+      if (rightPrice == null) return -1;
+      if (leftPrice !== rightPrice) return leftPrice - rightPrice;
+      return compareNewest(left, right);
+    });
+  }
+
+  if (normalizedSort === ACADEMY_DISCOVERY_SORT.PRICE_HIGH) {
+    return rows.sort((left, right) => {
+      const leftPrice = toNumber(left.subscriptionFeeAmount ?? left.subscription_fee_amount);
+      const rightPrice = toNumber(right.subscriptionFeeAmount ?? right.subscription_fee_amount);
+      if (leftPrice == null && rightPrice == null) return compareNewest(left, right);
+      if (leftPrice == null) return 1;
+      if (rightPrice == null) return -1;
+      if (leftPrice !== rightPrice) return rightPrice - leftPrice;
+      return compareNewest(left, right);
+    });
   }
 
   return rows;
