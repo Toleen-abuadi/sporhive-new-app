@@ -23,7 +23,6 @@ import {
   AuthHeader,
   AuthTextField,
   ErrorBanner,
-  ModeLockedHint,
   PhoneField,
   SegmentedToggle,
   defaultPhonePayload,
@@ -98,9 +97,6 @@ export function LoginScreen() {
     normalizeLoginMode(entryMode) ||
     AUTH_LOGIN_MODES.PUBLIC;
 
-  const lockMode = ['1', 'true'].includes(
-    String(getParamValue(params.lockMode) || '').trim().toLowerCase()
-  );
   const redirectTo = sanitizeRedirectTo(getParamValue(params.redirectTo));
 
   const [mode, setMode] = useState(requestedMode);
@@ -122,7 +118,6 @@ export function LoginScreen() {
   }, [academies, lastSelectedAcademyId]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMode(requestedMode);
   }, [requestedMode]);
 
@@ -166,7 +161,6 @@ export function LoginScreen() {
   };
 
   const onModeChange = (nextMode) => {
-    if (lockMode) return;
     setMode(nextMode);
     clearErrors();
   };
@@ -256,19 +250,11 @@ export function LoginScreen() {
           onBack={() => router.replace(ROUTES.ONBOARDING_ENTRY)}
         />
 
-        {lockMode ? (
-          <ModeLockedHint
-            modeLabel={mode === AUTH_LOGIN_MODES.PLAYER ? t('auth.mode.player') : t('auth.mode.public')}
-            onChangeMode={() => router.replace(ROUTES.ONBOARDING_ENTRY)}
-          />
-        ) : null}
-
         <AuthCard style={styles.card}>
           <SegmentedToggle
             value={mode}
             onChange={onModeChange}
             options={modeOptions}
-            disabled={lockMode}
           />
 
           {mode === AUTH_LOGIN_MODES.PUBLIC ? (

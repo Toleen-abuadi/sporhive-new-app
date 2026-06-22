@@ -85,7 +85,6 @@ export function PlaygroundRatingTokenScreen() {
 
   useEffect(() => {
     if (!resolvedToken) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setResolvedLink(null);
       setAccessNeedsLogin(false);
       setAccessError(copy.errors.ratingResolveFailed);
@@ -105,7 +104,6 @@ export function PlaygroundRatingTokenScreen() {
     const tokenUserId = String(resolvedLink.userId || '').trim();
 
     if (!tokenUserId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAccessNeedsLogin(false);
       setAccessError(copy.errors.ratingResolveFailed);
       return;

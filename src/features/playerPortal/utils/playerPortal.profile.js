@@ -1,10 +1,20 @@
 import { resolvePortalImageSource, resolvePortalImageUri } from './playerPortal.images';
+import { toArray, toNumber, toObject } from './playerPortal.normalizers';
 
 const BASE64_TABLE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
 const cleanString = (value) => {
   if (value == null) return '';
   return String(value).trim();
+};
+
+const pickFirstString = (...values) => {
+  for (let index = 0; index < values.length; index += 1) {
+    const value = values[index];
+    if (value == null || value === '') continue;
+    return cleanString(value);
+  }
+  return '';
 };
 
 export const MIN_PLAYER_AGE_YEARS = 3;
@@ -198,10 +208,493 @@ export const getProfileDirtyKeys = (initialState, nextState) => {
   return keys.filter((key) => cleanString(initialState?.[key]) !== cleanString(nextState?.[key]));
 };
 
+const DYNAMIC_FIELD_GROUP_KEYS = ['registration', 'tryout'];
+
+const normalizeDynamicFieldType = (value) => cleanString(value).toLowerCase() || 'short_text';
+
+const resolveDynamicLocaleText = (source, keyBase, locale) => {
+  const row = toObject(source);
+  const nested = toObject(row[keyBase]);
+  const isArabic = String(locale || '').toLowerCase().startsWith('ar');
+  const ordered = isArabic
+    ? [
+        row[`${keyBase}_ar`],
+        row[`${keyBase}Ar`],
+        nested.ar,
+        nested.arabic,
+        nested.label_ar,
+        nested.labelAr,
+        nested.value_ar,
+        nested.valueAr,
+        row[`${keyBase}_en`],
+        row[`${keyBase}En`],
+        nested.en,
+        nested.english,
+        nested.label_en,
+        nested.labelEn,
+        nested.value_en,
+        nested.valueEn,
+      ]
+    : [
+        row[`${keyBase}_en`],
+        row[`${keyBase}En`],
+        nested.en,
+        nested.english,
+        nested.label_en,
+        nested.labelEn,
+        nested.value_en,
+        nested.valueEn,
+        row[`${keyBase}_ar`],
+        row[`${keyBase}Ar`],
+        nested.ar,
+        nested.arabic,
+        nested.label_ar,
+        nested.labelAr,
+        nested.value_ar,
+        nested.valueAr,
+      ];
+
+  return pickFirstString(...ordered, row[keyBase]);
+};
+
+const normalizeDynamicFieldOption = (option, index = 0) => {
+  if (option == null) return null;
+  if (typeof option === 'string' || typeof option === 'number' || typeof option === 'boolean') {
+    return {
+      value: option,
+      label_en: cleanString(option),
+      label_ar: cleanString(option),
+      raw: option,
+    };
+  }
+
+  const row = toObject(option);
+  const value = row.value ?? row.id ?? row.key ?? row.option_value ?? row.optionValue ?? index;
+  return {
+    value,
+    label_en: resolveDynamicLocaleText(row, 'label', 'en') || cleanString(value),
+    label_ar: resolveDynamicLocaleText(row, 'label', 'ar') || cleanString(value),
+    raw: row,
+  };
+};
+
+const normalizeDynamicField = (field, index = 0) => {
+  const row = toObject(field);
+  const fieldKey = cleanString(row.field_key || row.fieldKey || row.key || `field_${index + 1}`);
+  if (!fieldKey) return null;
+
+  return {
+    field_key: fieldKey,
+    fieldKey,
+    field_type: normalizeDynamicFieldType(row.field_type || row.fieldType || row.type),
+    fieldType: normalizeDynamicFieldType(row.field_type || row.fieldType || row.type),
+    label_en: resolveDynamicLocaleText(row, 'label', 'en') || fieldKey,
+    label_ar: resolveDynamicLocaleText(row, 'label', 'ar') || fieldKey,
+    placeholder_en: resolveDynamicLocaleText(row, 'placeholder', 'en'),
+    placeholder_ar: resolveDynamicLocaleText(row, 'placeholder', 'ar'),
+    help_text_en: resolveDynamicLocaleText(row, 'help_text', 'en'),
+    help_text_ar: resolveDynamicLocaleText(row, 'help_text', 'ar'),
+    is_required: Boolean(row.is_required ?? row.isRequired),
+    validation_rules: toObject(row.validation_rules || row.validationRules),
+    options: toArray(row.options).map(normalizeDynamicFieldOption).filter(Boolean),
+    value: row.value ?? null,
+    raw: row,
+  };
+};
+
+const extractDynamicFieldGroupSource = (candidate, key) => {
+  const row = toObject(candidate?.data || candidate);
+  const fields = toArray(row.fields);
+  if (!fields.length) return null;
+
+  const formType = normalizeDynamicFieldType(row.form_type || row.formType || key);
+  return {
+    ...row,
+    form_type: formType,
+    formType,
+    fields,
+  };
+};
+
+const resolveDynamicFieldGroupSource = (playerData, key) => {
+  const source = toObject(playerData);
+  const dynamicFields = toObject(source.dynamic_fields);
+  const candidates = [
+    source[`${key}_dynamic_fields`],
+    dynamicFields[`${key}_dynamic_fields`],
+    dynamicFields[key],
+    dynamicFields,
+  ];
+
+  for (let index = 0; index < candidates.length; index += 1) {
+    const resolved = extractDynamicFieldGroupSource(candidates[index], key);
+    if (resolved) return resolved;
+  }
+
+  return null;
+};
+
+const normalizeDynamicFieldGroup = (playerData, key) => {
+  const group = resolveDynamicFieldGroupSource(playerData, key);
+  if (!group) return null;
+
+  return {
+    key,
+    formType: normalizeDynamicFieldType(group.form_type || group.formType || key),
+    data: {
+      ...group,
+      fields: toArray(group.fields).map(normalizeDynamicField).filter(Boolean),
+    },
+    fields: toArray(group.fields).map(normalizeDynamicField).filter(Boolean),
+  };
+};
+
+export const getPlayerPortalDynamicFieldGroups = (playerData) =>
+  DYNAMIC_FIELD_GROUP_KEYS.map((key) => normalizeDynamicFieldGroup(playerData, key)).filter(
+    (group) => group && group.fields.length > 0
+  );
+
+export const getPlayerPortalDynamicFieldLabel = (field, locale = 'en') => {
+  const row = toObject(field);
+  const fieldKey = cleanString(row.field_key || row.fieldKey || row.key);
+  return resolveDynamicLocaleText(row, 'label', locale) || fieldKey;
+};
+
+export const getPlayerPortalDynamicFieldPlaceholder = (field, locale = 'en') => {
+  const row = toObject(field);
+  return resolveDynamicLocaleText(row, 'placeholder', locale);
+};
+
+export const getPlayerPortalDynamicFieldHelpText = (field, locale = 'en') => {
+  const row = toObject(field);
+  return resolveDynamicLocaleText(row, 'help_text', locale);
+};
+
+export const getPlayerPortalDynamicFieldOptionLabel = (option, locale = 'en') => {
+  const row = toObject(option);
+  if (typeof option === 'string' || typeof option === 'number' || typeof option === 'boolean') {
+    return cleanString(option);
+  }
+  return resolveDynamicLocaleText(row, 'label', locale) || cleanString(row.value ?? row.id ?? row.key);
+};
+
+export const getPlayerPortalDynamicFieldDisplayValue = (field, value, locale = 'en', t) => {
+  const translate = typeof t === 'function' ? t : () => '';
+  const row = toObject(field);
+  const fieldType = normalizeDynamicFieldType(row.field_type || row.fieldType || row.type);
+
+  if (isDynamicFieldEmpty(fieldType, value)) {
+    return '-';
+  }
+
+  if (fieldType === 'yes_no') {
+    if (value === true || cleanString(value).toLowerCase() === 'true') return translate('common.yes');
+    if (value === false || cleanString(value).toLowerCase() === 'false') return translate('common.no');
+    return '-';
+  }
+
+  if (fieldType === 'single_choice' || fieldType === 'dropdown') {
+    const option = toArray(row.options).find((candidate) => {
+      const optionRow = toObject(candidate);
+      return (
+        optionRow.value === value ||
+        optionRow.id === value ||
+        cleanString(optionRow.value) === cleanString(value) ||
+        cleanString(optionRow.id) === cleanString(value)
+      );
+    });
+    return option ? getPlayerPortalDynamicFieldOptionLabel(option, locale) : cleanString(value) || '-';
+  }
+
+  if (fieldType === 'multi_choice') {
+    const selected = toArray(value);
+    if (!selected.length) return '-';
+    return selected
+      .map((item) => {
+        const option = toArray(row.options).find((candidate) => {
+          const optionRow = toObject(candidate);
+          return (
+            optionRow.value === item ||
+            optionRow.id === item ||
+            cleanString(optionRow.value) === cleanString(item) ||
+            cleanString(optionRow.id) === cleanString(item)
+          );
+        });
+        return option ? getPlayerPortalDynamicFieldOptionLabel(option, locale) : cleanString(item);
+      })
+      .filter(Boolean)
+      .join(', ') || '-';
+  }
+
+  if (fieldType === 'date') {
+    return cleanString(normalizeDateInput(value) || value) || '-';
+  }
+
+  return cleanString(value) || '-';
+};
+
+const normalizeDynamicAnswerChoice = (fieldType, value) => {
+  if (fieldType === 'multi_choice') {
+    return toArray(value).filter((item) => item != null && item !== '');
+  }
+
+  if (fieldType === 'yes_no') {
+    if (value === true || value === false) return value;
+    const normalized = cleanString(value).toLowerCase();
+    if (!normalized) return null;
+    if (['1', 'true', 'yes', 'y'].includes(normalized)) return true;
+    if (['0', 'false', 'no', 'n'].includes(normalized)) return false;
+    return null;
+  }
+
+  if (value == null || value === '') return null;
+  return value;
+};
+
+export const normalizePlayerPortalDynamicFieldAnswer = (field, value) => {
+  const fieldType = normalizeDynamicFieldType(field?.field_type || field?.fieldType || field?.type);
+
+  if (fieldType === 'number') {
+    if (value == null || value === '') return null;
+    const normalized = Number(String(value).replace(/,/g, '').trim());
+    return Number.isFinite(normalized) ? normalized : null;
+  }
+
+  if (fieldType === 'date') {
+    const normalized = normalizeDateInput(value);
+    return normalized || '';
+  }
+
+  if (fieldType === 'multi_choice' || fieldType === 'single_choice' || fieldType === 'dropdown' || fieldType === 'yes_no') {
+    return normalizeDynamicAnswerChoice(fieldType, value);
+  }
+
+  return value == null ? '' : String(value);
+};
+
+const isDynamicFieldEmpty = (fieldType, value) => {
+  if (fieldType === 'multi_choice') return !Array.isArray(value) || value.length === 0;
+  if (fieldType === 'yes_no') return value === null || value === undefined || value === '';
+  return value === null || value === undefined || value === '';
+};
+
+const parseDynamicFieldNumber = (value, rules = {}) => {
+  const raw = cleanString(value).replace(/,/g, '').trim();
+  if (!raw) return null;
+  if (rules.allow_decimal === false || rules.allowDecimal === false) {
+    if (!/^-?\d+$/.test(raw)) return null;
+  }
+  const numeric = Number(raw);
+  return Number.isFinite(numeric) ? numeric : null;
+};
+
+const compareIsoDates = (left, right) => {
+  if (!left || !right) return 0;
+  const leftTime = new Date(left).getTime();
+  const rightTime = new Date(right).getTime();
+  if (Number.isNaN(leftTime) || Number.isNaN(rightTime)) return 0;
+  if (leftTime < rightTime) return -1;
+  if (leftTime > rightTime) return 1;
+  return 0;
+};
+
+export const validatePlayerPortalDynamicField = (field, value) => {
+  const row = toObject(field);
+  const fieldType = normalizeDynamicFieldType(row.field_type || row.fieldType || row.type);
+  const rules = toObject(row.validation_rules || row.validationRules);
+  const required = Boolean(row.is_required ?? row.isRequired);
+  const empty = isDynamicFieldEmpty(fieldType, value);
+
+  if (required && empty) return 'required';
+  if (empty) return '';
+
+  if (fieldType === 'number') {
+    const numeric = parseDynamicFieldNumber(value, rules);
+    if (numeric == null) return 'invalid_number';
+    if (rules.min_value != null && numeric < Number(rules.min_value)) return 'min_value';
+    if (rules.max_value != null && numeric > Number(rules.max_value)) return 'max_value';
+    return '';
+  }
+
+  if (fieldType === 'email') {
+    const input = cleanString(value);
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input) ? '' : 'invalid_email';
+  }
+
+  if (fieldType === 'phone') {
+    const input = cleanString(value).replace(/\s+/g, '');
+    return /^\+?[0-9]{7,16}$/.test(input) ? '' : 'invalid_phone';
+  }
+
+  if (fieldType === 'date') {
+    const normalized = normalizeDateInput(value);
+    if (!normalized) return 'invalid_date';
+    if (rules.min_date && compareIsoDates(normalized, normalizeDateInput(rules.min_date)) < 0) return 'min_date';
+    if (rules.max_date && compareIsoDates(normalized, normalizeDateInput(rules.max_date)) > 0) return 'max_date';
+    return '';
+  }
+
+  if (fieldType === 'short_text' || fieldType === 'long_text') {
+    const input = cleanString(value);
+    if (rules.max_length != null && input.length > Number(rules.max_length)) return 'max_length';
+    return '';
+  }
+
+  if (fieldType === 'single_choice' || fieldType === 'dropdown') {
+    const options = toArray(row.options);
+    if (!options.length) return '';
+    const valid = options.some((option) => {
+      const candidate = toObject(option);
+      return candidate.value === value || candidate.id === value || cleanString(candidate.value) === cleanString(value);
+    });
+    return valid ? '' : 'invalid_option';
+  }
+
+  if (fieldType === 'multi_choice') {
+    const options = toArray(row.options);
+    const selected = toArray(value);
+    if (rules.min_selections != null && selected.length < Number(rules.min_selections)) return 'min_selections';
+    if (rules.max_selections != null && selected.length > Number(rules.max_selections)) return 'max_selections';
+    if (!options.length) return '';
+    const valid = selected.every((selection) =>
+      options.some((option) => {
+        const candidate = toObject(option);
+        return candidate.value === selection || candidate.id === selection || cleanString(candidate.value) === cleanString(selection);
+      })
+    );
+    return valid ? '' : 'invalid_option';
+  }
+
+  if (fieldType === 'yes_no') {
+    if (value === true || value === false) return '';
+    return 'invalid_option';
+  }
+
+  return '';
+};
+
+export const resolvePlayerPortalDynamicFieldValidationMessage = (field, code, t) => {
+  const translate = typeof t === 'function' ? t : () => '';
+  if (!code) return '';
+
+  const fieldType = normalizeDynamicFieldType(field?.field_type || field?.fieldType || field?.type);
+
+  if (code === 'required') return translate('playerPortal.profile.validation.required');
+  if (code === 'invalid_number') return translate('playerPortal.profile.validation.invalidNumber');
+  if (code === 'invalid_email') return translate('playerPortal.profile.validation.invalidEmail');
+  if (code === 'invalid_phone') return translate('playerPortal.profile.validation.invalidPhone');
+  if (code === 'invalid_date') return translate('playerPortal.profile.validation.invalidDate');
+  if (code === 'max_length') {
+    return translate('playerPortal.profile.validation.maxLength', {
+      count: toNumber(field?.validation_rules?.max_length || field?.validationRules?.max_length || field?.validationRules?.maxLength) || 0,
+    });
+  }
+  if (code === 'min_value') {
+    return translate('playerPortal.profile.validation.minValue', {
+      value: field?.validation_rules?.min_value ?? field?.validationRules?.min_value ?? field?.validationRules?.minValue,
+    });
+  }
+  if (code === 'max_value') {
+    return translate('playerPortal.profile.validation.maxValue', {
+      value: field?.validation_rules?.max_value ?? field?.validationRules?.max_value ?? field?.validationRules?.maxValue,
+    });
+  }
+  if (code === 'min_date') {
+    return translate('playerPortal.profile.validation.minDate', {
+      value: normalizeDateInput(field?.validation_rules?.min_date || field?.validationRules?.min_date || field?.validationRules?.minDate),
+    });
+  }
+  if (code === 'max_date') {
+    return translate('playerPortal.profile.validation.maxDate', {
+      value: normalizeDateInput(field?.validation_rules?.max_date || field?.validationRules?.max_date || field?.validationRules?.maxDate),
+    });
+  }
+  if (code === 'min_selections') {
+    return translate('playerPortal.profile.validation.minSelections', {
+      count: toNumber(field?.validation_rules?.min_selections || field?.validationRules?.min_selections || field?.validationRules?.minSelections) || 0,
+    });
+  }
+  if (code === 'max_selections') {
+    return translate('playerPortal.profile.validation.maxSelections', {
+      count: toNumber(field?.validation_rules?.max_selections || field?.validationRules?.max_selections || field?.validationRules?.maxSelections) || 0,
+    });
+  }
+  if (code === 'invalid_option') {
+    if (fieldType === 'yes_no') return translate('playerPortal.profile.validation.invalidYesNo');
+    return translate('playerPortal.profile.validation.invalidOption');
+  }
+
+  return '';
+};
+
+const buildDynamicAnswersGroupPayload = (group, answersByKey = {}) => {
+  const payload = {};
+  toArray(group?.fields).forEach((field) => {
+    const fieldKey = cleanString(field?.field_key || field?.fieldKey || field?.key);
+    if (!fieldKey) return;
+    const normalized = normalizePlayerPortalDynamicFieldAnswer(field, answersByKey[fieldKey]);
+    if (normalized !== undefined) {
+      payload[fieldKey] = normalized;
+    }
+  });
+  return payload;
+};
+
+export const buildPlayerPortalDynamicAnswersPayload = ({ groups = [], answersByGroup = {} } = {}) => {
+  const payload = {};
+  groups.forEach((group) => {
+    const groupKey = cleanString(group?.key);
+    if (!groupKey) return;
+    const answers = toObject(answersByGroup[groupKey]);
+    const groupPayload = buildDynamicAnswersGroupPayload(group, answers);
+    if (Object.keys(groupPayload).length === 0) return;
+
+    if (groupKey === 'registration') {
+      payload.registration_dynamic_answers = groupPayload;
+    } else if (groupKey === 'tryout') {
+      payload.tryout_dynamic_answers = groupPayload;
+    }
+  });
+  return payload;
+};
+
+export const validatePlayerPortalDynamicAnswers = (groups = [], answersByGroup = {}) => {
+  const errorsByGroup = {};
+  let valid = true;
+
+  groups.forEach((group) => {
+    const groupKey = cleanString(group?.key);
+    if (!groupKey) return;
+    const answers = toObject(answersByGroup[groupKey]);
+    const groupErrors = {};
+
+    toArray(group?.fields).forEach((field) => {
+      const fieldKey = cleanString(field?.field_key || field?.fieldKey || field?.key);
+      if (!fieldKey) return;
+      const code = validatePlayerPortalDynamicField(field, answers[fieldKey]);
+      if (code) {
+        groupErrors[fieldKey] = code;
+        valid = false;
+      }
+    });
+
+    if (Object.keys(groupErrors).length > 0) {
+      errorsByGroup[groupKey] = groupErrors;
+    }
+  });
+
+  return {
+    valid,
+    errors: errorsByGroup,
+  };
+};
+
 export const buildProfileUpdatePayload = ({
   profile,
   draft,
   imagePayload = null,
+  dynamicAnswersByGroup = {},
+  dynamicFieldGroups = [],
 } = {}) => {
   const base = {
     try_out: Number(profile?.id),
@@ -225,6 +718,13 @@ export const buildProfileUpdatePayload = ({
     base.image_type = imagePayload.image_type;
     base.image_size = Number(imagePayload.image_size) || 0;
   }
+
+  const dynamicPayload = buildPlayerPortalDynamicAnswersPayload({
+    groups: dynamicFieldGroups,
+    answersByGroup: dynamicAnswersByGroup,
+  });
+
+  Object.assign(base, dynamicPayload);
 
   return Object.entries(base).reduce((acc, [key, value]) => {
     if (value == null && !['weight', 'height'].includes(key)) return acc;

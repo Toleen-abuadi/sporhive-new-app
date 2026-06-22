@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Image, RefreshControl, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { PencilLine } from 'lucide-react-native';
@@ -16,7 +17,12 @@ import { usePlayerProfileEditor } from '../hooks';
 import { formatDateLabel, formatNumberLabel } from '../utils/playerPortal.formatters';
 import { resolvePortalGuardMessage } from '../utils/playerPortal.messages';
 import { usePlayerPortalSession } from '../hooks/usePlayerPortalSession';
-import { resolveProfileImageUri } from '../utils/playerPortal.profile';
+import {
+  getPlayerPortalDynamicFieldDisplayValue,
+  getPlayerPortalDynamicFieldGroups,
+  getPlayerPortalDynamicFieldLabel,
+  resolveProfileImageUri,
+} from '../utils/playerPortal.profile';
 
 export function PlayerProfileScreen() {
   const router = useRouter();
@@ -27,6 +33,7 @@ export function PlayerProfileScreen() {
   const profileEditor = usePlayerProfileEditor();
   const profile = profileEditor.profile;
   const imageUri = resolveProfileImageUri(profile, session.requestContext);
+  const dynamicFieldGroups = useMemo(() => getPlayerPortalDynamicFieldGroups(profile), [profile]);
 
   const showLoading = profileEditor.isFetchingProfile || (!profile && !profileEditor.profileError);
 
@@ -81,7 +88,6 @@ export function PlayerProfileScreen() {
         <>
           <PortalSectionCard
             title={t('playerPortal.profile.sections.summaryTitle')}
-            subtitle={t('playerPortal.profile.sections.summarySubtitle')}
           >
             <View style={[styles.headerRow, { flexDirection: getRowDirection(isRTL) }]}>
               {imageUri ? (
@@ -184,6 +190,24 @@ export function PlayerProfileScreen() {
               })}
             </Text>
           </PortalSectionCard>
+
+          {dynamicFieldGroups.length > 0 ? (
+            <PortalSectionCard
+              title={t('playerPortal.profile.sections.additionalInfoTitle')}
+              subtitle={t('playerPortal.profile.sections.additionalInfoSubtitle')}
+            >
+              {dynamicFieldGroups.map((group) =>
+                group.fields.map((field) => (
+                  <Text key={`${group.key}.${field.field_key}`} variant="bodySmall" color={colors.textSecondary}>
+                    {t('playerPortal.profile.labels.dynamicFieldValue', {
+                      label: getPlayerPortalDynamicFieldLabel(field, locale),
+                      value: getPlayerPortalDynamicFieldDisplayValue(field, field.value, locale, t),
+                    })}
+                  </Text>
+                ))
+              )}
+            </PortalSectionCard>
+          ) : null}
         </>
       ) : null}
     </AppScreen>

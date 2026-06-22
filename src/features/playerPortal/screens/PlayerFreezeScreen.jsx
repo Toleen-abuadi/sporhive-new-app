@@ -1,39 +1,54 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
-import { useRouter } from 'expo-router';
-import { CalendarDays, CircleAlert, History, Snowflake } from 'lucide-react-native';
-import { useToast } from '../../../components/feedback/ToastHost';
-import { AppScreen } from '../../../components/ui/AppScreen';
-import { Button } from '../../../components/ui/Button';
-import { DatePickerField } from '../../../components/ui/DatePickerField';
-import { LanguageSwitch } from '../../../components/ui/LanguageSwitch';
-import { ScreenHeader } from '../../../components/ui/ScreenHeader';
-import { Text } from '../../../components/ui/Text';
-import { ROUTES } from '../../../constants/routes';
-import { useI18n } from '../../../hooks/useI18n';
-import { useTheme } from '../../../hooks/useTheme';
-import { getRowDirection } from '../../../utils/rtl';
-import { borderRadius, spacing } from '../../../theme/tokens';
+import { useRouter } from "expo-router";
 import {
-  PortalEmptyState,
-  PortalErrorState,
-  PortalSectionCard,
-  PortalSkeletonCard,
-  PortalStatusBadge,
-} from '../components';
-import { usePlayerFreeze, usePlayerOverview } from '../hooks';
+    CalendarDays,
+    CircleAlert,
+    History,
+    Snowflake,
+} from "lucide-react-native";
+import { useEffect, useMemo, useState } from "react";
 import {
-  addDaysISODate,
-  inclusiveDays,
-  toISODate,
-  validateFreezeRequest,
-} from '../utils/playerPortal.freeze';
-import { formatAmountLabel, formatDateLabel, formatNumberLabel } from '../utils/playerPortal.formatters';
-import { resolvePortalGuardMessage } from '../utils/playerPortal.messages';
+    Pressable,
+    RefreshControl,
+    StyleSheet,
+    TextInput,
+    View,
+} from "react-native";
+import { useToast } from "../../../components/feedback/ToastHost";
+import { AppScreen } from "../../../components/ui/AppScreen";
+import { Button } from "../../../components/ui/Button";
+import { DatePickerField } from "../../../components/ui/DatePickerField";
+import { LanguageSwitch } from "../../../components/ui/LanguageSwitch";
+import { ScreenHeader } from "../../../components/ui/ScreenHeader";
+import { Text } from "../../../components/ui/Text";
+import { ROUTES } from "../../../constants/routes";
+import { useI18n } from "../../../hooks/useI18n";
+import { useTheme } from "../../../hooks/useTheme";
+import { borderRadius, spacing } from "../../../theme/tokens";
+import { getRowDirection } from "../../../utils/rtl";
+import {
+    PortalEmptyState,
+    PortalErrorState,
+    PortalSectionCard,
+    PortalSkeletonCard,
+    PortalStatusBadge,
+} from "../components";
+import { usePlayerFreeze, usePlayerOverview } from "../hooks";
+import {
+    formatAmountLabel,
+    formatDateLabel,
+    formatNumberLabel,
+} from "../utils/playerPortal.formatters";
+import {
+    addDaysISODate,
+    inclusiveDays,
+    toISODate,
+    validateFreezeRequest,
+} from "../utils/playerPortal.freeze";
+import { resolvePortalGuardMessage } from "../utils/playerPortal.messages";
 
 const REQUEST_STEPS = Object.freeze({
-  FORM: 'form',
-  REVIEW: 'review',
+  FORM: "form",
+  REVIEW: "review",
 });
 
 const DEFAULT_RANGE_DAYS = 2;
@@ -45,14 +60,19 @@ const resolveNextValidRange = ({
   todayISO = toISODate(new Date()),
   preferredDurationDays = DEFAULT_RANGE_DAYS,
 } = {}) => {
-  const normalizedMaxDays = Number.isFinite(Number(maxDays)) ? Number(maxDays) : 90;
+  const normalizedMaxDays = Number.isFinite(Number(maxDays))
+    ? Number(maxDays)
+    : 90;
   if (normalizedMaxDays < 2) {
-    return { startDate: '', endDate: '' };
+    return { startDate: "", endDate: "" };
   }
 
   const durationDays = Math.max(
     2,
-    Math.min(Number(preferredDurationDays) || DEFAULT_RANGE_DAYS, normalizedMaxDays)
+    Math.min(
+      Number(preferredDurationDays) || DEFAULT_RANGE_DAYS,
+      normalizedMaxDays,
+    ),
   );
 
   for (let offset = 1; offset <= SAFE_DEFAULT_LOOKAHEAD_DAYS; offset += 1) {
@@ -76,84 +96,88 @@ const resolveNextValidRange = ({
     }
   }
 
-  return { startDate: '', endDate: '' };
+  return { startDate: "", endDate: "" };
 };
 
 const getPhaseStatus = (item) => {
-  const status = String(item?.status || '').toLowerCase();
-  const phase = String(item?.phase || '').toLowerCase();
+  const status = String(item?.status || "").toLowerCase();
+  const phase = String(item?.phase || "").toLowerCase();
 
-  if (status === 'approved' && phase) return phase;
-  return status || phase || 'inactive';
+  if (status === "approved" && phase) return phase;
+  return status || phase || "inactive";
 };
 
 const getFreezeSectionLabel = (sectionKey, t) => {
-  if (sectionKey === 'canceled') return t('common.enums.status.cancelled');
+  if (sectionKey === "canceled") return t("common.enums.status.cancelled");
   return t(`common.enums.status.${sectionKey}`);
 };
 
 const getFreezeRowKey = (item, sectionKey, index) => {
-  const id = item?.id ?? item?.registrationId ?? '';
-  const startDate = item?.startDate || item?.start_date || '';
-  const endDate = item?.endDate || item?.end_date || '';
-  const createdAt = item?.createdAt || item?.created_at || '';
-  return [sectionKey, id, startDate, endDate, createdAt, index].filter((value) => value !== '').join('-');
+  const id = item?.id ?? item?.registrationId ?? "";
+  const startDate = item?.startDate || item?.start_date || "";
+  const endDate = item?.endDate || item?.end_date || "";
+  const createdAt = item?.createdAt || item?.created_at || "";
+  return [sectionKey, id, startDate, endDate, createdAt, index]
+    .filter((value) => value !== "")
+    .join("-");
 };
 
 const resolveFreezeSubmitErrorMessage = (error, t) => {
-  const code = String(error?.code || '').toLowerCase();
-  const message = String(error?.message || '').toLowerCase();
+  const code = String(error?.code || "").toLowerCase();
+  const message = String(error?.message || "").toLowerCase();
 
   const overlapMatch =
-    code.includes('overlap') ||
-    message.includes('overlap') ||
-    message.includes('intersect') ||
-    message.includes('تداخل');
+    code.includes("overlap") ||
+    message.includes("overlap") ||
+    message.includes("intersect") ||
+    message.includes("تداخل");
 
   if (overlapMatch) {
-    return t('playerPortal.freeze.errors.overlap');
+    return t("playerPortal.freeze.errors.overlap");
   }
 
   const pendingPaymentMatch =
-    code.includes('pending_payment') ||
-    message.includes('pending payment') ||
-    message.includes('awaiting payment') ||
-    message.includes('unpaid') ||
-    message.includes('دفعة') ||
-    message.includes('مدفوع');
+    code.includes("pending_payment") ||
+    message.includes("pending payment") ||
+    message.includes("awaiting payment") ||
+    message.includes("unpaid") ||
+    message.includes("دفعة") ||
+    message.includes("مدفوع");
 
   if (pendingPaymentMatch) {
-    const amountMatch = String(error?.message || '').match(
-      /pending payment(?:\s+of)?\s+([0-9]+(?:[.,][0-9]+)*)\s*([A-Za-z]{3})?/i
+    const amountMatch = String(error?.message || "").match(
+      /pending payment(?:\s+of)?\s+([0-9]+(?:[.,][0-9]+)*)\s*([A-Za-z]{3})?/i,
     );
     if (amountMatch?.[1]) {
       const amountLabel = formatAmountLabel(amountMatch[1], {
-        locale: String(error?.locale || ''),
-        currency: amountMatch[2] || 'JOD',
+        locale: String(error?.locale || ""),
+        currency: amountMatch[2] || "JD",
         fallback: amountMatch[1],
       });
-      return t('playerPortal.freeze.errors.pendingPaymentBlockedWithAmount', { amount: amountLabel });
+      return t("playerPortal.freeze.errors.pendingPaymentBlockedWithAmount", {
+        amount: amountLabel,
+      });
     }
-    return t('playerPortal.freeze.errors.pendingPaymentBlocked');
+    return t("playerPortal.freeze.errors.pendingPaymentBlocked");
   }
 
-  return '';
+  return "";
 };
 
 const isFreezeHistoryEmptyLikeError = (error) => {
   const status = Number(error?.status) || 0;
   if ([204, 404].includes(status)) return true;
 
-  const code = String(error?.code || '').toLowerCase();
-  if (code.includes('empty') || code.includes('not_found')) return true;
+  const code = String(error?.code || "").toLowerCase();
+  if (code.includes("empty") || code.includes("not_found")) return true;
 
-  const message = String(error?.message || '').toLowerCase();
+  const message = String(error?.message || "").toLowerCase();
   return (
-    message.includes('no freeze history') ||
-    message.includes('cannot reload the history') ||
-    message.includes('history is empty') ||
-    message.includes('no records') ||
-    message.includes('لا يوجد سجل')
+    message.includes("no freeze history") ||
+    message.includes("cannot reload the history") ||
+    message.includes("history is empty") ||
+    message.includes("no records") ||
+    message.includes("لا يوجد سجل")
   );
 };
 
@@ -161,24 +185,34 @@ function FreezeHistoryCard({ item, locale, t, colors, isRTL }) {
   const duration = inclusiveDays(item.startDate, item.endDate);
 
   return (
-      <View style={[styles.historyCard, { borderColor: colors.border, backgroundColor: colors.surfaceSoft }]}>
-      <View style={[styles.historyHead, { flexDirection: getRowDirection(isRTL) }]}>
-        <PortalStatusBadge status={getPhaseStatus(item)} domain="freezeStatus" />
+    <View
+      style={[
+        styles.historyCard,
+        { borderColor: colors.border, backgroundColor: colors.surfaceSoft },
+      ]}
+    >
+      <View
+        style={[styles.historyHead, { flexDirection: getRowDirection(isRTL) }]}
+      >
+        <PortalStatusBadge
+          status={getPhaseStatus(item)}
+          domain="freezeStatus"
+        />
         <Text variant="caption" color={colors.textMuted}>
-          {t('playerPortal.freeze.labels.durationDays', {
-            count: formatNumberLabel(duration, { locale, fallback: '0' }),
+          {t("playerPortal.freeze.labels.durationDays", {
+            count: formatNumberLabel(duration, { locale, fallback: "0" }),
           })}
         </Text>
       </View>
 
       <Text variant="bodySmall" color={colors.textSecondary}>
-        {t('playerPortal.freeze.labels.startDate', {
-          date: formatDateLabel(item.startDate, { locale, fallback: '-' }),
+        {t("playerPortal.freeze.labels.startDate", {
+          date: formatDateLabel(item.startDate, { locale, fallback: "-" }),
         })}
       </Text>
       <Text variant="bodySmall" color={colors.textSecondary}>
-        {t('playerPortal.freeze.labels.endDate', {
-          date: formatDateLabel(item.endDate, { locale, fallback: '-' }),
+        {t("playerPortal.freeze.labels.endDate", {
+          date: formatDateLabel(item.endDate, { locale, fallback: "-" }),
         })}
       </Text>
 
@@ -195,7 +229,9 @@ export function PlayerFreezeScreen() {
   const router = useRouter();
   const toast = useToast();
   const { t, locale, isRTL } = useI18n();
-  const isArabic = String(locale || '').toLowerCase().startsWith('ar');
+  const isArabic = String(locale || "")
+    .toLowerCase()
+    .startsWith("ar");
   const { colors } = useTheme();
   const overviewQuery = usePlayerOverview({ auto: true, enabled: true });
 
@@ -218,9 +254,9 @@ export function PlayerFreezeScreen() {
     isSubmittingRequest,
   } = usePlayerFreeze({ auto: true });
 
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [reason, setReason] = useState('');
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [reason, setReason] = useState("");
   const [requestStep, setRequestStep] = useState(REQUEST_STEPS.FORM);
   const [submitError, setSubmitError] = useState(null);
   const [dateTouched, setDateTouched] = useState(false);
@@ -237,7 +273,6 @@ export function PlayerFreezeScreen() {
       preferredDurationDays: DEFAULT_RANGE_DAYS,
     });
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStartDate(nextRange.startDate);
     setEndDate(nextRange.endDate);
     if (!nextRange.startDate || !nextRange.endDate) {
@@ -247,15 +282,18 @@ export function PlayerFreezeScreen() {
 
   const usedCountThisYear = useMemo(
     () => getUsedCountForYear(startDate),
-    [getUsedCountForYear, startDate]
+    [getUsedCountForYear, startDate],
   );
-  const startMinDate = useMemo(() => addDaysISODate(toISODate(new Date()), 1), []);
+  const startMinDate = useMemo(
+    () => addDaysISODate(toISODate(new Date()), 1),
+    [],
+  );
   const endMinDate = useMemo(() => {
     if (!startDate) return startMinDate;
     return addDaysISODate(startDate, 1);
   }, [startDate, startMinDate]);
   const endMaxDate = useMemo(() => {
-    if (!startDate || !policy.maxDays) return '';
+    if (!startDate || !policy.maxDays) return "";
     return addDaysISODate(startDate, Math.max(policy.maxDays - 1, 0));
   }, [policy.maxDays, startDate]);
 
@@ -269,37 +307,56 @@ export function PlayerFreezeScreen() {
         usedCountThisYear,
         rows: items,
       }),
-    [endDate, items, policy.maxDays, policy.maxPerYear, startDate, usedCountThisYear]
+    [
+      endDate,
+      items,
+      policy.maxDays,
+      policy.maxPerYear,
+      startDate,
+      usedCountThisYear,
+    ],
   );
 
-  const currentRegistrationType = overviewQuery.overview?.subscription?.registrationType || 'subscription';
+  const currentRegistrationType =
+    overviewQuery.overview?.subscription?.registrationType || "subscription";
 
   const validationMessage = useMemo(() => {
-    if (validation.valid) return '';
+    if (validation.valid) return "";
     const [code] = validation.errors;
 
     switch (code) {
-      case 'dates_required':
-        return t('playerPortal.freeze.errors.pickDates');
-      case 'invalid_range':
-        return t('playerPortal.freeze.errors.badRange');
-      case 'past_start':
-        return t('playerPortal.freeze.errors.pastStart');
-      case 'too_long':
-        return t('playerPortal.freeze.errors.tooLong', { days: policy.maxDays });
-      case 'year_limit':
-        return t('playerPortal.freeze.errors.yearLimit', { count: policy.maxPerYear });
-      case 'overlap':
-        return t('playerPortal.freeze.errors.overlap');
+      case "dates_required":
+        return t("playerPortal.freeze.errors.pickDates");
+      case "invalid_range":
+        return t("playerPortal.freeze.errors.badRange");
+      case "past_start":
+        return t("playerPortal.freeze.errors.pastStart");
+      case "too_long":
+        return t("playerPortal.freeze.errors.tooLong", {
+          days: policy.maxDays,
+        });
+      case "year_limit":
+        return t("playerPortal.freeze.errors.yearLimit", {
+          count: policy.maxPerYear,
+        });
+      case "overlap":
+        return t("playerPortal.freeze.errors.overlap");
       default:
-        return t('playerPortal.freeze.errors.unknown');
+        return t("playerPortal.freeze.errors.unknown");
     }
-  }, [policy.maxDays, policy.maxPerYear, t, validation.errors, validation.valid]);
+  }, [
+    policy.maxDays,
+    policy.maxPerYear,
+    t,
+    validation.errors,
+    validation.valid,
+  ]);
 
   const resolveLocalizedFreezeSubmitError = (error) =>
     resolveFreezeSubmitErrorMessage({ ...error, locale }, t);
 
-  const shouldShowValidationWarning = !validation.valid && (dateTouched || showValidationError);
+  const shouldShowValidationWarning =
+    !validation.valid && (dateTouched || showValidationError);
 
   const submitRequest = async () => {
     if (isSubmittingRequest) {
@@ -320,8 +377,10 @@ export function PlayerFreezeScreen() {
     });
 
     if (!result.success) {
-      if (result.error?.code === 'FREEZE_REQUEST_IN_FLIGHT') return;
-      const localizedSubmitError = resolveLocalizedFreezeSubmitError(result.error);
+      if (result.error?.code === "FREEZE_REQUEST_IN_FLIGHT") return;
+      const localizedSubmitError = resolveLocalizedFreezeSubmitError(
+        result.error,
+      );
       const nextError = localizedSubmitError
         ? {
             ...(result.error || {}),
@@ -332,22 +391,26 @@ export function PlayerFreezeScreen() {
       setSubmitError(nextError);
       toast.error(
         localizedSubmitError ||
-          (isArabic ? '' : result.error?.message) ||
-          t('playerPortal.freeze.messages.submitFailed')
+          (isArabic ? "" : result.error?.message) ||
+          t("playerPortal.freeze.messages.submitFailed"),
       );
       return;
     }
 
     toast.success(
-      (isArabic ? '' : result.data?.payload?.message) || t('playerPortal.freeze.messages.submitted')
+      (isArabic ? "" : result.data?.payload?.message) ||
+        t("playerPortal.freeze.messages.submitted"),
     );
     const oldStartDate = startDate;
     const oldEndDate = endDate;
-    const preferredDurationDays = Math.max(2, inclusiveDays(startDate, endDate));
+    const preferredDurationDays = Math.max(
+      2,
+      inclusiveDays(startDate, endDate),
+    );
     const rowsForReset = [
       ...items,
       {
-        status: 'pending',
+        status: "pending",
         startDate: oldStartDate,
         endDate: oldEndDate,
       },
@@ -359,7 +422,7 @@ export function PlayerFreezeScreen() {
       preferredDurationDays,
     });
     setSubmitError(null);
-    setReason('');
+    setReason("");
     setRequestStep(REQUEST_STEPS.FORM);
     setDateTouched(false);
     setShowValidationError(false);
@@ -371,11 +434,11 @@ export function PlayerFreezeScreen() {
   const showInitialLoading = isLoading && !error && items.length === 0;
   const isEmptyLikeError = isFreezeHistoryEmptyLikeError(error);
   const freezeSections = [
-    { key: 'pending', rows: pending },
-    { key: 'approved', rows: approved },
-    { key: 'rejected', rows: rejected },
-    { key: 'canceled', rows: canceled },
-    { key: 'ended', rows: ended },
+    { key: "pending", rows: pending },
+    { key: "approved", rows: approved },
+    { key: "rejected", rows: rejected },
+    { key: "canceled", rows: canceled },
+    { key: "ended", rows: ended },
   ].filter((section) => (section.rows || []).length > 0);
 
   return (
@@ -392,8 +455,8 @@ export function PlayerFreezeScreen() {
       }
     >
       <ScreenHeader
-        title={t('playerPortal.freeze.title')}
-        subtitle={t('playerPortal.freeze.subtitle')}
+        title={t("playerPortal.freeze.title")}
+        subtitle={t("playerPortal.freeze.subtitle")}
         onBack={() => router.replace(ROUTES.PLAYER_HOME)}
         right={<LanguageSwitch compact />}
       />
@@ -401,7 +464,7 @@ export function PlayerFreezeScreen() {
       {!canFetch ? (
         <PortalSectionCard>
           <PortalEmptyState
-            title={t('playerPortal.home.unavailableTitle')}
+            title={t("playerPortal.home.unavailableTitle")}
             description={resolvePortalGuardMessage(guardReason, t)}
           />
         </PortalSectionCard>
@@ -409,29 +472,52 @@ export function PlayerFreezeScreen() {
 
       {canFetch ? (
         <PortalSectionCard
-          title={t('playerPortal.freeze.sections.policyTitle')}
-          subtitle={t('playerPortal.freeze.sections.policySubtitle')}
+          title={t("playerPortal.freeze.sections.policyTitle")}
+          subtitle={t("playerPortal.freeze.sections.policySubtitle")}
         >
-          <View style={[styles.policyRow, { flexDirection: getRowDirection(isRTL) }]}>
-            <View style={[styles.policyBadge, { backgroundColor: colors.accentOrangeSoft }]}> 
-              <Snowflake size={16} color={colors.accentOrange} strokeWidth={2.2} />
+          <View
+            style={[
+              styles.policyRow,
+              { flexDirection: getRowDirection(isRTL) },
+            ]}
+          >
+            <View
+              style={[
+                styles.policyBadge,
+                { backgroundColor: colors.accentOrangeSoft },
+              ]}
+            >
+              <Snowflake
+                size={16}
+                color={colors.accentOrange}
+                strokeWidth={2.2}
+              />
             </View>
             <View style={styles.policyBody}>
               <Text variant="bodySmall" color={colors.textSecondary}>
-                {t('playerPortal.freeze.labels.policy', {
-                  maxDays: formatNumberLabel(policy.maxDays, { locale, fallback: '90' }),
-                  maxCount: formatNumberLabel(policy.maxPerYear, { locale, fallback: '3' }),
+                {t("playerPortal.freeze.labels.policy", {
+                  maxDays: formatNumberLabel(policy.maxDays, {
+                    locale,
+                    fallback: "90",
+                  }),
+                  maxCount: formatNumberLabel(policy.maxPerYear, {
+                    locale,
+                    fallback: "3",
+                  }),
                 })}
               </Text>
               <Text variant="caption" color={colors.textMuted}>
-                {t('playerPortal.freeze.labels.usedThisYear', {
-                  count: formatNumberLabel(usedCountThisYear, { locale, fallback: '0' }),
+                {t("playerPortal.freeze.labels.usedThisYear", {
+                  count: formatNumberLabel(usedCountThisYear, {
+                    locale,
+                    fallback: "0",
+                  }),
                 })}
               </Text>
               <Text variant="caption" color={colors.textMuted}>
-                {currentRegistrationType === 'course'
-                  ? t('playerPortal.freeze.labels.courseModeHint')
-                  : t('playerPortal.freeze.labels.subscriptionModeHint')}
+                {currentRegistrationType === "course"
+                  ? t("playerPortal.freeze.labels.courseModeHint")
+                  : t("playerPortal.freeze.labels.subscriptionModeHint")}
               </Text>
             </View>
           </View>
@@ -440,14 +526,14 @@ export function PlayerFreezeScreen() {
 
       {canFetch ? (
         <PortalSectionCard
-          title={t('playerPortal.freeze.sections.requestTitle')}
-          subtitle={t('playerPortal.freeze.sections.requestSubtitle')}
+          title={t("playerPortal.freeze.sections.requestTitle")}
+          subtitle={t("playerPortal.freeze.sections.requestSubtitle")}
         >
           {requestStep === REQUEST_STEPS.FORM ? (
             <>
               <View style={styles.inputGroup}>
                 <DatePickerField
-                  label={t('playerPortal.freeze.labels.startDateInput')}
+                  label={t("playerPortal.freeze.labels.startDateInput")}
                   value={startDate}
                   onChange={(value) => {
                     setStartDate(value);
@@ -462,14 +548,14 @@ export function PlayerFreezeScreen() {
                     }
                     setRequestStep(REQUEST_STEPS.FORM);
                   }}
-                  placeholder={t('common.formats.isoDatePlaceholder')}
+                  placeholder={t("common.formats.isoDatePlaceholder")}
                   minDate={startMinDate}
                 />
               </View>
 
               <View style={styles.inputGroup}>
                 <DatePickerField
-                  label={t('playerPortal.freeze.labels.endDateInput')}
+                  label={t("playerPortal.freeze.labels.endDateInput")}
                   value={endDate}
                   onChange={(value) => {
                     setEndDate(value);
@@ -477,20 +563,22 @@ export function PlayerFreezeScreen() {
                     setShowValidationError(false);
                     setRequestStep(REQUEST_STEPS.FORM);
                   }}
-                  placeholder={t('common.formats.isoDatePlaceholder')}
+                  placeholder={t("common.formats.isoDatePlaceholder")}
                   minDate={endMinDate}
-                  maxDate={endMaxDate || ''}
+                  maxDate={endMaxDate || ""}
                 />
               </View>
 
               <View style={styles.inputGroup}>
                 <Text variant="caption" color={colors.textSecondary}>
-                  {t('playerPortal.freeze.labels.reason')}
+                  {t("playerPortal.freeze.labels.reason")}
                 </Text>
                 <TextInput
                   value={reason}
                   onChangeText={(value) => setReason(value)}
-                  placeholder={t('playerPortal.freeze.labels.reasonPlaceholder')}
+                  placeholder={t(
+                    "playerPortal.freeze.labels.reasonPlaceholder",
+                  )}
                   placeholderTextColor={colors.textMuted}
                   multiline
                   numberOfLines={3}
@@ -511,10 +599,18 @@ export function PlayerFreezeScreen() {
                 <View
                   style={[
                     styles.alertBox,
-                    { flexDirection: getRowDirection(isRTL), borderColor: colors.warning, backgroundColor: colors.accentOrangeSoft },
+                    {
+                      flexDirection: getRowDirection(isRTL),
+                      borderColor: colors.warning,
+                      backgroundColor: colors.accentOrangeSoft,
+                    },
                   ]}
-                > 
-                  <CircleAlert size={14} color={colors.warning} strokeWidth={2.2} />
+                >
+                  <CircleAlert
+                    size={14}
+                    color={colors.warning}
+                    strokeWidth={2.2}
+                  />
                   <Text variant="caption" color={colors.textSecondary}>
                     {validationMessage}
                   </Text>
@@ -533,46 +629,73 @@ export function PlayerFreezeScreen() {
                   setShowValidationError(false);
                   setRequestStep(REQUEST_STEPS.REVIEW);
                 }}
-                leadingIcon={<CalendarDays size={14} color={colors.white} strokeWidth={2.2} />}
+                leadingIcon={
+                  <CalendarDays
+                    size={14}
+                    color={colors.white}
+                    strokeWidth={2.2}
+                  />
+                }
               >
-                {t('playerPortal.freeze.actions.reviewRequest')}
+                {t("playerPortal.freeze.actions.reviewRequest")}
               </Button>
             </>
           ) : (
             <>
-              <View style={[styles.reviewCard, { borderColor: colors.border, backgroundColor: colors.surfaceSoft }]}> 
+              <View
+                style={[
+                  styles.reviewCard,
+                  {
+                    borderColor: colors.border,
+                    backgroundColor: colors.surfaceSoft,
+                  },
+                ]}
+              >
                 <Text variant="bodySmall" color={colors.textSecondary}>
-                  {t('playerPortal.freeze.labels.startDate', {
-                    date: formatDateLabel(startDate, { locale, fallback: '-' }),
+                  {t("playerPortal.freeze.labels.startDate", {
+                    date: formatDateLabel(startDate, { locale, fallback: "-" }),
                   })}
                 </Text>
                 <Text variant="bodySmall" color={colors.textSecondary}>
-                  {t('playerPortal.freeze.labels.endDate', {
-                    date: formatDateLabel(endDate, { locale, fallback: '-' }),
+                  {t("playerPortal.freeze.labels.endDate", {
+                    date: formatDateLabel(endDate, { locale, fallback: "-" }),
                   })}
                 </Text>
                 <Text variant="bodySmall" color={colors.textSecondary}>
-                  {t('playerPortal.freeze.labels.durationDays', {
-                    count: formatNumberLabel(inclusiveDays(startDate, endDate), { locale, fallback: '0' }),
+                  {t("playerPortal.freeze.labels.durationDays", {
+                    count: formatNumberLabel(
+                      inclusiveDays(startDate, endDate),
+                      { locale, fallback: "0" },
+                    ),
                   })}
                 </Text>
                 <Text variant="caption" color={colors.textMuted}>
-                  {reason || t('playerPortal.freeze.labels.noReason')}
+                  {reason || t("playerPortal.freeze.labels.noReason")}
                 </Text>
               </View>
 
               <View style={styles.inlineActions}>
-                <Button fullWidth variant="secondary" onPress={() => setRequestStep(REQUEST_STEPS.FORM)}>
-                  {t('playerPortal.freeze.actions.editRequest')}
+                <Button
+                  fullWidth
+                  variant="secondary"
+                  onPress={() => setRequestStep(REQUEST_STEPS.FORM)}
+                >
+                  {t("playerPortal.freeze.actions.editRequest")}
                 </Button>
                 <Button
                   fullWidth
                   onPress={submitRequest}
                   loading={isSubmittingRequest}
                   disabled={!validation.valid || isSubmittingRequest}
-                  leadingIcon={<Snowflake size={14} color={colors.white} strokeWidth={2.2} />}
+                  leadingIcon={
+                    <Snowflake
+                      size={14}
+                      color={colors.white}
+                      strokeWidth={2.2}
+                    />
+                  }
                 >
-                  {t('playerPortal.freeze.actions.submitRequest')}
+                  {t("playerPortal.freeze.actions.submitRequest")}
                 </Button>
               </View>
             </>
@@ -581,10 +704,10 @@ export function PlayerFreezeScreen() {
           {submitError ? (
             <PortalErrorState
               compact
-              title={t('playerPortal.freeze.errors.submitTitle')}
+              title={t("playerPortal.freeze.errors.submitTitle")}
               error={submitError}
-              fallbackMessage={t('playerPortal.freeze.errors.submitFallback')}
-              retryLabel={t('playerPortal.actions.retry')}
+              fallbackMessage={t("playerPortal.freeze.errors.submitFallback")}
+              retryLabel={t("playerPortal.actions.retry")}
               onRetry={() => {
                 if (isSubmittingRequest) return;
                 submitRequest();
@@ -596,27 +719,32 @@ export function PlayerFreezeScreen() {
 
       {canFetch ? (
         <PortalSectionCard
-          title={t('playerPortal.freeze.sections.historyTitle')}
-          subtitle={t('playerPortal.freeze.sections.historySubtitle')}
+          title={t("playerPortal.freeze.sections.historyTitle")}
+          subtitle={t("playerPortal.freeze.sections.historySubtitle")}
         >
           {showInitialLoading ? (
             <PortalSkeletonCard rows={[18, 12, 12]} />
           ) : null}
 
-          {!showInitialLoading && error && items.length === 0 && !isEmptyLikeError ? (
+          {!showInitialLoading &&
+          error &&
+          items.length === 0 &&
+          !isEmptyLikeError ? (
             <PortalErrorState
-              title={t('playerPortal.freeze.errors.loadTitle')}
+              title={t("playerPortal.freeze.errors.loadTitle")}
               error={error}
-              fallbackMessage={t('playerPortal.freeze.errors.loadFallback')}
-              retryLabel={t('playerPortal.actions.retry')}
+              fallbackMessage={t("playerPortal.freeze.errors.loadFallback")}
+              retryLabel={t("playerPortal.actions.retry")}
               onRetry={() => refreshAll()}
             />
           ) : null}
 
-          {!showInitialLoading && items.length === 0 && (!error || isEmptyLikeError) ? (
+          {!showInitialLoading &&
+          items.length === 0 &&
+          (!error || isEmptyLikeError) ? (
             <PortalEmptyState
-              title={t('playerPortal.freeze.empty.title')}
-              description={t('playerPortal.freeze.empty.description')}
+              title={t("playerPortal.freeze.empty.title")}
+              description={t("playerPortal.freeze.empty.description")}
             />
           ) : null}
 
@@ -624,8 +752,17 @@ export function PlayerFreezeScreen() {
             <View style={styles.historyList}>
               {freezeSections.map((section) => (
                 <View key={section.key} style={styles.historySection}>
-                  <View style={[styles.historyTitleRow, { flexDirection: getRowDirection(isRTL) }]}>
-                    <History size={14} color={colors.accentOrange} strokeWidth={2.2} />
+                  <View
+                    style={[
+                      styles.historyTitleRow,
+                      { flexDirection: getRowDirection(isRTL) },
+                    ]}
+                  >
+                    <History
+                      size={14}
+                      color={colors.accentOrange}
+                      strokeWidth={2.2}
+                    />
                     <Text variant="bodySmall" weight="semibold">
                       {getFreezeSectionLabel(section.key, t)}
                     </Text>
@@ -651,7 +788,7 @@ export function PlayerFreezeScreen() {
       {canFetch && error && items.length > 0 && !isEmptyLikeError ? (
         <Pressable onPress={() => refreshAll()}>
           <Text variant="caption" color={colors.textMuted}>
-            {t('playerPortal.freeze.errors.partialLoad')}
+            {t("playerPortal.freeze.errors.partialLoad")}
           </Text>
         </Pressable>
       ) : null}
@@ -664,15 +801,15 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   policyRow: {
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
     gap: spacing.sm,
   },
   policyBadge: {
     width: 34,
     height: 34,
     borderRadius: borderRadius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   policyBody: {
     flex: 1,
@@ -686,7 +823,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
     gap: spacing.xs,
   },
   noteBody: {
@@ -710,7 +847,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
     gap: spacing.xs,
   },
   reviewCard: {
@@ -729,7 +866,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   historyTitleRow: {
-    alignItems: 'center',
+    alignItems: "center",
     gap: spacing.xs,
     marginTop: spacing.xs,
   },
@@ -740,8 +877,8 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   historyHead: {
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: spacing.sm,
   },
 });

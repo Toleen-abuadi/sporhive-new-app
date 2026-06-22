@@ -53,7 +53,6 @@ export function PlayerNewsDetailScreen() {
 
   useEffect(() => {
     if (!newsId) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadNewsItem();
   }, [loadNewsItem, newsId]);
 

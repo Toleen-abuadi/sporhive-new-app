@@ -1,17 +1,17 @@
 import {
-  cleanString,
-  pickFirst,
-  toArray,
-  toBoolean,
-  toIsoDate,
-  toNumber,
-  toObject,
-  toTimeHHMM,
+    cleanString,
+    pickFirst,
+    toArray,
+    toBoolean,
+    toIsoDate,
+    toNumber,
+    toObject,
+    toTimeHHMM,
 } from '../utils/playgrounds.normalizers';
 import {
-  normalizeBookingStatus,
-  PLAYGROUNDS_PAYMENT_TYPES,
-  resolvePaymentType,
+    normalizeBookingStatus,
+    PLAYGROUNDS_PAYMENT_TYPES,
+    resolvePaymentType,
 } from '../utils/playgrounds.statuses';
 
 const toStringId = (value) => {
@@ -265,7 +265,7 @@ export function mapBookingRow(booking, { locale = 'en', ...options } = {}) {
       typeLabel: resolvePaymentType(paymentType || PLAYGROUNDS_PAYMENT_TYPES.CASH, locale),
       status: cleanString(payment.status || 'pending').toLowerCase(),
       amount: normalizePrice(payment.amount || item.total_price),
-      currency: cleanString(payment.currency || 'JOD'),
+      currency: cleanString(payment.currency || 'JD'),
       cashOnDate: toBoolean(payment.cash_on_date || item.cash_payment_on_date),
       cliqImages: toArray(payment.cliq_images),
     },
@@ -384,7 +384,7 @@ export function mapCreateBookingResponse(payload) {
       type: cleanString(payment.payment_type || payment.type),
       status: cleanString(payment.status),
       amount: normalizePrice(payment.amount),
-      currency: cleanString(payment.currency || 'JOD'),
+      currency: cleanString(payment.currency || 'JD'),
       raw: payment,
     },
     raw: root,

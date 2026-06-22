@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Linking, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
+import { Linking, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useToast } from '../../../components/feedback/ToastHost';
 import { AppScreen } from '../../../components/ui/AppScreen';
@@ -19,13 +19,21 @@ import { usePlayerProfileEditor } from '../hooks';
 import { resolvePortalGuardMessage } from '../utils/playerPortal.messages';
 import {
   GOOGLE_MAPS_DEFAULT_URL,
+  getPlayerPortalDynamicFieldDisplayValue,
+  getPlayerPortalDynamicFieldGroups,
+  getPlayerPortalDynamicFieldHelpText,
+  getPlayerPortalDynamicFieldLabel,
+  getPlayerPortalDynamicFieldOptionLabel,
+  getPlayerPortalDynamicFieldPlaceholder,
   getMaxDateOfBirthISO,
   resolveProfileValidationMessage,
+  resolvePlayerPortalDynamicFieldValidationMessage,
   validateProfileField,
 } from '../utils/playerPortal.profile';
 
 function Field({
   label,
+  required = false,
   value,
   onChangeText,
   placeholder,
@@ -36,9 +44,16 @@ function Field({
 }) {
   return (
     <View style={styles.fieldWrap}>
-      <Text variant="caption" color={colors.textSecondary}>
-        {label}
-      </Text>
+      <View style={styles.labelRow}>
+        <Text variant="caption" color={colors.textSecondary}>
+          {label}
+        </Text>
+        {required ? (
+          <Text variant="caption" color={colors.error}>
+            {' *'}
+          </Text>
+        ) : null}
+      </View>
       <TextInput
         value={value}
         onChangeText={onChangeText}
@@ -67,15 +82,308 @@ function Field({
   );
 }
 
+function DynamicChoiceField({
+  label,
+  required = false,
+  value,
+  options = [],
+  multiple = false,
+  placeholder,
+  helpText = '',
+  error = '',
+  colors,
+  locale = 'en',
+  isRTL = false,
+  t,
+  onChange,
+}) {
+  const [visible, setVisible] = useState(false);
+  const [draftValue, setDraftValue] = useState(multiple ? [] : null);
+
+  const syncDraftValue = useCallback(() => {
+    setDraftValue(
+      multiple ? (Array.isArray(value) ? [...value] : []) : value == null || value === '' ? null : value
+    );
+  }, [multiple, value]);
+
+  useEffect(() => {
+    if (visible) return;
+    syncDraftValue();
+  }, [syncDraftValue, visible]);
+
+  const currentValueText = getPlayerPortalDynamicFieldDisplayValue(
+    {
+      field_type: multiple ? 'multi_choice' : 'single_choice',
+      options,
+    },
+    value,
+    locale,
+    t
+  );
+  const displayText = currentValueText === '-' ? placeholder : currentValueText;
+
+  const openModal = () => {
+    syncDraftValue();
+    setVisible(true);
+  };
+
+  const closeModal = () => {
+    setVisible(false);
+    syncDraftValue();
+  };
+
+  const toggleOption = (optionValue) => {
+    if (!multiple) {
+      if (!required && (draftValue === optionValue || String(draftValue) === String(optionValue))) {
+        onChange?.(null);
+      } else {
+        onChange?.(optionValue);
+      }
+      setVisible(false);
+      return;
+    }
+
+    setDraftValue((prev) => {
+      const next = Array.isArray(prev) ? [...prev] : [];
+      const exists = next.some((item) => String(item) === String(optionValue));
+      const updated = exists ? next.filter((item) => String(item) !== String(optionValue)) : [...next, optionValue];
+      return updated;
+    });
+  };
+
+  const commitMulti = () => {
+    onChange?.(Array.isArray(draftValue) ? draftValue : []);
+    setVisible(false);
+  };
+
+  const selection = Array.isArray(draftValue) ? draftValue : [];
+
+  return (
+    <View style={styles.fieldWrap}>
+      <View style={styles.labelRow}>
+        <Text variant="caption" color={colors.textSecondary}>
+          {label}
+        </Text>
+        {required ? (
+          <Text variant="caption" color={colors.error}>
+            {' *'}
+          </Text>
+        ) : null}
+      </View>
+
+      <Pressable
+        onPress={openModal}
+        style={[
+          styles.selectorInput,
+          {
+            borderColor: error ? colors.error : colors.border,
+            backgroundColor: colors.surface,
+          },
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityState={{
+          selected: Array.isArray(value) ? value.length > 0 : value !== null && value !== undefined && value !== '',
+        }}
+      >
+        <Text
+          variant="bodySmall"
+          color={currentValueText === '-' ? colors.textMuted : colors.textPrimary}
+          style={[styles.selectorText, { textAlign: isRTL ? 'right' : 'left' }]}
+          numberOfLines={2}
+        >
+          {displayText}
+        </Text>
+      </Pressable>
+
+      {helpText ? (
+        <Text variant="caption" color={colors.textSecondary}>
+          {helpText}
+        </Text>
+      ) : null}
+      {error ? (
+        <Text variant="caption" color={colors.error}>
+          {error}
+        </Text>
+      ) : null}
+
+      <Modal transparent visible={visible} animationType="fade" onRequestClose={closeModal}>
+        <Pressable style={styles.modalBackdrop} onPress={closeModal}>
+          <Pressable
+            style={[
+              styles.modalCard,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+              },
+            ]}
+            onPress={(event) => event.stopPropagation()}
+          >
+            <Text variant="body" weight="bold" color={colors.textPrimary}>
+              {label}
+            </Text>
+
+            <ScrollView style={styles.modalList} contentContainerStyle={styles.modalListContent}>
+              {options.map((option) => {
+                const optionValue = option.value;
+                const selected = multiple
+                  ? selection.some((item) => String(item) === String(optionValue))
+                  : String(draftValue ?? '') === String(optionValue ?? '');
+                return (
+                  <Pressable
+                    key={String(optionValue)}
+                    onPress={() => toggleOption(optionValue)}
+                    style={[
+                      styles.modalOption,
+                      {
+                        borderColor: selected ? colors.accentOrange : colors.border,
+                        backgroundColor: selected ? colors.surfaceSoft : colors.background,
+                        flexDirection: isRTL ? 'row-reverse' : 'row',
+                      },
+                    ]}
+                  >
+                    <Text variant="bodySmall" color={colors.textPrimary} style={styles.modalOptionText}>
+                      {getPlayerPortalDynamicFieldOptionLabel(option, locale)}
+                    </Text>
+                    {selected ? (
+                      <Text variant="bodySmall" color={colors.accentOrange} weight="bold">
+                        {multiple ? '✓' : '●'}
+                      </Text>
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+
+            <View style={[styles.modalActions, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+              <Button variant="secondary" onPress={closeModal} style={styles.modalAction}>
+                {t('common.actions.cancel')}
+              </Button>
+              {multiple ? (
+                <Button onPress={commitMulti} style={styles.modalAction}>
+                  {t('common.actions.done')}
+                </Button>
+              ) : null}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </View>
+  );
+}
+
+function DynamicFieldInput({
+  field,
+  value,
+  error,
+  colors,
+  locale,
+  isRTL,
+  t,
+  onChange,
+}) {
+  const fieldType = String(field?.field_type || field?.fieldType || field?.type || '').toLowerCase();
+  const label = getPlayerPortalDynamicFieldLabel(field, locale);
+  const placeholder = getPlayerPortalDynamicFieldPlaceholder(field, locale);
+  const helpText = getPlayerPortalDynamicFieldHelpText(field, locale);
+  const rules = field?.validation_rules || field?.validationRules || {};
+  const required = Boolean(field?.is_required || field?.isRequired);
+  const stringValue = value == null ? '' : String(value);
+
+  if (fieldType === 'date') {
+    return (
+      <DatePickerField
+        label={label}
+        value={stringValue}
+        onChange={onChange}
+        placeholder={placeholder || t('common.formats.isoDatePlaceholder')}
+        minDate={rules.min_date || rules.minDate}
+        maxDate={rules.max_date || rules.maxDate}
+        error={error}
+      />
+    );
+  }
+
+  if (fieldType === 'single_choice' || fieldType === 'dropdown' || fieldType === 'multi_choice' || fieldType === 'yes_no') {
+    const normalizedOptions =
+      fieldType === 'yes_no'
+        ? [
+            { value: true, label_en: t('common.yes'), label_ar: t('common.yes') },
+            { value: false, label_en: t('common.no'), label_ar: t('common.no') },
+          ]
+        : (field.options || []).map((option) => option);
+
+    if (!normalizedOptions.length && fieldType !== 'yes_no') {
+      return (
+        <Field
+          label={label}
+          required={required}
+          value={stringValue}
+          onChangeText={onChange}
+          placeholder={placeholder || '-'}
+          colors={colors}
+          error={error}
+        />
+      );
+    }
+
+    return (
+      <DynamicChoiceField
+        label={label}
+        required={required}
+        value={value}
+        options={normalizedOptions}
+        multiple={fieldType === 'multi_choice'}
+        placeholder={placeholder || '-'}
+        helpText={helpText}
+        error={error}
+        colors={colors}
+        locale={locale}
+        isRTL={isRTL}
+        t={t}
+        onChange={onChange}
+      />
+    );
+  }
+
+  return (
+    <Field
+      label={label}
+      required={required}
+      value={stringValue}
+      onChangeText={onChange}
+      placeholder={placeholder}
+      colors={colors}
+      multiline={fieldType === 'long_text'}
+      keyboardType={
+        fieldType === 'email'
+          ? 'email-address'
+          : fieldType === 'phone'
+            ? 'phone-pad'
+            : fieldType === 'number'
+              ? rules.allow_decimal === false || rules.allowDecimal === false
+                ? 'numeric'
+                : 'decimal-pad'
+              : 'default'
+      }
+      error={error}
+    />
+  );
+}
+
 export function PlayerProfileEditScreen() {
   const router = useRouter();
   const toast = useToast();
-  const { t } = useI18n();
+  const { t, locale, isRTL } = useI18n();
   const { colors } = useTheme();
 
   const profileEditor = usePlayerProfileEditor();
   const [pickerError, setPickerError] = useState(null);
   const maxDateOfBirthISO = useMemo(() => getMaxDateOfBirthISO(), []);
+  const dynamicFieldGroups = useMemo(
+    () => profileEditor.dynamicFieldGroups || getPlayerPortalDynamicFieldGroups(profileEditor.profile),
+    [profileEditor.dynamicFieldGroups, profileEditor.profile]
+  );
 
   const getFieldErrorMessage = useCallback(
     (field) => {
@@ -84,6 +392,23 @@ export function PlayerProfileEditScreen() {
       return resolveProfileValidationMessage(field, code, t);
     },
     [profileEditor.fieldErrors, t]
+  );
+
+  const getDynamicFieldErrorMessage = useCallback(
+    (groupKey, field) => {
+      const code = profileEditor.dynamicFieldErrorsByGroup?.[groupKey]?.[field.field_key];
+      if (!code) return '';
+      return resolvePlayerPortalDynamicFieldValidationMessage(field, code, t);
+    },
+    [profileEditor.dynamicFieldErrorsByGroup, t]
+  );
+
+  const getDynamicFieldValue = useCallback(
+    (groupKey, field) => {
+      const currentValue = profileEditor.dynamicAnswersByGroup?.[groupKey]?.[field.field_key];
+      return currentValue === undefined ? field.value : currentValue;
+    },
+    [profileEditor.dynamicAnswersByGroup]
   );
 
   const onOpenMaps = useCallback(async () => {
@@ -109,7 +434,6 @@ export function PlayerProfileEditScreen() {
   }, [profileEditor.draft.google_maps_location, t, toast]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPickerError(null);
   }, [profileEditor.imageUri]);
 
@@ -117,10 +441,7 @@ export function PlayerProfileEditScreen() {
     const result = await profileEditor.saveProfile();
     if (!result.success) {
       if (result.error?.code === 'PROFILE_VALIDATION_FAILED' && result.error?.details) {
-        const [firstField] = Object.keys(result.error.details);
-        const code = result.error.details?.[firstField];
-        const localizedMessage = resolveProfileValidationMessage(firstField, code, t);
-        toast.error(localizedMessage || t('playerPortal.profile.errors.submitFallback'));
+        toast.error(t('playerPortal.profile.errors.fixHighlighted'));
         return;
       }
       toast.error(result.error?.message || t('playerPortal.profile.errors.submitFallback'));
@@ -357,6 +678,25 @@ export function PlayerProfileEditScreen() {
               keyboardType="decimal-pad"
               error={getFieldErrorMessage('height')}
             />
+            {dynamicFieldGroups.map((group) =>
+              group.fields.map((field) => {
+                const fieldValue = getDynamicFieldValue(group.key, field);
+                const fieldError = getDynamicFieldErrorMessage(group.key, field);
+                return (
+                  <DynamicFieldInput
+                    key={`${group.key}.${field.field_key}`}
+                    field={field}
+                    value={fieldValue}
+                    error={fieldError}
+                    colors={colors}
+                    locale={locale}
+                    isRTL={isRTL}
+                    t={t}
+                    onChange={(nextValue) => profileEditor.setDynamicFieldValue(group.key, field.field_key, nextValue)}
+                  />
+                );
+              })
+            )}
           </PortalSectionCard>
 
           {(profileEditor.submitError || pickerError) ? (
@@ -398,6 +738,11 @@ const styles = StyleSheet.create({
   fieldWrap: {
     gap: spacing.xs,
   },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
   input: {
     minHeight: 44,
     borderWidth: 1,
@@ -405,10 +750,57 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     fontSize: 14,
   },
+  selectorInput: {
+    minHeight: 44,
+    borderWidth: 1,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.sm,
+    justifyContent: 'center',
+  },
+  selectorText: {
+    width: '100%',
+  },
   textArea: {
     minHeight: 84,
     paddingTop: spacing.sm,
     paddingBottom: spacing.sm,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'center',
+    padding: spacing.md,
+  },
+  modalCard: {
+    borderWidth: 1,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    maxHeight: '80%',
+    gap: spacing.md,
+  },
+  modalList: {
+    maxHeight: 360,
+  },
+  modalListContent: {
+    gap: spacing.sm,
+  },
+  modalOption: {
+    borderWidth: 1,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  modalOptionText: {
+    flex: 1,
+  },
+  modalActions: {
+    gap: spacing.sm,
+  },
+  modalAction: {
+    flex: 1,
   },
   actions: {
     gap: spacing.sm,

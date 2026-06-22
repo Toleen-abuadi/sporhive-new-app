@@ -6,7 +6,7 @@ export const PLAYER_PORTAL_ENDPOINTS = Object.freeze({
   passwordResetRequest: '/auth/password-reset/request',
 
   overview: '/player-profile/overview',
-  profileGet: '/player-profile/profile/get',
+  profileGet: '/player-profile/overview',
   profileUpdate: '/player-profile/profile/update',
   subscriptionHistory: '/player-profile/subscription-history',
   subscriptionRequests: '/player-profile/subscription-requests',

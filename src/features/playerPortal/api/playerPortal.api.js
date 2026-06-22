@@ -27,10 +27,108 @@ import {
 } from './playerPortal.mapper';
 
 const DEFAULT_TIMEOUT_MS = 20000;
+const OVERVIEW_RESPONSE_CACHE_TTL_MS = 4000;
+const overviewRequestInFlight = new Map();
+const overviewResponseCache = new Map();
 
 const cleanString = (value) => {
   if (value == null) return '';
   return String(value).trim();
+};
+
+const OVERVIEW_DEDUP_SENSITIVE_KEY_PATTERN =
+  /(?:^|_)(token|password|secret|authorization|image|base64|photo|avatar|phone|email|name|user|profile)$/i;
+
+const normalizeOverviewDedupValue = (value) => {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizeOverviewDedupValue(item)).filter((item) => item !== undefined);
+  }
+  if (typeof value !== 'object') {
+    return typeof value === 'string' ? cleanString(value) : value;
+  }
+
+  return Object.keys(value)
+    .sort()
+    .reduce((acc, key) => {
+      const normalizedKey = cleanString(key);
+      if (!normalizedKey || OVERVIEW_DEDUP_SENSITIVE_KEY_PATTERN.test(normalizedKey)) return acc;
+      const normalizedValue = normalizeOverviewDedupValue(value[key]);
+      if (normalizedValue !== undefined) {
+        acc[normalizedKey] = normalizedValue;
+      }
+      return acc;
+    }, {});
+};
+
+const buildOverviewDedupKey = (context = {}, payload = {}, endpoint = PLAYER_PORTAL_ENDPOINTS.overview) => {
+  const normalizedContext = toObject(context);
+  const academyId = toNumber(normalizedContext.academyId ?? normalizedContext.customerId);
+  const customerId = toNumber(normalizedContext.customerId ?? normalizedContext.academyId);
+  const tryoutId = toNumber(normalizedContext.tryoutId ?? normalizedContext.externalPlayerId);
+  const externalPlayerId = toNumber(normalizedContext.externalPlayerId ?? normalizedContext.tryoutId);
+  const locale = cleanString(normalizedContext.locale).toLowerCase();
+
+  return JSON.stringify({
+    endpoint: cleanString(endpoint),
+    academyId,
+    customerId,
+    tryoutId,
+    externalPlayerId,
+    locale,
+    payload: normalizeOverviewDedupValue(toObject(payload)),
+  });
+};
+
+const getCachedOverviewResult = (cacheKey) => {
+  const cached = overviewResponseCache.get(cacheKey);
+  if (!cached) return null;
+  if (cached.expiresAt <= Date.now()) {
+    overviewResponseCache.delete(cacheKey);
+    return null;
+  }
+  return cached.result;
+};
+
+const setCachedOverviewResult = (cacheKey, result) => {
+  overviewResponseCache.set(cacheKey, {
+    expiresAt: Date.now() + OVERVIEW_RESPONSE_CACHE_TTL_MS,
+    result,
+  });
+};
+
+const requestOverview = (context, payload = {}, options = {}) => {
+  const timeoutMs = Number(options.timeoutMs) || 45000;
+  const cacheKey = buildOverviewDedupKey(context, payload);
+  const cachedResult = getCachedOverviewResult(cacheKey);
+  if (cachedResult) {
+    return Promise.resolve(cachedResult);
+  }
+
+  const inFlight = overviewRequestInFlight.get(cacheKey);
+  if (inFlight) {
+    return inFlight;
+  }
+
+  const request = proxyRequest(PLAYER_PORTAL_ENDPOINTS.overview, {
+    context,
+    payload,
+    timeoutMs,
+    includePlayerId: true,
+    requirePlayerId: true,
+  }).then((result) => {
+    if (result.success) {
+      setCachedOverviewResult(cacheKey, result);
+    }
+    return result;
+  });
+
+  overviewRequestInFlight.set(cacheKey, request);
+
+  return request.finally(() => {
+    overviewRequestInFlight.delete(cacheKey);
+  });
 };
 
 const normalizePath = (path) => {
@@ -69,6 +167,16 @@ const normalizePortalError = (error, fallbackMessage = 'Player portal request fa
     return createPortalError({ message: fallbackMessage });
   }
 
+  const rawMessage = cleanString(error.message);
+  if (error.name === 'AbortError' || rawMessage.toLowerCase() === 'aborted' || rawMessage.toLowerCase().includes('aborted')) {
+    return createPortalError({
+      code: 'ABORTED',
+      status: 0,
+      message: 'Player profile is taking too long to load. Please try again.',
+      details: error.details || error.response?.data || error.data || { name: error.name, message: error.message },
+    });
+  }
+
   if (error.code && Object.prototype.hasOwnProperty.call(error, 'status')) {
     return error;
   }
@@ -82,7 +190,10 @@ const normalizePortalError = (error, fallbackMessage = 'Player portal request fa
   const payload = error?.details || error?.response?.data || error?.data || null;
   const payloadMessage =
     cleanString(payload?.error) || cleanString(payload?.message) || cleanString(payload?.detail);
-  const message = cleanString(error.message) || payloadMessage || fallbackMessage;
+  const message =
+    status === 504
+      ? 'Player profile is taking too long to load. Please try again.'
+      : cleanString(error.message) || payloadMessage || fallbackMessage;
   const code =
     cleanString(error.code) ||
     (status === 401
@@ -357,12 +468,16 @@ async function proxyRequest(endpoint, {
     const parsedPayload = await safeReadPayload(response, { expectBinary });
 
     if (!response.ok) {
+      const status = Number(response.status) || 0;
       return {
         success: false,
         error: createPortalError({
-          code: response.status === 401 ? 'UNAUTHORIZED' : 'HTTP_ERROR',
-          status: Number(response.status) || 0,
-          message: inferMessageFromPayload(parsedPayload, 'Player portal request failed.'),
+          code: status === 401 ? 'UNAUTHORIZED' : status === 504 ? 'GATEWAY_TIMEOUT' : 'HTTP_ERROR',
+          status,
+          message:
+            status === 504
+              ? 'Player profile is taking too long to load. Please try again.'
+              : inferMessageFromPayload(parsedPayload, 'Player portal request failed.'),
           details: parsedPayload,
         }),
       };
@@ -424,12 +539,16 @@ async function publicProxyRequest(endpoint, {
 
     const parsedPayload = await safeReadPayload(response, { expectBinary });
     if (!response.ok) {
+      const status = Number(response.status) || 0;
       return {
         success: false,
         error: createPortalError({
-          code: response.status === 401 ? 'UNAUTHORIZED' : 'HTTP_ERROR',
-          status: Number(response.status) || 0,
-          message: inferMessageFromPayload(parsedPayload, 'Player portal request failed.'),
+          code: status === 401 ? 'UNAUTHORIZED' : status === 504 ? 'GATEWAY_TIMEOUT' : 'HTTP_ERROR',
+          status,
+          message:
+            status === 504
+              ? 'Player profile is taking too long to load. Please try again.'
+              : inferMessageFromPayload(parsedPayload, 'Player portal request failed.'),
           details: parsedPayload,
         }),
       };
@@ -560,32 +679,19 @@ export const playerPortalApi = {
   },
 
   getOverview(context, payload = {}) {
-    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.overview, {
-      context,
-      payload,
-      includePlayerId: true,
-      requirePlayerId: true,
-    }).then((result) => ensureProxyResultShape(result, mapOverviewResponse));
+    return requestOverview(context, payload, { timeoutMs: 45000 }).then((result) =>
+      ensureProxyResultShape(result, mapOverviewResponse)
+    );
   },
 
   async getPayments(context, payload = {}) {
-    const result = await proxyRequest(PLAYER_PORTAL_ENDPOINTS.overview, {
-      context,
-      payload,
-      includePlayerId: true,
-      requirePlayerId: true,
-    });
+    const result = await requestOverview(context, payload, { timeoutMs: 45000 });
 
     return ensureProxyResultShape(result, mapPaymentsFromOverview);
   },
 
   async getPaymentById(context, paymentId, payload = {}) {
-    const result = await proxyRequest(PLAYER_PORTAL_ENDPOINTS.overview, {
-      context,
-      payload,
-      includePlayerId: true,
-      requirePlayerId: true,
-    });
+    const result = await requestOverview(context, payload, { timeoutMs: 45000 });
 
     if (!result.success) return result;
 
@@ -619,7 +725,7 @@ export const playerPortalApi = {
       return profileResult;
     }
 
-    const overview = await this.getOverview(context, payload);
+    const overview = await requestOverview(context, payload, { timeoutMs: 45000 });
     if (!overview.success) return overview;
 
     return {
@@ -710,12 +816,7 @@ export const playerPortalApi = {
       return optionsResult;
     }
 
-    const overviewResult = await proxyRequest(PLAYER_PORTAL_ENDPOINTS.overview, {
-      context,
-      payload,
-      includePlayerId: true,
-      requirePlayerId: true,
-    });
+    const overviewResult = await requestOverview(context, payload, { timeoutMs: 45000 });
 
     const mappedOverview = ensureProxyResultShape(overviewResult, mapRenewalOptionsFromOverview);
     if (!mappedOverview.success) return mappedOverview;
@@ -767,12 +868,7 @@ export const playerPortalApi = {
       return listResult;
     }
 
-    const overviewResult = await proxyRequest(PLAYER_PORTAL_ENDPOINTS.overview, {
-      context,
-      payload,
-      includePlayerId: true,
-      requirePlayerId: true,
-    });
+    const overviewResult = await requestOverview(context, payload, { timeoutMs: 45000 });
 
     if (!overviewResult.success) return overviewResult;
 

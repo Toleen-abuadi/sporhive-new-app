@@ -444,7 +444,6 @@ export function PlaygroundsIndexScreen() {
   const [menuVisible, setMenuVisible] = useState(false);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setActiveTab(routeInitialState.activeTab);
     setFilters(routeInitialState.filters);
     setAppliedFilters(routeInitialState.filters);

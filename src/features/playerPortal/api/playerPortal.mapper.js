@@ -1,24 +1,31 @@
-import {
-  normalizeOverviewData,
-  normalizePagination,
-  normalizeProxyCollection,
-  normalizeRatingTypes,
-  toArray,
-  toNumber,
-  toObject,
-} from '../utils/playerPortal.normalizers';
 import { mapFreezeRows } from '../utils/playerPortal.freeze';
-import {
-  compareUniformStatusProgress,
-  getUniformStatusStepIndex,
-  normalizeUniformStatus,
-  STATUS_ORDER,
-} from '../utils/playerPortal.uniform';
 import { resolvePortalImageSource, resolveUniformImageSource } from '../utils/playerPortal.images';
+import {
+    normalizeOverviewData,
+    normalizePagination,
+    normalizeProxyCollection,
+    normalizeRatingTypes,
+    toArray,
+    toNumber,
+    toObject,
+} from '../utils/playerPortal.normalizers';
+import {
+    compareUniformStatusProgress,
+    getUniformStatusStepIndex,
+    normalizeUniformStatus,
+    STATUS_ORDER,
+} from '../utils/playerPortal.uniform';
 
 const cleanString = (value) => {
   if (value == null) return '';
   return String(value).trim();
+};
+
+const hasDynamicFields = (value) => Array.isArray(value?.fields) && value.fields.length > 0;
+
+const normalizeDynamicFieldGroup = (value) => {
+  const group = toObject(value);
+  return hasDynamicFields(group) ? group : null;
 };
 
 const joinName = (...parts) =>
@@ -388,6 +395,8 @@ export function mapProfileFromOverview(overview, context = {}) {
   );
   const playerInfo = toObject(playerData.player_info);
   const registrationInfo = toObject(playerData.registration_info);
+  const dynamicFields = toObject(playerData.dynamic_fields);
+  const normalizedDynamicFields = Object.keys(dynamicFields).length > 0 ? dynamicFields : null;
   const imageFields = buildProfileImageFields(source, context);
 
   return {
@@ -419,12 +428,21 @@ export function mapProfileFromOverview(overview, context = {}) {
     imageType: imageFields.imageType,
     image_size: imageFields.imageSize,
     imageSize: imageFields.imageSize,
+    registration_dynamic_fields: normalizeDynamicFieldGroup(
+      playerData.registration_dynamic_fields || dynamicFields.registration || dynamicFields.registration_dynamic_fields
+    ),
+    tryout_dynamic_fields: normalizeDynamicFieldGroup(
+      playerData.tryout_dynamic_fields || dynamicFields.tryout || dynamicFields.tryout_dynamic_fields
+    ),
+    dynamic_fields: normalizedDynamicFields,
   };
 }
 
 export function mapProfileGetResponse(payload, context = {}) {
   const root = toObject(payload);
   const profile = toObject(root.profile || root.data?.profile || root.data || root.player);
+  const dynamicFields = toObject(profile.dynamic_fields || root.dynamic_fields || root.data?.dynamic_fields);
+  const normalizedDynamicFields = Object.keys(dynamicFields).length > 0 ? dynamicFields : null;
   const phoneNumbers = toObject(profile.phone_numbers || profile.phoneNumbers);
   const imageFields = buildProfileImageFields(
     {
@@ -463,6 +481,11 @@ export function mapProfileGetResponse(payload, context = {}) {
     imageType: imageFields.imageType || cleanString(profile.image_type),
     image_size: imageFields.imageSize ?? toNumber(profile.image_size),
     imageSize: imageFields.imageSize ?? toNumber(profile.image_size),
+    registration_dynamic_fields: normalizeDynamicFieldGroup(
+      profile.registration_dynamic_fields || dynamicFields.registration || dynamicFields.registration_dynamic_fields
+    ),
+    tryout_dynamic_fields: normalizeDynamicFieldGroup(profile.tryout_dynamic_fields || dynamicFields.tryout || dynamicFields.tryout_dynamic_fields),
+    dynamic_fields: normalizedDynamicFields,
     raw: root,
   };
 }
@@ -593,7 +616,7 @@ const normalizePaymentRow = (payment) => {
     label: subType ? `${type} / ${subType}` : type,
     status,
     amount: cleanString(row.amount || amountNumber || '0'),
-    currency: cleanString(row.currency || 'JOD'),
+    currency: cleanString(row.currency || 'JD'),
     amountNumber,
     dueDate: cleanString(row.dueDate),
     paidOn: cleanString(row.paidOn),

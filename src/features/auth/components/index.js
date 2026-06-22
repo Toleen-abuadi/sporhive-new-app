@@ -4,7 +4,6 @@ export { AuthHeader } from './AuthHeader';
 export { AuthTextField } from './AuthTextField';
 export { CountryCodePicker } from './CountryCodePicker';
 export { ErrorBanner } from './ErrorBanner';
-export { ModeLockedHint } from './ModeLockedHint';
 export { OTPInput } from './OTPInput';
 export { PasswordHints } from './PasswordHints';
 export { PhoneField, defaultPhonePayload } from './PhoneField';

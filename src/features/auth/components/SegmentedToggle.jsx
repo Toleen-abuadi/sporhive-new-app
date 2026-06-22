@@ -75,6 +75,7 @@ export function SegmentedToggle({ value, onChange, options = [], disabled = fals
             }}
             style={styles.item}
             accessibilityRole="button"
+            accessibilityLabel={option.label}
             accessibilityState={{ disabled, selected: active }}
           >
             <Text

@@ -173,7 +173,6 @@ export function PlayerPerformanceScreen() {
   useEffect(() => {
     const hasSelectedMetric = leaderboardMetricOptions.some((option) => option.key === selectedLeaderboardMetric);
     if (!hasSelectedMetric) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedLeaderboardMetric(LEADERBOARD_METRIC_OVERALL);
     }
   }, [leaderboardMetricOptions, selectedLeaderboardMetric]);

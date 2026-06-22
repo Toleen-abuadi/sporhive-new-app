@@ -1,13 +1,13 @@
-import { cleanString, toNumber } from './playgrounds.normalizers';
-import { resolveNumericLocale, toEnglishDigits } from '../../../utils/numbering';
 import {
-  formatPrice,
-  formatRange as baseFormatRange,
-  formatTime,
-  formatTimeRange,
-  isArabicLocale,
-  isolateLTR,
+    formatRange as baseFormatRange,
+    formatPrice,
+    formatTime,
+    formatTimeRange,
+    isArabicLocale,
+    isolateLTR,
 } from '../../../utils/formatting';
+import { resolveNumericLocale, toEnglishDigits } from '../../../utils/numbering';
+import { cleanString, toNumber } from './playgrounds.normalizers';
 
 const resolveLocale = (locale) => resolveNumericLocale(locale, 'en-US');
 
@@ -47,7 +47,7 @@ export function formatPlaygroundTimeRange(startTime, endTime, locale = 'en') {
   return formatTimeRange(startTime, endTime, locale);
 }
 
-export function formatPlaygroundPrice(value, { locale = 'en', currency = 'JOD' } = {}) {
+export function formatPlaygroundPrice(value, { locale = 'en', currency = 'JD' } = {}) {
   return formatPrice(value, currency, locale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -63,7 +63,7 @@ const resolvePriceLabel = (locale, labelType = 'price') => {
 
 export function formatLabeledPrice(
   value,
-  { locale = 'en', currency = 'JOD', labelType = 'price', label = '' } = {}
+  { locale = 'en', currency = 'JD', labelType = 'price', label = '' } = {}
 ) {
   const price = formatPlaygroundPrice(value, { locale, currency });
   if (!price) return '';

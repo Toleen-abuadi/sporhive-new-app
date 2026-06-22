@@ -1,7 +1,7 @@
-import { toNumber } from './playerPortal.normalizers';
 import { translateApiEnumValue } from '../../../utils/apiValueLocalization';
-import { resolveNumericLocale, toEnglishDigits } from '../../../utils/numbering';
 import { formatPrice } from '../../../utils/formatting';
+import { resolveNumericLocale, toEnglishDigits } from '../../../utils/numbering';
+import { toNumber } from './playerPortal.normalizers';
 
 const resolveLocale = (locale) => {
   const normalized = String(locale || '').toLowerCase();
@@ -46,7 +46,7 @@ export function formatAmountLabel(value, { locale = 'en', fallback = '0', curren
     return formatNumberLabel(numeric, { locale, fallback });
   }
 
-  const currencyCode = String(currency || '').trim().toUpperCase() || 'JOD';
+  const currencyCode = String(currency || '').trim().toUpperCase() || 'JD';
   const formatted = formatPrice(numeric, currencyCode, locale, {
     currencyDisplay: 'code',
     maximumFractionDigits: 2,

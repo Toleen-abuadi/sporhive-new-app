@@ -461,7 +461,6 @@ export function usePlayerRenewalFlow({ auto = true } = {}) {
     if (!courseId) return;
     const valid = filteredCourseOptions.some((item) => sameId(item.value, courseId));
     if (!valid) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCourseIdState('');
     }
   }, [courseId, filteredCourseOptions]);
@@ -470,7 +469,6 @@ export function usePlayerRenewalFlow({ auto = true } = {}) {
     if (!groupId) return;
     const valid = filteredGroupOptions.some((item) => sameId(item.value, groupId));
     if (!valid) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setGroupId('');
     }
   }, [filteredGroupOptions, groupId]);
@@ -482,7 +480,6 @@ export function usePlayerRenewalFlow({ auto = true } = {}) {
     const startOk = isISODate(startDate);
     const startISO = startOk ? startDate : todayISO;
     if (!startOk) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStartDate(startISO);
     }
 
@@ -498,7 +495,6 @@ export function usePlayerRenewalFlow({ auto = true } = {}) {
     const startOk = isISODate(startDate);
     const nextStartISO = startOk ? maxISODate(startDate, anchorStartISO) : anchorStartISO || todayISO;
     if (!startOk) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStartDate(nextStartISO);
     }
 
@@ -606,7 +602,6 @@ export function usePlayerRenewalFlow({ auto = true } = {}) {
       }
 
       if (boundedStartISO && boundedStartISO !== startDate) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setStartDate(boundedStartISO);
       }
 

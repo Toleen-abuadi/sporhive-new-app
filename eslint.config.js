@@ -27,9 +27,6 @@ module.exports = defineConfig([
       "**/*.jsx",
       "**/*.js"
     ],
-    rules: {
-      "react-hooks/set-state-in-effect": "warn",
-      "react-hooks/preserve-manual-memoization": "warn"
-    }
+    rules: {}
   }
 ]);

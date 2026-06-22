@@ -1,61 +1,67 @@
-import { useCallback, useMemo } from 'react';
-import { RefreshControl, StyleSheet, View } from 'react-native';
+import { useRouter } from "expo-router";
 import {
-  CreditCard,
-  HandCoins,
-  ShoppingBasket,
-  ShieldPlus,
-} from 'lucide-react-native';
-import { useRouter } from 'expo-router';
-import { AppScreen } from '../../../components/ui/AppScreen';
-import { LanguageSwitch } from '../../../components/ui/LanguageSwitch';
-import { ScreenHeader } from '../../../components/ui/ScreenHeader';
-import { Text } from '../../../components/ui/Text';
+    CreditCard,
+    HandCoins,
+    ShieldPlus,
+    ShoppingBasket,
+} from "lucide-react-native";
+import { useCallback, useMemo } from "react";
+import { RefreshControl, StyleSheet, View } from "react-native";
+import { AppScreen } from "../../../components/ui/AppScreen";
+import { LanguageSwitch } from "../../../components/ui/LanguageSwitch";
+import { ScreenHeader } from "../../../components/ui/ScreenHeader";
+import { Text } from "../../../components/ui/Text";
+import { ROUTES } from "../../../constants/routes";
+import { useI18n } from "../../../hooks/useI18n";
+import { useTheme } from "../../../hooks/useTheme";
+import { spacing } from "../../../theme/tokens";
 import {
-  ROUTES,
-} from '../../../constants/routes';
-import { useI18n } from '../../../hooks/useI18n';
-import { useTheme } from '../../../hooks/useTheme';
-import { getRowDirection } from '../../../utils/rtl';
-import { resolveNumericLocale, toEnglishDigits } from '../../../utils/numbering';
-import { spacing } from '../../../theme/tokens';
+    resolveNumericLocale,
+    toEnglishDigits,
+} from "../../../utils/numbering";
+import { getRowDirection } from "../../../utils/rtl";
 import {
-  PlayerHeaderCard,
-  PlayerKpiCard,
-  PortalEmptyState,
-  PortalErrorState,
-  PortalQuickActions,
-  PortalSectionCard,
-  PortalSkeletonCard,
-  PortalStatusBadge,
-} from '../components';
-import { usePlayerOverview } from '../hooks';
-import { usePlayerPortalSession } from '../hooks/usePlayerPortalSession';
+    PlayerHeaderCard,
+    PlayerKpiCard,
+    PortalEmptyState,
+    PortalErrorState,
+    PortalQuickActions,
+    PortalSectionCard,
+    PortalSkeletonCard,
+    PortalStatusBadge,
+} from "../components";
+import { usePlayerOverview } from "../hooks";
+import { usePlayerPortalSession } from "../hooks/usePlayerPortalSession";
 import {
-  formatAmountLabel,
-  formatDateLabel,
-  formatFreezeStatusLabel,
-  formatNumberLabel,
-  formatPaymentStatusLabel,
-  formatStatusLabel,
-} from '../utils/playerPortal.formatters';
-import { resolvePortalGuardMessage } from '../utils/playerPortal.messages';
+    formatAmountLabel,
+    formatDateLabel,
+    formatFreezeStatusLabel,
+    formatNumberLabel,
+    formatPaymentStatusLabel,
+    formatStatusLabel,
+} from "../utils/playerPortal.formatters";
+import { resolvePortalGuardMessage } from "../utils/playerPortal.messages";
 
-import { resolvePortalImageUri } from '../utils/playerPortal.images';
+import { resolvePortalImageUri } from "../utils/playerPortal.images";
 
 const resolveLastUpdated = (value, locale) => {
-  if (!value) return '';
+  if (!value) return "";
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return '';
+  if (Number.isNaN(parsed.getTime())) return "";
 
-  const intlLocale = resolveNumericLocale(locale, locale === 'ar' ? 'ar-JO' : 'en-US');
+  const intlLocale = resolveNumericLocale(
+    locale,
+    locale === "ar" ? "ar-JO" : "en-US",
+  );
   try {
-    return toEnglishDigits(parsed.toLocaleTimeString(intlLocale, {
-      hour: '2-digit',
-      minute: '2-digit',
-    }));
+    return toEnglishDigits(
+      parsed.toLocaleTimeString(intlLocale, {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    );
   } catch {
-    return '';
+    return "";
   }
 };
 
@@ -82,48 +88,63 @@ export function PlayerHomeScreen() {
   const quickActions = useMemo(
     () => [
       {
-        key: 'payments',
-        label: t('playerPortal.actions.payments'),
-        icon: <CreditCard size={15} color={colors.accentOrange} strokeWidth={2.3} />,
+        key: "payments",
+        label: t("playerPortal.actions.payments"),
+        icon: (
+          <CreditCard size={15} color={colors.accentOrange} strokeWidth={2.3} />
+        ),
         onPress: () => router.push(ROUTES.PLAYER_PAYMENTS),
       },
       {
-        key: 'store',
-        label: t('playerPortal.actions.store'),
-        icon: <ShoppingBasket size={15} color={colors.accentOrange} strokeWidth={2.3} />,
+        key: "store",
+        label: t("playerPortal.actions.store"),
+        icon: (
+          <ShoppingBasket
+            size={15}
+            color={colors.accentOrange}
+            strokeWidth={2.3}
+          />
+        ),
         onPress: () => router.push(ROUTES.PLAYER_STORE),
       },
       {
-        key: 'renewal',
-        label: t('playerPortal.actions.renewal'),
-        icon: <ShieldPlus size={15} color={colors.accentOrange} strokeWidth={2.3} />,
+        key: "renewal",
+        label: t("playerPortal.actions.renewal"),
+        icon: (
+          <ShieldPlus size={15} color={colors.accentOrange} strokeWidth={2.3} />
+        ),
         onPress: () => router.push(ROUTES.PLAYER_RENEWAL),
       },
       {
-        key: 'freeze',
-        label: t('playerPortal.actions.freeze'),
-        icon: <HandCoins size={15} color={colors.accentOrange} strokeWidth={2.3} />,
+        key: "freeze",
+        label: t("playerPortal.actions.freeze"),
+        icon: (
+          <HandCoins size={15} color={colors.accentOrange} strokeWidth={2.3} />
+        ),
         onPress: () => router.push(ROUTES.PLAYER_FREEZE),
       },
     ],
-    [colors.accentOrange, router, t]
+    [colors.accentOrange, router, t],
   );
 
-  const guardTitle = t('playerPortal.home.unavailableTitle');
+  const guardTitle = t("playerPortal.home.unavailableTitle");
   const guardDescription = resolvePortalGuardMessage(guardReason, t);
   const hasOverview = Boolean(overview);
   const isInitialLoading = isLoading && !hasOverview;
   const playerImage = resolvePortalImageUri(overview, session.requestContext);
-  const latestPaymentStatus = String(overview?.summaries?.latestPaymentStatus || '')
+  const latestPaymentStatus = String(
+    overview?.summaries?.latestPaymentStatus || "",
+  )
     .trim()
     .toLowerCase();
-  const isPaymentConfirmed = latestPaymentStatus === 'paid' || latestPaymentStatus === 'confirmed';
+  const isPaymentConfirmed =
+    latestPaymentStatus === "paid" || latestPaymentStatus === "confirmed";
   const paymentStatusValue = isPaymentConfirmed
-    ? t('playerPortal.home.kpis.paymentPaidShort')
+    ? t("playerPortal.home.kpis.paymentPaidShort")
     : formatPaymentStatusLabel(overview?.summaries?.latestPaymentStatus, {
         t,
         locale,
-        fallback: '-',
+        fallback: "-",
       });
 
   return (
@@ -140,8 +161,8 @@ export function PlayerHomeScreen() {
       }
     >
       <ScreenHeader
-        title={t('playerPortal.home.title')}
-        subtitle={t('playerPortal.home.subtitle')}
+        title={t("playerPortal.home.title")}
+        subtitle={t("playerPortal.home.subtitle")}
         right={<LanguageSwitch compact />}
       />
 
@@ -168,10 +189,10 @@ export function PlayerHomeScreen() {
       {canFetch && !hasOverview && error ? (
         <PortalSectionCard>
           <PortalErrorState
-            title={t('playerPortal.errors.overviewTitle')}
+            title={t("playerPortal.errors.overviewTitle")}
             error={error}
-            fallbackMessage={t('playerPortal.errors.overviewFallback')}
-            retryLabel={t('playerPortal.actions.retry')}
+            fallbackMessage={t("playerPortal.errors.overviewFallback")}
+            retryLabel={t("playerPortal.actions.retry")}
             onRetry={() => refetch()}
           />
         </PortalSectionCard>
@@ -181,174 +202,212 @@ export function PlayerHomeScreen() {
         <>
           <PlayerHeaderCard
             title={overview.player.displayName}
-            subtitle={t('playerPortal.home.header.welcome')}
-            academyLabel={t('playerPortal.home.header.academy', {
-              name: overview.academyName || '-',
+            subtitle={t("playerPortal.home.header.welcome")}
+            academyLabel={t("playerPortal.home.header.academy", {
+              name: overview.academyName || "-",
             })}
-            playerIdLabel={t('playerPortal.home.header.playerId', {
-              id: overview.player.id || '-',
+            playerIdLabel={t("playerPortal.home.header.playerId", {
+              id: overview.player.id || "-",
             })}
-            statusLabel={t('playerPortal.home.header.status', {
+            statusLabel={t("playerPortal.home.header.status", {
               status: formatStatusLabel(overview.subscription.status, {
                 t,
                 locale,
-                domain: 'subscriptionState',
-                fallback: '-',
+                domain: "subscriptionState",
+                fallback: "-",
               }),
             })}
-            lastUpdatedLabel={t('playerPortal.home.header.updatedAt', {
-              time: resolveLastUpdated(lastFetchedAt, locale) || '-',
+            lastUpdatedLabel={t("playerPortal.home.header.updatedAt", {
+              time: resolveLastUpdated(lastFetchedAt, locale) || "-",
             })}
             imageUri={playerImage}
           />
 
           <View style={styles.kpiRow}>
             <PlayerKpiCard
-              label={t('playerPortal.home.kpis.remainingSessions')}
+              label={t("playerPortal.home.kpis.remainingSessions")}
               value={formatNumberLabel(overview.summaries.sessionsRemaining, {
                 locale,
-                fallback: '0',
+                fallback: "0",
               })}
-              hint={t('playerPortal.home.kpis.totalSessions', {
+              hint={t("playerPortal.home.kpis.totalSessions", {
                 count: formatNumberLabel(overview.summaries.totalSessions, {
                   locale,
-                  fallback: '0',
+                  fallback: "0",
                 }),
               })}
               status={overview.subscription.status}
               style={styles.kpiCard}
             />
             <PlayerKpiCard
-              label={t('playerPortal.home.kpis.creditBalance')}
+              label={t("playerPortal.home.kpis.creditBalance")}
               value={formatAmountLabel(overview.summaries.creditBalance, {
                 locale,
-                fallback: '0',
+                fallback: "0",
               })}
               hint={
                 overview.summaries.nextCreditExpiry
-                  ? t('playerPortal.home.kpis.nextExpiry', {
-                      date: formatDateLabel(overview.summaries.nextCreditExpiry, {
-                        locale,
-                        fallback: '-',
-                      }),
+                  ? t("playerPortal.home.kpis.nextExpiry", {
+                      date: formatDateLabel(
+                        overview.summaries.nextCreditExpiry,
+                        {
+                          locale,
+                          fallback: "-",
+                        },
+                      ),
                     })
-                  : t('playerPortal.home.kpis.noExpiry')
+                  : t("playerPortal.home.kpis.noExpiry")
               }
-              status={overview.credits.activeCount > 0 ? 'active' : 'inactive'}
+              status={overview.credits.activeCount > 0 ? "active" : "inactive"}
               style={styles.kpiCard}
             />
             <PlayerKpiCard
-              label={t('playerPortal.home.kpis.paymentStatus')}
+              label={t("playerPortal.home.kpis.paymentStatus")}
               value={paymentStatusValue}
-              hint={t('playerPortal.home.kpis.latestPayment')}
-              status={isPaymentConfirmed ? undefined : overview.summaries.latestPaymentStatus}
+              hint={t("playerPortal.home.kpis.latestPayment")}
+              status={
+                isPaymentConfirmed
+                  ? undefined
+                  : overview.summaries.latestPaymentStatus
+              }
               valueVariant="h3"
               valueWeight="semibold"
               valueNumberOfLines={1}
               valueAdjustsFontSizeToFit
               valueMinimumFontScale={0.82}
-              valueStyle={[styles.paymentValue, isPaymentConfirmed ? { color: colors.success } : null]}
+              valueStyle={[
+                styles.paymentValue,
+                isPaymentConfirmed ? { color: colors.success } : null,
+              ]}
               style={[
                 styles.kpiCard,
                 styles.paymentKpiCard,
                 isPaymentConfirmed
-                  ? { backgroundColor: colors.successSoft, borderColor: colors.success }
+                  ? {
+                      backgroundColor: colors.successSoft,
+                      borderColor: colors.success,
+                    }
                   : null,
               ]}
             />
           </View>
 
           <PortalSectionCard
-            title={t('playerPortal.home.sections.subscriptionTitle')}
-            subtitle={t('playerPortal.home.sections.subscriptionSubtitle')}
+            title={t("playerPortal.home.sections.subscriptionTitle")}
+            subtitle={t("playerPortal.home.sections.subscriptionSubtitle")}
           >
             <Text variant="bodySmall" color={colors.textSecondary}>
-              {t('playerPortal.home.subscription.course', {
-                name: overview.subscription.courseName || '-',
+              {t("playerPortal.home.subscription.course", {
+                name: overview.subscription.courseName || "-",
               })}
             </Text>
             <Text variant="bodySmall" color={colors.textSecondary}>
-              {t('playerPortal.home.subscription.group', {
-                name: overview.subscription.groupName || '-',
+              {t("playerPortal.home.subscription.group", {
+                name: overview.subscription.groupName || "-",
               })}
             </Text>
             <Text variant="bodySmall" color={colors.textSecondary}>
-              {t('playerPortal.home.subscription.period', {
-                start: formatDateLabel(overview.subscription.startDate, { locale, fallback: '-' }),
-                end: formatDateLabel(overview.subscription.endDate, { locale, fallback: '-' }),
+              {t("playerPortal.home.subscription.period", {
+                start: formatDateLabel(overview.subscription.startDate, {
+                  locale,
+                  fallback: "-",
+                }),
+                end: formatDateLabel(overview.subscription.endDate, {
+                  locale,
+                  fallback: "-",
+                }),
               })}
             </Text>
           </PortalSectionCard>
 
           <PortalSectionCard
-            title={t('playerPortal.home.sections.creditsTitle')}
-            subtitle={t('playerPortal.home.sections.creditsSubtitle')}
+            title={t("playerPortal.home.sections.creditsTitle")}
+            subtitle={t("playerPortal.home.sections.creditsSubtitle")}
           >
             <Text variant="bodySmall" color={colors.textSecondary}>
-              {t('playerPortal.home.credits.total', {
-                value: formatAmountLabel(overview.credits.totalCreditRemaining, {
-                  locale,
-                  fallback: '0',
-                }),
+              {t("playerPortal.home.credits.total", {
+                value: formatAmountLabel(
+                  overview.credits.totalCreditRemaining,
+                  {
+                    locale,
+                    fallback: "0",
+                  },
+                ),
               })}
             </Text>
             <Text variant="bodySmall" color={colors.textSecondary}>
-              {t('playerPortal.home.credits.nextExpiry', {
+              {t("playerPortal.home.credits.nextExpiry", {
                 date: formatDateLabel(overview.credits.nextCreditExpiry, {
                   locale,
-                  fallback: t('playerPortal.home.credits.none'),
+                  fallback: t("playerPortal.home.credits.none"),
                 }),
               })}
             </Text>
-            <View style={[styles.statusInline, { flexDirection: getRowDirection(isRTL) }]}>
+            <View
+              style={[
+                styles.statusInline,
+                { flexDirection: getRowDirection(isRTL) },
+              ]}
+            >
               <PortalStatusBadge
-                status={overview.performance.currentFreeze?.phase || 'inactive'}
+                status={overview.performance.currentFreeze?.phase || "inactive"}
                 domain="freezeStatus"
               />
               <Text variant="caption" color={colors.textSecondary}>
                 {overview.performance.currentFreeze?.phase
-                  ? t('playerPortal.home.credits.currentFreeze', {
-                      status: formatFreezeStatusLabel(overview.performance.currentFreeze.phase, {
-                        t,
-                        locale,
-                        fallback: '-',
-                      }),
+                  ? t("playerPortal.home.credits.currentFreeze", {
+                      status: formatFreezeStatusLabel(
+                        overview.performance.currentFreeze.phase,
+                        {
+                          t,
+                          locale,
+                          fallback: "-",
+                        },
+                      ),
                     })
-                  : t('playerPortal.home.credits.noFreeze')}
+                  : t("playerPortal.home.credits.noFreeze")}
               </Text>
             </View>
           </PortalSectionCard>
 
           <PortalSectionCard
-            title={t('playerPortal.home.sections.paymentTitle')}
-            subtitle={t('playerPortal.home.sections.paymentSubtitle')}
-            actionLabel={t('playerPortal.actions.viewAll')}
+            title={t("playerPortal.home.sections.paymentTitle")}
+            subtitle={t("playerPortal.home.sections.paymentSubtitle")}
+            actionLabel={t("playerPortal.actions.viewAll")}
             onActionPress={() => router.push(ROUTES.PLAYER_PAYMENTS)}
           >
             {overview.latestPayment ? (
               <>
-                <View style={[styles.statusInline, { flexDirection: getRowDirection(isRTL) }]}>
-                  <PortalStatusBadge status={overview.latestPayment.status} domain="paymentStatus" />
+                <View
+                  style={[
+                    styles.statusInline,
+                    { flexDirection: getRowDirection(isRTL) },
+                  ]}
+                >
+                  <PortalStatusBadge
+                    status={overview.latestPayment.status}
+                    domain="paymentStatus"
+                  />
                   <Text variant="caption" color={colors.textSecondary}>
-                    {t('playerPortal.home.payment.invoice', {
-                      id: overview.latestPayment.invoiceId || '-',
+                    {t("playerPortal.home.payment.invoice", {
+                      id: overview.latestPayment.invoiceId || "-",
                     })}
                   </Text>
                 </View>
                 <Text variant="bodySmall" color={colors.textSecondary}>
-                  {t('playerPortal.home.payment.amount', {
+                  {t("playerPortal.home.payment.amount", {
                     amount: formatAmountLabel(overview.latestPayment.amount, {
                       locale,
-                      fallback: '0',
-                      currency: overview.latestPayment.currency || 'JOD',
+                      fallback: "0",
+                      currency: overview.latestPayment.currency || "JD",
                     }),
                   })}
                 </Text>
                 <Text variant="bodySmall" color={colors.textSecondary}>
-                  {t('playerPortal.home.payment.dueDate', {
+                  {t("playerPortal.home.payment.dueDate", {
                     date: formatDateLabel(overview.latestPayment.dueDate, {
                       locale,
-                      fallback: '-',
+                      fallback: "-",
                     }),
                   })}
                 </Text>
@@ -356,15 +415,15 @@ export function PlayerHomeScreen() {
             ) : (
               <PortalEmptyState
                 compact
-                title={t('playerPortal.home.payment.emptyTitle')}
-                description={t('playerPortal.home.payment.emptyDescription')}
+                title={t("playerPortal.home.payment.emptyTitle")}
+                description={t("playerPortal.home.payment.emptyDescription")}
               />
             )}
           </PortalSectionCard>
 
           <PortalSectionCard
-            title={t('playerPortal.home.sections.quickActionsTitle')}
-            subtitle={t('playerPortal.home.sections.quickActionsSubtitle')}
+            title={t("playerPortal.home.sections.quickActionsTitle")}
+            subtitle={t("playerPortal.home.sections.quickActionsSubtitle")}
           >
             <PortalQuickActions actions={quickActions} />
           </PortalSectionCard>
@@ -379,38 +438,38 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   kpiRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: spacing.sm,
   },
   kpiCard: {
-    minWidth: '31%',
+    minWidth: "31%",
   },
   paymentKpiCard: {
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: "transparent",
   },
   paymentValue: {
     flexShrink: 1,
   },
   statusInline: {
-    alignItems: 'center',
+    alignItems: "center",
     gap: spacing.sm,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
   },
   bookingShortcut: {
     borderWidth: 1,
     borderRadius: 14,
     padding: spacing.sm,
-    alignItems: 'center',
+    alignItems: "center",
     gap: spacing.sm,
   },
   shortcutIcon: {
     width: 36,
     height: 36,
     borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   shortcutText: {
     flex: 1,

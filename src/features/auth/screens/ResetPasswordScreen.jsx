@@ -622,7 +622,6 @@ export function ResetPasswordScreen() {
     if (step !== STEPS.OTP || !resetContext) return;
     const remaining = getContextCooldownSeconds(resetContext);
     if (remaining > resendIn) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setResendIn(remaining);
     }
   }, [getContextCooldownSeconds, resendIn, resetContext, step]);

@@ -3,14 +3,17 @@ import { usePlayerPortalSession } from './usePlayerPortalSession';
 import { usePlayerProfile } from './usePlayerProfile';
 import {
   buildProfileUpdatePayload,
+  getPlayerPortalDynamicFieldGroups,
   getProfileDirtyKeys,
   normalizeDateInput,
+  normalizePlayerPortalDynamicFieldAnswer,
   normalizeMetricInput,
   normalizePhoneInput,
   readImageUriAsPayload,
   resolveProfileImageUri,
   validateProfileField,
   validateProfileDraft,
+  validatePlayerPortalDynamicAnswers,
 } from '../utils/playerPortal.profile';
 
 const toFormState = (profile) => ({
@@ -32,40 +35,72 @@ const toFormState = (profile) => ({
   image_size: profile?.image_size || profile?.imageSize || null,
 });
 
+const toDynamicAnswersState = (profile) =>
+  getPlayerPortalDynamicFieldGroups(profile).reduce(
+    (acc, group) => {
+      acc[group.key] = group.fields.reduce((groupAcc, field) => {
+        const fieldKey = field.field_key;
+        if (!fieldKey) return groupAcc;
+        groupAcc[fieldKey] = normalizePlayerPortalDynamicFieldAnswer(field, field.value);
+        return groupAcc;
+      }, {});
+      return acc;
+    },
+    { registration: {}, tryout: {} }
+  );
+
+const createEmptyDynamicErrors = () => ({ registration: {}, tryout: {} });
+
+const areDynamicAnswersEqual = (left, right) => JSON.stringify(left || {}) === JSON.stringify(right || {});
+
 export function usePlayerProfileEditor() {
   const session = usePlayerPortalSession();
   const profileQuery = usePlayerProfile();
 
   const [draft, setDraft] = useState(() => toFormState(profileQuery.profile));
   const [initialDraft, setInitialDraft] = useState(() => toFormState(profileQuery.profile));
+  const [dynamicAnswersByGroup, setDynamicAnswersByGroup] = useState(() => toDynamicAnswersState(profileQuery.profile));
+  const [initialDynamicAnswersByGroup, setInitialDynamicAnswersByGroup] = useState(() =>
+    toDynamicAnswersState(profileQuery.profile)
+  );
+  const [dynamicFieldErrorsByGroup, setDynamicFieldErrorsByGroup] = useState(() => createEmptyDynamicErrors());
   const [fieldErrors, setFieldErrors] = useState({});
   const [submitError, setSubmitError] = useState(null);
   const [imageDraft, setImageDraft] = useState(null);
 
   const didInitRef = useRef(false);
+  const dynamicFieldGroups = useMemo(() => getPlayerPortalDynamicFieldGroups(profileQuery.profile), [profileQuery.profile]);
 
   useEffect(() => {
     if (!profileQuery.profile) return;
     const next = toFormState(profileQuery.profile);
+    const nextDynamicAnswers = toDynamicAnswersState(profileQuery.profile);
 
     if (!didInitRef.current) {
       didInitRef.current = true;
       setDraft(next);
       setInitialDraft(next);
+      setDynamicAnswersByGroup(nextDynamicAnswers);
+      setInitialDynamicAnswersByGroup(nextDynamicAnswers);
       return;
     }
 
     const dirtyNow = getProfileDirtyKeys(initialDraft, draft);
-    if (dirtyNow.length === 0) {
+    const dynamicDirtyNow = !areDynamicAnswersEqual(initialDynamicAnswersByGroup, dynamicAnswersByGroup);
+    if (dirtyNow.length === 0 && !dynamicDirtyNow) {
       const shouldSyncDraft = getProfileDirtyKeys(draft, next).length > 0;
       const shouldSyncInitial = getProfileDirtyKeys(initialDraft, next).length > 0;
-      if (!shouldSyncDraft && !shouldSyncInitial) return;
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      const shouldSyncDynamic = !areDynamicAnswersEqual(dynamicAnswersByGroup, nextDynamicAnswers);
+      const shouldSyncInitialDynamic = !areDynamicAnswersEqual(initialDynamicAnswersByGroup, nextDynamicAnswers);
+      if (!shouldSyncDraft && !shouldSyncInitial && !shouldSyncDynamic && !shouldSyncInitialDynamic) return;
       setDraft(next);
       setInitialDraft(next);
+      setDynamicAnswersByGroup(nextDynamicAnswers);
+      setInitialDynamicAnswersByGroup(nextDynamicAnswers);
       setImageDraft(null);
+      setDynamicFieldErrorsByGroup(createEmptyDynamicErrors());
     }
-  }, [draft, initialDraft, profileQuery.profile]);
+  }, [dynamicAnswersByGroup, initialDraft, initialDynamicAnswersByGroup, draft, profileQuery.profile]);
 
   const imageUriValue = imageDraft?.uri;
   const imageBase64 = imageDraft?.base64;
@@ -79,8 +114,6 @@ export function usePlayerProfileEditor() {
     }
     return keys;
   }, [draft, imageUriValue, initialDraft]);
-
-  const isDirty = dirtyKeys.length > 0;
 
   const imageUri = useMemo(() => {
     if (imageUriValue) return imageUriValue;
@@ -113,6 +146,42 @@ export function usePlayerProfileEditor() {
       });
 
       return nextDraft;
+    });
+  }, []);
+
+  const setDynamicFieldValue = useCallback((groupKey, fieldKey, value) => {
+    const nextGroupKey = String(groupKey || '').trim();
+    const nextFieldKey = String(fieldKey || '').trim();
+    if (!nextGroupKey || !nextFieldKey) return;
+
+    setDynamicAnswersByGroup((prev) => {
+      const currentGroup = prev[nextGroupKey] || {};
+      if (currentGroup[nextFieldKey] === value) return prev;
+      return {
+        ...prev,
+        [nextGroupKey]: {
+          ...currentGroup,
+          [nextFieldKey]: value,
+        },
+      };
+    });
+
+    setDynamicFieldErrorsByGroup((prev) => {
+      const currentGroup = prev[nextGroupKey];
+      if (!currentGroup || !currentGroup[nextFieldKey]) return prev;
+
+      const nextGroup = { ...currentGroup };
+      delete nextGroup[nextFieldKey];
+      if (Object.keys(nextGroup).length === 0) {
+        const nextErrors = { ...prev };
+        delete nextErrors[nextGroupKey];
+        return nextErrors;
+      }
+
+      return {
+        ...prev,
+        [nextGroupKey]: nextGroup,
+      };
     });
   }, []);
 
@@ -163,22 +232,29 @@ export function usePlayerProfileEditor() {
 
   const resetDraft = useCallback(() => {
     setDraft(initialDraft);
+    setDynamicAnswersByGroup(initialDynamicAnswersByGroup);
+    setDynamicFieldErrorsByGroup(createEmptyDynamicErrors());
     setFieldErrors({});
     setSubmitError(null);
     setImageDraft(null);
-  }, [initialDraft]);
+  }, [initialDraft, initialDynamicAnswersByGroup]);
 
   const saveProfile = useCallback(async () => {
     const validation = validateProfileDraft(draft);
-    if (!validation.valid) {
+    const dynamicValidation = validatePlayerPortalDynamicAnswers(dynamicFieldGroups, dynamicAnswersByGroup);
+    if (!validation.valid || !dynamicValidation.valid) {
       setFieldErrors(validation.errors);
+      setDynamicFieldErrorsByGroup(dynamicValidation.errors);
       return {
         success: false,
         error: {
           code: 'PROFILE_VALIDATION_FAILED',
           status: 0,
           message: 'Profile form is invalid.',
-          details: validation.errors,
+          details: {
+            ...validation.errors,
+            dynamic: dynamicValidation.errors,
+          },
         },
       };
     }
@@ -224,6 +300,8 @@ export function usePlayerProfileEditor() {
       profile: profileQuery.profile,
       draft,
       imagePayload,
+      dynamicAnswersByGroup,
+      dynamicFieldGroups,
     });
 
     const result = await profileQuery.updateProfile(payload);
@@ -239,11 +317,14 @@ export function usePlayerProfileEditor() {
 
     setInitialDraft(next);
     setDraft(next);
+    setInitialDynamicAnswersByGroup(dynamicAnswersByGroup);
+    setDynamicAnswersByGroup(dynamicAnswersByGroup);
+    setDynamicFieldErrorsByGroup(createEmptyDynamicErrors());
     setImageDraft(null);
     setFieldErrors({});
     setSubmitError(null);
     return result;
-  }, [draft, imageBase64, imageMime, imageSize, imageUriValue, profileQuery]);
+  }, [draft, dynamicAnswersByGroup, dynamicFieldGroups, imageBase64, imageMime, imageSize, imageUriValue, profileQuery]);
 
   return {
     canFetch: session.canFetchOverview,
@@ -251,8 +332,11 @@ export function usePlayerProfileEditor() {
     profile: profileQuery.profile,
     draft,
     initialDraft,
+    dynamicFieldGroups,
+    dynamicAnswersByGroup,
+    dynamicFieldErrorsByGroup,
     dirtyKeys,
-    isDirty,
+    isDirty: dirtyKeys.length > 0 || !areDynamicAnswersEqual(initialDynamicAnswersByGroup, dynamicAnswersByGroup),
     imageUri,
     imageDraft,
     fieldErrors,
@@ -261,6 +345,7 @@ export function usePlayerProfileEditor() {
     isUpdatingProfile: profileQuery.isUpdatingProfile,
     profileError: profileQuery.profileError,
     setFieldValue,
+    setDynamicFieldValue,
     updatePhoneField,
     updateMetricField,
     updateDateField,

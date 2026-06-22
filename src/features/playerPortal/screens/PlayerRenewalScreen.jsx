@@ -1,37 +1,52 @@
-import { useMemo } from 'react';
-import { Pressable, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
-import { useRouter } from 'expo-router';
-import { ArrowLeft, ArrowRight, CalendarDays, CheckCircle2, Crown, Layers, Target, Zap } from 'lucide-react-native';
-import { useToast } from '../../../components/feedback/ToastHost';
-import { AppScreen } from '../../../components/ui/AppScreen';
-import { Button } from '../../../components/ui/Button';
-import { Chip } from '../../../components/ui/Chip';
-import { DatePickerField } from '../../../components/ui/DatePickerField';
-import { LanguageSwitch } from '../../../components/ui/LanguageSwitch';
-import { ScreenHeader } from '../../../components/ui/ScreenHeader';
-import { Text } from '../../../components/ui/Text';
-import { ROUTES } from '../../../constants/routes';
-import { useI18n } from '../../../hooks/useI18n';
-import { useTheme } from '../../../hooks/useTheme';
-import { getRowDirection } from '../../../utils/rtl';
-import { normalizeNumericInput } from '../../../utils/numbering';
-import { borderRadius, spacing } from '../../../theme/tokens';
+import { useRouter } from "expo-router";
 import {
-  PortalEmptyState,
-  PortalErrorState,
-  PortalSectionCard,
-  PortalSkeletonCard,
-} from '../components';
-import { usePlayerRenewalFlow } from '../hooks';
-import { clampISODate } from '../utils/playerPortal.courseSchedule';
+    ArrowLeft,
+    ArrowRight,
+    CalendarDays,
+    CheckCircle2,
+    Crown,
+    Layers,
+    Target,
+    Zap,
+} from "lucide-react-native";
+import { useMemo } from "react";
 import {
-  formatAmountLabel,
-  formatDateLabel,
-  formatNumberLabel,
-  formatRegistrationTypeLabel,
-  formatRenewalTypeLabel,
-} from '../utils/playerPortal.formatters';
-import { resolvePortalGuardMessage } from '../utils/playerPortal.messages';
+    Pressable,
+    RefreshControl,
+    StyleSheet,
+    TextInput,
+    View,
+} from "react-native";
+import { useToast } from "../../../components/feedback/ToastHost";
+import { AppScreen } from "../../../components/ui/AppScreen";
+import { Button } from "../../../components/ui/Button";
+import { Chip } from "../../../components/ui/Chip";
+import { DatePickerField } from "../../../components/ui/DatePickerField";
+import { LanguageSwitch } from "../../../components/ui/LanguageSwitch";
+import { ScreenHeader } from "../../../components/ui/ScreenHeader";
+import { Text } from "../../../components/ui/Text";
+import { ROUTES } from "../../../constants/routes";
+import { useI18n } from "../../../hooks/useI18n";
+import { useTheme } from "../../../hooks/useTheme";
+import { borderRadius, spacing } from "../../../theme/tokens";
+import { normalizeNumericInput } from "../../../utils/numbering";
+import { getRowDirection } from "../../../utils/rtl";
+import {
+    PortalEmptyState,
+    PortalErrorState,
+    PortalSectionCard,
+    PortalSkeletonCard,
+} from "../components";
+import { usePlayerRenewalFlow } from "../hooks";
+import { clampISODate } from "../utils/playerPortal.courseSchedule";
+import {
+    formatAmountLabel,
+    formatDateLabel,
+    formatNumberLabel,
+    formatRegistrationTypeLabel,
+    formatRenewalTypeLabel,
+} from "../utils/playerPortal.formatters";
+import { resolvePortalGuardMessage } from "../utils/playerPortal.messages";
 
 const STEP_ITEMS = Object.freeze([
   { key: 0, icon: Target },
@@ -43,35 +58,38 @@ const STEP_ITEMS = Object.freeze([
 const normalizeStepTitle = (step, t) => {
   switch (step) {
     case 0:
-      return t('playerPortal.renewal.steps.typeTitle');
+      return t("playerPortal.renewal.steps.typeTitle");
     case 1:
-      return t('playerPortal.renewal.steps.optionsTitle');
+      return t("playerPortal.renewal.steps.optionsTitle");
     case 2:
-      return t('playerPortal.renewal.steps.datesTitle');
+      return t("playerPortal.renewal.steps.datesTitle");
     default:
-      return t('playerPortal.renewal.steps.reviewTitle');
+      return t("playerPortal.renewal.steps.reviewTitle");
   }
 };
 
-const resolvePendingPaymentBlockMessage = (rawMessage, { t, locale, fallbackKey }) => {
-  const message = String(rawMessage || '').trim();
+const resolvePendingPaymentBlockMessage = (
+  rawMessage,
+  { t, locale, fallbackKey },
+) => {
+  const message = String(rawMessage || "").trim();
   const normalized = message.toLowerCase();
   const isPendingPaymentMessage =
-    normalized.includes('pending payment') ||
-    normalized.includes('awaiting payment') ||
-    normalized.includes('unpaid') ||
-    normalized.includes('دفعة') ||
-    normalized.includes('مدفوع');
+    normalized.includes("pending payment") ||
+    normalized.includes("awaiting payment") ||
+    normalized.includes("unpaid") ||
+    normalized.includes("دفعة") ||
+    normalized.includes("مدفوع");
 
-  if (!isPendingPaymentMessage) return '';
+  if (!isPendingPaymentMessage) return "";
 
   const amountMatch = message.match(
-    /pending payment(?:\s+of)?\s+([0-9]+(?:[.,][0-9]+)*)\s*([A-Za-z]{3})?/i
+    /pending payment(?:\s+of)?\s+([0-9]+(?:[.,][0-9]+)*)\s*([A-Za-z]{3})?/i,
   );
   if (amountMatch?.[1]) {
     const amountLabel = formatAmountLabel(amountMatch[1], {
       locale,
-      currency: amountMatch[2] || 'JOD',
+      currency: amountMatch[2] || "JD",
       fallback: amountMatch[1],
     });
     return t(`${fallbackKey}WithAmount`, { amount: amountLabel });
@@ -80,7 +98,15 @@ const resolvePendingPaymentBlockMessage = (rawMessage, { t, locale, fallbackKey 
   return t(fallbackKey);
 };
 
-function SelectableCard({ title, description, icon, selected, onPress, colors, isRTL }) {
+function SelectableCard({
+  title,
+  description,
+  icon,
+  selected,
+  onPress,
+  colors,
+  isRTL,
+}) {
   const Icon = icon;
   return (
     <Pressable
@@ -95,9 +121,23 @@ function SelectableCard({ title, description, icon, selected, onPress, colors, i
         },
       ]}
     >
-      <View style={[styles.selectCardHead, { flexDirection: getRowDirection(isRTL) }]}>
-        <View style={[styles.selectIcon, { backgroundColor: selected ? colors.surface : colors.surfaceSoft }]}> 
-          <Icon size={16} color={selected ? colors.accentOrange : colors.textSecondary} strokeWidth={2.2} />
+      <View
+        style={[
+          styles.selectCardHead,
+          { flexDirection: getRowDirection(isRTL) },
+        ]}
+      >
+        <View
+          style={[
+            styles.selectIcon,
+            { backgroundColor: selected ? colors.surface : colors.surfaceSoft },
+          ]}
+        >
+          <Icon
+            size={16}
+            color={selected ? colors.accentOrange : colors.textSecondary}
+            strokeWidth={2.2}
+          />
         </View>
         <Text variant="bodySmall" weight="bold">
           {title}
@@ -118,47 +158,67 @@ export function PlayerRenewalScreen() {
 
   const flow = usePlayerRenewalFlow({ auto: true });
   const hasPendingRenewalRequest = Boolean(flow.eligibility?.hasPendingRequest);
-  const isArabic = String(locale || '').toLowerCase().startsWith('ar');
+  const isArabic = String(locale || "")
+    .toLowerCase()
+    .startsWith("ar");
 
   const currentRegistration = flow.currentRegistration;
   const stepTitle = normalizeStepTitle(flow.step, t);
   const courseOverlapMessage = useMemo(() => {
-    if (!flow.hasCourseOverlapSelection) return '';
-    return t('playerPortal.renewal.errors.overlapCourse', {
-      date: formatDateLabel(flow.anchorISO, { locale, fallback: '-' }),
+    if (!flow.hasCourseOverlapSelection) return "";
+    return t("playerPortal.renewal.errors.overlapCourse", {
+      date: formatDateLabel(flow.anchorISO, { locale, fallback: "-" }),
     });
   }, [flow.anchorISO, flow.hasCourseOverlapSelection, locale, t]);
   const serverBlockedMessage = useMemo(() => {
-    if (!flow.hasServerBlockingCondition) return '';
-    const pendingPaymentMessage = resolvePendingPaymentBlockMessage(flow.blockingReason, {
-      t,
-      locale,
-      fallbackKey: 'playerPortal.renewal.errors.pendingPaymentBlocked',
-    });
+    if (!flow.hasServerBlockingCondition) return "";
+    const pendingPaymentMessage = resolvePendingPaymentBlockMessage(
+      flow.blockingReason,
+      {
+        t,
+        locale,
+        fallbackKey: "playerPortal.renewal.errors.pendingPaymentBlocked",
+      },
+    );
     if (pendingPaymentMessage) return pendingPaymentMessage;
-    return (isArabic ? '' : flow.blockingReason) || t('playerPortal.renewal.errors.serverBlocked');
-  }, [flow.blockingReason, flow.hasServerBlockingCondition, isArabic, locale, t]);
+    return (
+      (isArabic ? "" : flow.blockingReason) ||
+      t("playerPortal.renewal.errors.serverBlocked")
+    );
+  }, [
+    flow.blockingReason,
+    flow.hasServerBlockingCondition,
+    isArabic,
+    locale,
+    t,
+  ]);
   const startBoundsHelperText = useMemo(() => {
-    const min = formatDateLabel(flow.bounds.startMin, { locale, fallback: '-' });
-    const max = formatDateLabel(flow.bounds.startMax, { locale, fallback: '-' });
+    const min = formatDateLabel(flow.bounds.startMin, {
+      locale,
+      fallback: "-",
+    });
+    const max = formatDateLabel(flow.bounds.startMax, {
+      locale,
+      fallback: "-",
+    });
     if (flow.bounds.startMin && flow.bounds.startMax) {
-      return t('playerPortal.renewal.labels.startBounds', { min, max });
+      return t("playerPortal.renewal.labels.startBounds", { min, max });
     }
     if (flow.bounds.startMin) {
-      return t('playerPortal.renewal.labels.startFrom', { date: min });
+      return t("playerPortal.renewal.labels.startFrom", { date: min });
     }
-    return '';
+    return "";
   }, [flow.bounds.startMax, flow.bounds.startMin, locale, t]);
   const endBoundsHelperText = useMemo(() => {
-    const min = formatDateLabel(flow.bounds.endMin, { locale, fallback: '-' });
-    const max = formatDateLabel(flow.bounds.endMax, { locale, fallback: '-' });
+    const min = formatDateLabel(flow.bounds.endMin, { locale, fallback: "-" });
+    const max = formatDateLabel(flow.bounds.endMax, { locale, fallback: "-" });
     if (flow.bounds.endMin && flow.bounds.endMax) {
-      return t('playerPortal.renewal.labels.endBounds', { min, max });
+      return t("playerPortal.renewal.labels.endBounds", { min, max });
     }
     if (flow.bounds.endMin) {
-      return t('playerPortal.renewal.labels.endFrom', { date: min });
+      return t("playerPortal.renewal.labels.endFrom", { date: min });
     }
-    return '';
+    return "";
   }, [flow.bounds.endMax, flow.bounds.endMin, locale, t]);
 
   const canSubmit =
@@ -186,28 +246,35 @@ export function PlayerRenewalScreen() {
   const onSubmit = async () => {
     const result = await flow.submitRenewalRequest();
     if (!result.success) {
-      if (result.error?.code === 'RENEWAL_SERVER_BLOCKED') {
-        toast.error(serverBlockedMessage || t('playerPortal.renewal.errors.serverBlocked'));
+      if (result.error?.code === "RENEWAL_SERVER_BLOCKED") {
+        toast.error(
+          serverBlockedMessage ||
+            t("playerPortal.renewal.errors.serverBlocked"),
+        );
         return;
       }
-      if (result.error?.code === 'COURSE_OVERLAP_WITH_ACTIVE_SUBSCRIPTION') {
-        toast.error(courseOverlapMessage || t('playerPortal.renewal.errors.overlapCourse', { date: '-' }));
+      if (result.error?.code === "COURSE_OVERLAP_WITH_ACTIVE_SUBSCRIPTION") {
+        toast.error(
+          courseOverlapMessage ||
+            t("playerPortal.renewal.errors.overlapCourse", { date: "-" }),
+        );
         return;
       }
       toast.error(
         resolvePendingPaymentBlockMessage(result.error?.message, {
           t,
           locale,
-          fallbackKey: 'playerPortal.renewal.errors.pendingPaymentBlocked',
+          fallbackKey: "playerPortal.renewal.errors.pendingPaymentBlocked",
         }) ||
-          (isArabic ? '' : result.error?.message) ||
-          t('playerPortal.renewal.messages.submitFailed')
+          (isArabic ? "" : result.error?.message) ||
+          t("playerPortal.renewal.messages.submitFailed"),
       );
       return;
     }
 
     toast.success(
-      (isArabic ? '' : result.data?.payload?.message) || t('playerPortal.renewal.messages.submitted')
+      (isArabic ? "" : result.data?.payload?.message) ||
+        t("playerPortal.renewal.messages.submitted"),
     );
     flow.resetFlow();
     router.replace(ROUTES.PLAYER_HOME);
@@ -227,8 +294,8 @@ export function PlayerRenewalScreen() {
       }
     >
       <ScreenHeader
-        title={t('playerPortal.renewal.title')}
-        subtitle={t('playerPortal.renewal.subtitle')}
+        title={t("playerPortal.renewal.title")}
+        subtitle={t("playerPortal.renewal.subtitle")}
         onBack={() => router.replace(ROUTES.PLAYER_HOME)}
         right={<LanguageSwitch compact />}
       />
@@ -236,7 +303,7 @@ export function PlayerRenewalScreen() {
       {!flow.canFetch ? (
         <PortalSectionCard>
           <PortalEmptyState
-            title={t('playerPortal.home.unavailableTitle')}
+            title={t("playerPortal.home.unavailableTitle")}
             description={resolvePortalGuardMessage(flow.guardReason, t)}
           />
         </PortalSectionCard>
@@ -249,13 +316,16 @@ export function PlayerRenewalScreen() {
         </PortalSectionCard>
       ) : null}
 
-      {flow.canFetch && !flow.isLoadingOptions && flow.optionsError && !flow.options?.courses?.length ? (
+      {flow.canFetch &&
+      !flow.isLoadingOptions &&
+      flow.optionsError &&
+      !flow.options?.courses?.length ? (
         <PortalSectionCard>
           <PortalErrorState
-            title={t('playerPortal.renewal.errors.loadTitle')}
+            title={t("playerPortal.renewal.errors.loadTitle")}
             error={flow.optionsError}
-            fallbackMessage={t('playerPortal.renewal.errors.loadFallback')}
-            retryLabel={t('playerPortal.actions.retry')}
+            fallbackMessage={t("playerPortal.renewal.errors.loadFallback")}
+            retryLabel={t("playerPortal.actions.retry")}
             onRetry={() => flow.refreshRenewalData()}
           />
         </PortalSectionCard>
@@ -264,54 +334,66 @@ export function PlayerRenewalScreen() {
       {flow.canFetch && !flow.isLoadingOptions ? (
         <>
           <PortalSectionCard
-            title={t('playerPortal.renewal.sections.currentTitle')}
-            subtitle={t('playerPortal.renewal.sections.currentSubtitle')}
+            title={t("playerPortal.renewal.sections.currentTitle")}
+            subtitle={t("playerPortal.renewal.sections.currentSubtitle")}
           >
             <View style={styles.summaryGrid}>
               <Text variant="bodySmall" color={colors.textSecondary}>
-                {t('playerPortal.renewal.labels.currentType', {
-                  value: formatRegistrationTypeLabel(currentRegistration.registration_type, {
-                    t,
+                {t("playerPortal.renewal.labels.currentType", {
+                  value: formatRegistrationTypeLabel(
+                    currentRegistration.registration_type,
+                    {
+                      t,
+                      locale,
+                      fallback: currentRegistration.registration_type || "-",
+                    },
+                  ),
+                })}
+              </Text>
+              <Text variant="bodySmall" color={colors.textSecondary}>
+                {t("playerPortal.renewal.labels.currentCourse", {
+                  value: currentRegistration.course_name || "-",
+                })}
+              </Text>
+              <Text variant="bodySmall" color={colors.textSecondary}>
+                {t("playerPortal.renewal.labels.currentGroup", {
+                  value: currentRegistration.group_name || "-",
+                })}
+              </Text>
+              <Text variant="bodySmall" color={colors.textSecondary}>
+                {t("playerPortal.renewal.labels.currentStart", {
+                  value: formatDateLabel(currentRegistration.start_date, {
                     locale,
-                    fallback: currentRegistration.registration_type || '-',
+                    fallback: "-",
                   }),
                 })}
               </Text>
               <Text variant="bodySmall" color={colors.textSecondary}>
-                {t('playerPortal.renewal.labels.currentCourse', {
-                  value: currentRegistration.course_name || '-',
+                {t("playerPortal.renewal.labels.currentEnd", {
+                  value: formatDateLabel(currentRegistration.end_date, {
+                    locale,
+                    fallback: "-",
+                  }),
                 })}
               </Text>
               <Text variant="bodySmall" color={colors.textSecondary}>
-                {t('playerPortal.renewal.labels.currentGroup', {
-                  value: currentRegistration.group_name || '-',
+                {t("playerPortal.renewal.labels.currentSessions", {
+                  value: formatNumberLabel(
+                    currentRegistration.number_of_sessions,
+                    { locale, fallback: "0" },
+                  ),
                 })}
               </Text>
               <Text variant="bodySmall" color={colors.textSecondary}>
-                {t('playerPortal.renewal.labels.currentStart', {
-                  value: formatDateLabel(currentRegistration.start_date, { locale, fallback: '-' }),
-                })}
-              </Text>
-              <Text variant="bodySmall" color={colors.textSecondary}>
-                {t('playerPortal.renewal.labels.currentEnd', {
-                  value: formatDateLabel(currentRegistration.end_date, { locale, fallback: '-' }),
-                })}
-              </Text>
-              <Text variant="bodySmall" color={colors.textSecondary}>
-                {t('playerPortal.renewal.labels.currentSessions', {
-                  value: formatNumberLabel(currentRegistration.number_of_sessions, { locale, fallback: '0' }),
-                })}
-              </Text>
-              <Text variant="bodySmall" color={colors.textSecondary}>
-                {t('playerPortal.renewal.labels.currentLevel', {
-                  value: currentRegistration.level || '-',
+                {t("playerPortal.renewal.labels.currentLevel", {
+                  value: currentRegistration.level || "-",
                 })}
               </Text>
             </View>
 
             {hasPendingRenewalRequest ? (
               <Text variant="caption" color={colors.warning}>
-                {t('playerPortal.renewal.errors.pendingRequest')}
+                {t("playerPortal.renewal.errors.pendingRequest")}
               </Text>
             ) : null}
             {flow.hasServerBlockingCondition ? (
@@ -324,349 +406,454 @@ export function PlayerRenewalScreen() {
           <PortalSectionCard
             title={
               hasPendingRenewalRequest
-                ? t('playerPortal.renewal.steps.reviewTitle')
-                : t('playerPortal.renewal.sections.stepTitle', {
+                ? t("playerPortal.renewal.steps.reviewTitle")
+                : t("playerPortal.renewal.sections.stepTitle", {
                     step: flow.step + 1,
                     total: 4,
                   })
             }
-            subtitle={hasPendingRenewalRequest ? t('common.enums.status.under_review') : stepTitle}
+            subtitle={
+              hasPendingRenewalRequest
+                ? t("common.enums.status.under_review")
+                : stepTitle
+            }
           >
             {hasPendingRenewalRequest ? (
               <PortalEmptyState
                 icon={CheckCircle2}
-                title={t('playerPortal.renewal.errors.pendingRequest')}
-                description={t('common.enums.status.under_review')}
+                title={t("playerPortal.renewal.errors.pendingRequest")}
+                description={t("common.enums.status.under_review")}
               />
             ) : (
               <>
-            <View style={[styles.stepperRow, { flexDirection: getRowDirection(isRTL) }]}> 
-              {STEP_ITEMS.map((stepItem) => {
-                const Icon = stepItem.icon;
-                const active = stepItem.key <= flow.step;
-                return (
-                  <Pressable
-                    key={stepItem.key}
-                    accessibilityRole="button"
-                    onPress={() => flow.goToStep(stepItem.key)}
-                    style={[
-                      styles.stepChip,
-                      {
-                        flexDirection: getRowDirection(isRTL),
-                        borderColor: active ? colors.accentOrange : colors.border,
-                        backgroundColor: active ? colors.accentOrangeSoft : colors.surface,
-                      },
-                    ]}
-                  >
-                    <Icon
-                      size={14}
-                      color={active ? colors.accentOrange : colors.textSecondary}
-                      strokeWidth={2.3}
-                    />
-                    <Text variant="caption" weight="semibold" color={active ? colors.accentOrange : colors.textSecondary}>
-                      {stepItem.key + 1}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            {flow.step === flow.steps.TYPE ? (
-              <View style={styles.block}> 
-                <SelectableCard
-                  title={t('playerPortal.renewal.actions.subscriptionType')}
-                  description={t('playerPortal.renewal.labels.subscriptionDesc')}
-                  icon={Zap}
-                  selected={flow.renewType === 'subscription'}
-                  onPress={() => flow.setRenewType('subscription')}
-                  colors={colors}
-                  isRTL={isRTL}
-                />
-                <SelectableCard
-                  title={t('playerPortal.renewal.actions.courseType')}
-                  description={t('playerPortal.renewal.labels.courseDesc')}
-                  icon={Crown}
-                  selected={flow.renewType === 'course'}
-                  onPress={() => flow.setRenewType('course')}
-                  colors={colors}
-                  isRTL={isRTL}
-                />
-              </View>
-            ) : null}
-
-            {flow.step === flow.steps.OPTIONS ? (
-              <View style={styles.block}>
-                <Text variant="caption" color={colors.textSecondary}>
-                  {t('playerPortal.renewal.labels.level')}
-                </Text>
-                <View style={[styles.chipsWrap, { flexDirection: getRowDirection(isRTL) }]}>
-                  {flow.levelOptions.map((item) => {
-                    const label = locale === 'ar' ? item.label_ar || item.label_en : item.label_en || item.label_ar;
+                <View
+                  style={[
+                    styles.stepperRow,
+                    { flexDirection: getRowDirection(isRTL) },
+                  ]}
+                >
+                  {STEP_ITEMS.map((stepItem) => {
+                    const Icon = stepItem.icon;
+                    const active = stepItem.key <= flow.step;
                     return (
-                      <Chip
-                        key={`level-${item.value}`}
-                        label={label || item.value}
-                        selected={String(flow.level) === String(item.value)}
-                        onPress={() => flow.setLevel(item.value)}
-                      />
+                      <Pressable
+                        key={stepItem.key}
+                        accessibilityRole="button"
+                        onPress={() => flow.goToStep(stepItem.key)}
+                        style={[
+                          styles.stepChip,
+                          {
+                            flexDirection: getRowDirection(isRTL),
+                            borderColor: active
+                              ? colors.accentOrange
+                              : colors.border,
+                            backgroundColor: active
+                              ? colors.accentOrangeSoft
+                              : colors.surface,
+                          },
+                        ]}
+                      >
+                        <Icon
+                          size={14}
+                          color={
+                            active ? colors.accentOrange : colors.textSecondary
+                          }
+                          strokeWidth={2.3}
+                        />
+                        <Text
+                          variant="caption"
+                          weight="semibold"
+                          color={
+                            active ? colors.accentOrange : colors.textSecondary
+                          }
+                        >
+                          {stepItem.key + 1}
+                        </Text>
+                      </Pressable>
                     );
                   })}
                 </View>
 
-                {flow.renewType === 'course' ? (
-                  <>
+                {flow.step === flow.steps.TYPE ? (
+                  <View style={styles.block}>
+                    <SelectableCard
+                      title={t("playerPortal.renewal.actions.subscriptionType")}
+                      description={t(
+                        "playerPortal.renewal.labels.subscriptionDesc",
+                      )}
+                      icon={Zap}
+                      selected={flow.renewType === "subscription"}
+                      onPress={() => flow.setRenewType("subscription")}
+                      colors={colors}
+                      isRTL={isRTL}
+                    />
+                    <SelectableCard
+                      title={t("playerPortal.renewal.actions.courseType")}
+                      description={t("playerPortal.renewal.labels.courseDesc")}
+                      icon={Crown}
+                      selected={flow.renewType === "course"}
+                      onPress={() => flow.setRenewType("course")}
+                      colors={colors}
+                      isRTL={isRTL}
+                    />
+                  </View>
+                ) : null}
+
+                {flow.step === flow.steps.OPTIONS ? (
+                  <View style={styles.block}>
                     <Text variant="caption" color={colors.textSecondary}>
-                      {t('playerPortal.renewal.labels.course')}
+                      {t("playerPortal.renewal.labels.level")}
                     </Text>
-                    <View style={[styles.chipsWrap, { flexDirection: getRowDirection(isRTL) }]}>
-                      {flow.filteredCourseOptions.map((item) => (
+                    <View
+                      style={[
+                        styles.chipsWrap,
+                        { flexDirection: getRowDirection(isRTL) },
+                      ]}
+                    >
+                      {flow.levelOptions.map((item) => {
+                        const label =
+                          locale === "ar"
+                            ? item.label_ar || item.label_en
+                            : item.label_en || item.label_ar;
+                        return (
+                          <Chip
+                            key={`level-${item.value}`}
+                            label={label || item.value}
+                            selected={String(flow.level) === String(item.value)}
+                            onPress={() => flow.setLevel(item.value)}
+                          />
+                        );
+                      })}
+                    </View>
+
+                    {flow.renewType === "course" ? (
+                      <>
+                        <Text variant="caption" color={colors.textSecondary}>
+                          {t("playerPortal.renewal.labels.course")}
+                        </Text>
+                        <View
+                          style={[
+                            styles.chipsWrap,
+                            { flexDirection: getRowDirection(isRTL) },
+                          ]}
+                        >
+                          {flow.filteredCourseOptions.map((item) => (
+                            <Chip
+                              key={`course-${item.value}`}
+                              label={item.label}
+                              selected={
+                                String(flow.courseId) === String(item.value)
+                              }
+                              onPress={() => {
+                                flow.setCourseId(item.value);
+                                flow.setGroupId("");
+                              }}
+                            />
+                          ))}
+                        </View>
+                        {flow.filteredCourseOptions.length === 0 ? (
+                          <Text variant="caption" color={colors.textMuted}>
+                            {t("playerPortal.renewal.empty.courses")}
+                          </Text>
+                        ) : null}
+                        {flow.hasCourseOverlapSelection ? (
+                          <Text variant="caption" color={colors.warning}>
+                            {courseOverlapMessage}
+                          </Text>
+                        ) : null}
+                      </>
+                    ) : null}
+
+                    <Text variant="caption" color={colors.textSecondary}>
+                      {t("playerPortal.renewal.labels.group")}
+                    </Text>
+                    <View
+                      style={[
+                        styles.chipsWrap,
+                        { flexDirection: getRowDirection(isRTL) },
+                      ]}
+                    >
+                      {flow.filteredGroupOptions.map((item) => (
                         <Chip
-                          key={`course-${item.value}`}
+                          key={`group-${item.value}`}
                           label={item.label}
-                          selected={String(flow.courseId) === String(item.value)}
-                          onPress={() => {
-                            flow.setCourseId(item.value);
-                            flow.setGroupId('');
-                          }}
+                          selected={String(flow.groupId) === String(item.value)}
+                          onPress={() => flow.setGroupId(item.value)}
                         />
                       ))}
                     </View>
-                    {flow.filteredCourseOptions.length === 0 ? (
+                    {flow.filteredGroupOptions.length === 0 ? (
                       <Text variant="caption" color={colors.textMuted}>
-                        {t('playerPortal.renewal.empty.courses')}
+                        {flow.renewType === "course"
+                          ? t("playerPortal.renewal.empty.courseGroups")
+                          : t("playerPortal.renewal.empty.subscriptionGroups")}
                       </Text>
                     ) : null}
-                    {flow.hasCourseOverlapSelection ? (
-                      <Text variant="caption" color={colors.warning}>
-                        {courseOverlapMessage}
+                  </View>
+                ) : null}
+
+                {flow.step === flow.steps.DATES ? (
+                  <View style={styles.block}>
+                    <View style={styles.inputGroup}>
+                      <DatePickerField
+                        label={t("playerPortal.renewal.labels.startDate")}
+                        value={flow.startDate}
+                        onChange={(value) => {
+                          const clamped = clampISODate(
+                            value,
+                            flow.bounds.startMin,
+                            flow.bounds.startMax,
+                          );
+                          flow.setStartDate(clamped || value);
+                        }}
+                        placeholder={t("common.formats.isoDatePlaceholder")}
+                        minDate={flow.bounds.startMin}
+                        maxDate={flow.bounds.startMax}
+                        helperText={startBoundsHelperText}
+                      />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                      <DatePickerField
+                        label={t("playerPortal.renewal.labels.endDate")}
+                        value={flow.endDate}
+                        onChange={(value) => {
+                          const clamped = clampISODate(
+                            value,
+                            flow.bounds.endMin,
+                            flow.bounds.endMax,
+                          );
+                          flow.setEndDate(clamped || value);
+                        }}
+                        placeholder={t("common.formats.isoDatePlaceholder")}
+                        minDate={flow.bounds.endMin}
+                        maxDate={flow.bounds.endMax}
+                        helperText={endBoundsHelperText}
+                      />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                      <Text variant="caption" color={colors.textSecondary}>
+                        {t("playerPortal.renewal.labels.sessions")}
                       </Text>
-                    ) : null}
-                  </>
+                      <TextInput
+                        value={String(flow.numSessions || "")}
+                        onChangeText={(value) => {
+                          const parsed = Number.parseInt(
+                            normalizeNumericInput(value),
+                            10,
+                          );
+                          if (Number.isNaN(parsed)) {
+                            flow.setNumSessions(0);
+                            return;
+                          }
+                          flow.setNumSessions(parsed);
+                        }}
+                        keyboardType="number-pad"
+                        placeholder="0"
+                        placeholderTextColor={colors.textMuted}
+                        style={[
+                          styles.input,
+                          {
+                            borderColor: colors.border,
+                            backgroundColor: colors.surface,
+                            color: colors.textPrimary,
+                          },
+                        ]}
+                      />
+                      <Text variant="caption" color={colors.textMuted}>
+                        {t("playerPortal.renewal.labels.sessionsCap", {
+                          count: formatNumberLabel(flow.sessionsCap, {
+                            locale,
+                            fallback: "0",
+                          }),
+                        })}
+                      </Text>
+                    </View>
+                  </View>
                 ) : null}
 
-                <Text variant="caption" color={colors.textSecondary}>
-                  {t('playerPortal.renewal.labels.group')}
-                </Text>
-                <View style={[styles.chipsWrap, { flexDirection: getRowDirection(isRTL) }]}>
-                  {flow.filteredGroupOptions.map((item) => (
-                    <Chip
-                      key={`group-${item.value}`}
-                      label={item.label}
-                      selected={String(flow.groupId) === String(item.value)}
-                      onPress={() => flow.setGroupId(item.value)}
-                    />
-                  ))}
-                </View>
-                {flow.filteredGroupOptions.length === 0 ? (
-                  <Text variant="caption" color={colors.textMuted}>
-                    {flow.renewType === 'course'
-                      ? t('playerPortal.renewal.empty.courseGroups')
-                      : t('playerPortal.renewal.empty.subscriptionGroups')}
-                  </Text>
+                {flow.step === flow.steps.REVIEW ? (
+                  <View style={styles.block}>
+                    <View style={styles.inputGroup}>
+                      <Text variant="caption" color={colors.textSecondary}>
+                        {t("playerPortal.renewal.labels.playerNote")}
+                      </Text>
+                      <TextInput
+                        value={flow.playerNote}
+                        onChangeText={flow.setPlayerNote}
+                        placeholder={t(
+                          "playerPortal.renewal.labels.playerNotePlaceholder",
+                        )}
+                        placeholderTextColor={colors.textMuted}
+                        multiline
+                        numberOfLines={4}
+                        textAlignVertical="top"
+                        style={[
+                          styles.input,
+                          styles.noteInput,
+                          {
+                            borderColor: colors.border,
+                            backgroundColor: colors.surface,
+                            color: colors.textPrimary,
+                          },
+                        ]}
+                      />
+                    </View>
+
+                    <View
+                      style={[
+                        styles.reviewCard,
+                        {
+                          borderColor: colors.border,
+                          backgroundColor: colors.surfaceSoft,
+                        },
+                      ]}
+                    >
+                      <Text variant="bodySmall" color={colors.textSecondary}>
+                        {t("playerPortal.renewal.labels.reviewType", {
+                          value: formatRenewalTypeLabel(flow.renewType, {
+                            t,
+                            locale,
+                            fallback: flow.renewType || "-",
+                          }),
+                        })}
+                      </Text>
+                      {flow.renewType === "course" ? (
+                        <Text variant="bodySmall" color={colors.textSecondary}>
+                          {t("playerPortal.renewal.labels.reviewCourse", {
+                            value: flow.selectedCourse?.label || "-",
+                          })}
+                        </Text>
+                      ) : null}
+                      <Text variant="bodySmall" color={colors.textSecondary}>
+                        {t("playerPortal.renewal.labels.reviewGroup", {
+                          value: flow.selectedGroup?.label || "-",
+                        })}
+                      </Text>
+                      <Text variant="bodySmall" color={colors.textSecondary}>
+                        {t("playerPortal.renewal.labels.reviewStart", {
+                          value: formatDateLabel(flow.startDate, {
+                            locale,
+                            fallback: "-",
+                          }),
+                        })}
+                      </Text>
+                      <Text variant="bodySmall" color={colors.textSecondary}>
+                        {t("playerPortal.renewal.labels.reviewEnd", {
+                          value: formatDateLabel(flow.endDate, {
+                            locale,
+                            fallback: "-",
+                          }),
+                        })}
+                      </Text>
+                      <Text variant="bodySmall" color={colors.textSecondary}>
+                        {t("playerPortal.renewal.labels.reviewSessions", {
+                          value: formatNumberLabel(flow.numSessions, {
+                            locale,
+                            fallback: "0",
+                          }),
+                        })}
+                      </Text>
+                      <Text variant="bodySmall" color={colors.textSecondary}>
+                        {t("playerPortal.renewal.labels.reviewLevel", {
+                          value: flow.level || "-",
+                        })}
+                      </Text>
+                      {flow.playerNote ? (
+                        <Text variant="caption" color={colors.textMuted}>
+                          {flow.playerNote}
+                        </Text>
+                      ) : null}
+                    </View>
+                  </View>
                 ) : null}
-              </View>
-            ) : null}
 
-            {flow.step === flow.steps.DATES ? (
-              <View style={styles.block}>
-                <View style={styles.inputGroup}>
-                  <DatePickerField
-                    label={t('playerPortal.renewal.labels.startDate')}
-                    value={flow.startDate}
-                    onChange={(value) => {
-                      const clamped = clampISODate(value, flow.bounds.startMin, flow.bounds.startMax);
-                      flow.setStartDate(clamped || value);
-                    }}
-                    placeholder={t('common.formats.isoDatePlaceholder')}
-                    minDate={flow.bounds.startMin}
-                    maxDate={flow.bounds.startMax}
-                    helperText={startBoundsHelperText}
+                {flow.submitState.error ? (
+                  <PortalErrorState
+                    compact
+                    title={t("playerPortal.renewal.errors.submitTitle")}
+                    error={flow.submitState.error}
+                    fallbackMessage={t(
+                      "playerPortal.renewal.errors.submitFallback",
+                    )}
+                    retryLabel={t("playerPortal.actions.retry")}
+                    onRetry={onSubmit}
                   />
-                </View>
+                ) : null}
 
-                <View style={styles.inputGroup}>
-                  <DatePickerField
-                    label={t('playerPortal.renewal.labels.endDate')}
-                    value={flow.endDate}
-                    onChange={(value) => {
-                      const clamped = clampISODate(value, flow.bounds.endMin, flow.bounds.endMax);
-                      flow.setEndDate(clamped || value);
-                    }}
-                    placeholder={t('common.formats.isoDatePlaceholder')}
-                    minDate={flow.bounds.endMin}
-                    maxDate={flow.bounds.endMax}
-                    helperText={endBoundsHelperText}
-                  />
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text variant="caption" color={colors.textSecondary}>
-                    {t('playerPortal.renewal.labels.sessions')}
-                  </Text>
-                  <TextInput
-                    value={String(flow.numSessions || '')}
-                    onChangeText={(value) => {
-                      const parsed = Number.parseInt(normalizeNumericInput(value), 10);
-                      if (Number.isNaN(parsed)) {
-                        flow.setNumSessions(0);
-                        return;
+                <View
+                  style={[
+                    styles.actionsRow,
+                    { flexDirection: getRowDirection(isRTL) },
+                  ]}
+                >
+                  {flow.step > flow.steps.TYPE ? (
+                    <Button
+                      style={styles.actionButton}
+                      variant="secondary"
+                      onPress={() => flow.prevStep()}
+                      leadingIcon={
+                        isRTL ? (
+                          <ArrowRight
+                            size={14}
+                            color={colors.textPrimary}
+                            strokeWidth={2.2}
+                          />
+                        ) : (
+                          <ArrowLeft
+                            size={14}
+                            color={colors.textPrimary}
+                            strokeWidth={2.2}
+                          />
+                        )
                       }
-                      flow.setNumSessions(parsed);
-                    }}
-                    keyboardType="number-pad"
-                    placeholder="0"
-                    placeholderTextColor={colors.textMuted}
-                    style={[
-                      styles.input,
-                      {
-                        borderColor: colors.border,
-                        backgroundColor: colors.surface,
-                        color: colors.textPrimary,
-                      },
-                    ]}
-                  />
-                  <Text variant="caption" color={colors.textMuted}>
-                    {t('playerPortal.renewal.labels.sessionsCap', {
-                      count: formatNumberLabel(flow.sessionsCap, { locale, fallback: '0' }),
-                    })}
-                  </Text>
-                </View>
-              </View>
-            ) : null}
-
-            {flow.step === flow.steps.REVIEW ? (
-              <View style={styles.block}>
-                <View style={styles.inputGroup}>
-                  <Text variant="caption" color={colors.textSecondary}>
-                    {t('playerPortal.renewal.labels.playerNote')}
-                  </Text>
-                  <TextInput
-                    value={flow.playerNote}
-                    onChangeText={flow.setPlayerNote}
-                    placeholder={t('playerPortal.renewal.labels.playerNotePlaceholder')}
-                    placeholderTextColor={colors.textMuted}
-                    multiline
-                    numberOfLines={4}
-                    textAlignVertical="top"
-                    style={[
-                      styles.input,
-                      styles.noteInput,
-                      {
-                        borderColor: colors.border,
-                        backgroundColor: colors.surface,
-                        color: colors.textPrimary,
-                      },
-                    ]}
-                  />
-                </View>
-
-                <View style={[styles.reviewCard, { borderColor: colors.border, backgroundColor: colors.surfaceSoft }]}> 
-                  <Text variant="bodySmall" color={colors.textSecondary}>
-                    {t('playerPortal.renewal.labels.reviewType', {
-                      value: formatRenewalTypeLabel(flow.renewType, {
-                        t,
-                        locale,
-                        fallback: flow.renewType || '-',
-                      }),
-                    })}
-                  </Text>
-                  {flow.renewType === 'course' ? (
-                    <Text variant="bodySmall" color={colors.textSecondary}>
-                      {t('playerPortal.renewal.labels.reviewCourse', {
-                        value: flow.selectedCourse?.label || '-',
-                      })}
-                    </Text>
+                    >
+                      {t("common.actions.back")}
+                    </Button>
                   ) : null}
-                  <Text variant="bodySmall" color={colors.textSecondary}>
-                    {t('playerPortal.renewal.labels.reviewGroup', {
-                      value: flow.selectedGroup?.label || '-',
-                    })}
-                  </Text>
-                  <Text variant="bodySmall" color={colors.textSecondary}>
-                    {t('playerPortal.renewal.labels.reviewStart', {
-                      value: formatDateLabel(flow.startDate, { locale, fallback: '-' }),
-                    })}
-                  </Text>
-                  <Text variant="bodySmall" color={colors.textSecondary}>
-                    {t('playerPortal.renewal.labels.reviewEnd', {
-                      value: formatDateLabel(flow.endDate, { locale, fallback: '-' }),
-                    })}
-                  </Text>
-                  <Text variant="bodySmall" color={colors.textSecondary}>
-                    {t('playerPortal.renewal.labels.reviewSessions', {
-                      value: formatNumberLabel(flow.numSessions, { locale, fallback: '0' }),
-                    })}
-                  </Text>
-                  <Text variant="bodySmall" color={colors.textSecondary}>
-                    {t('playerPortal.renewal.labels.reviewLevel', {
-                      value: flow.level || '-',
-                    })}
-                  </Text>
-                  {flow.playerNote ? (
-                    <Text variant="caption" color={colors.textMuted}>
-                      {flow.playerNote}
-                    </Text>
-                  ) : null}
+
+                  {flow.step < flow.steps.REVIEW ? (
+                    <Button
+                      style={styles.actionButton}
+                      onPress={() => flow.nextStep()}
+                      disabled={nextDisabled}
+                      trailingIcon={
+                        isRTL ? (
+                          <ArrowLeft
+                            size={14}
+                            color={colors.white}
+                            strokeWidth={2.2}
+                          />
+                        ) : (
+                          <ArrowRight
+                            size={14}
+                            color={colors.white}
+                            strokeWidth={2.2}
+                          />
+                        )
+                      }
+                    >
+                      {t("common.actions.next")}
+                    </Button>
+                  ) : (
+                    <Button
+                      style={styles.actionButton}
+                      onPress={onSubmit}
+                      loading={flow.submitState.isSubmitting}
+                      disabled={nextDisabled}
+                      leadingIcon={
+                        <CheckCircle2
+                          size={14}
+                          color={colors.white}
+                          strokeWidth={2.2}
+                        />
+                      }
+                    >
+                      {t("playerPortal.renewal.actions.submit")}
+                    </Button>
+                  )}
                 </View>
-              </View>
-            ) : null}
-
-            {flow.submitState.error ? (
-              <PortalErrorState
-                compact
-                title={t('playerPortal.renewal.errors.submitTitle')}
-                error={flow.submitState.error}
-                fallbackMessage={t('playerPortal.renewal.errors.submitFallback')}
-                retryLabel={t('playerPortal.actions.retry')}
-                onRetry={onSubmit}
-              />
-            ) : null}
-
-            <View style={[styles.actionsRow, { flexDirection: getRowDirection(isRTL) }]}> 
-              {flow.step > flow.steps.TYPE ? (
-                <Button
-                  style={styles.actionButton}
-                  variant="secondary"
-                  onPress={() => flow.prevStep()}
-                  leadingIcon={
-                    isRTL ? (
-                      <ArrowRight size={14} color={colors.textPrimary} strokeWidth={2.2} />
-                    ) : (
-                      <ArrowLeft size={14} color={colors.textPrimary} strokeWidth={2.2} />
-                    )
-                  }
-                >
-                  {t('common.actions.back')}
-                </Button>
-              ) : null}
-
-              {flow.step < flow.steps.REVIEW ? (
-                <Button
-                  style={styles.actionButton}
-                  onPress={() => flow.nextStep()}
-                  disabled={nextDisabled}
-                  trailingIcon={
-                    isRTL ? (
-                      <ArrowLeft size={14} color={colors.white} strokeWidth={2.2} />
-                    ) : (
-                      <ArrowRight size={14} color={colors.white} strokeWidth={2.2} />
-                    )
-                  }
-                >
-                  {t('common.actions.next')}
-                </Button>
-              ) : (
-                <Button
-                  style={styles.actionButton}
-                  onPress={onSubmit}
-                  loading={flow.submitState.isSubmitting}
-                  disabled={nextDisabled}
-                  leadingIcon={<CheckCircle2 size={14} color={colors.white} strokeWidth={2.2} />}
-                >
-                  {t('playerPortal.renewal.actions.submit')}
-                </Button>
-              )}
-            </View>
               </>
             )}
           </PortalSectionCard>
@@ -684,7 +871,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   stepperRow: {
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
     gap: spacing.sm,
   },
   stepChip: {
@@ -693,8 +880,8 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.pill,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     gap: spacing.xs,
   },
   block: {
@@ -707,18 +894,18 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   selectCardHead: {
-    alignItems: 'center',
+    alignItems: "center",
     gap: spacing.xs,
   },
   selectIcon: {
     width: 30,
     height: 30,
     borderRadius: borderRadius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   chipsWrap: {
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
     gap: spacing.xs,
   },
   inputGroup: {

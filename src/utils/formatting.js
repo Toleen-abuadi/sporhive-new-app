@@ -21,17 +21,17 @@ export const isolateLTR = (value) => {
 
 const normalizeCurrencyCode = (currency) => {
   const raw = cleanString(currency).toUpperCase();
-  if (!raw) return 'JOD';
+  if (!raw) return 'JD';
 
-  if (['JOD', 'JD', 'د.أ', 'د.ا', 'دأ', 'دا'].includes(raw)) {
-    return 'JOD';
+  if (['JD', 'JD', 'د.أ', 'د.ا', 'دأ', 'دا'].includes(raw)) {
+    return 'JD';
   }
 
   return raw;
 };
 
 const resolveCurrencyLabel = (currencyCode, locale) => {
-  if (currencyCode === 'JOD' && isArabicLocale(locale)) {
+  if (currencyCode === 'JD' && isArabicLocale(locale)) {
     return 'د.أ';
   }
   return currencyCode;
@@ -39,7 +39,7 @@ const resolveCurrencyLabel = (currencyCode, locale) => {
 
 export function formatPrice(
   amount,
-  currency = 'JOD',
+  currency = 'JD',
   locale = 'en',
   {
     minimumFractionDigits = 2,

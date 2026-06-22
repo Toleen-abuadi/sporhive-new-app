@@ -61,7 +61,6 @@ export function PlayerStoreProductScreen() {
   useEffect(() => {
     if (!product) return;
     const preferred = product.variants.find((item) => item.inStock) || product.variants[0] || null;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setVariantId(preferred?.id || null);
   }, [product]);
 
@@ -73,7 +72,6 @@ export function PlayerStoreProductScreen() {
   useEffect(() => {
     if (!selectedVariant) return;
     const max = Math.max(1, Number(selectedVariant.quantity || 1));
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setQuantity((prev) => Math.max(1, Math.min(prev, max)));
   }, [selectedVariant]);
 

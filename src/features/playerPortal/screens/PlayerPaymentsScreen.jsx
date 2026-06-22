@@ -1,43 +1,46 @@
-import { useMemo } from 'react';
-import { RefreshControl, StyleSheet, View } from 'react-native';
-import { useRouter } from 'expo-router';
-import { AppScreen } from '../../../components/ui/AppScreen';
-import { Chip } from '../../../components/ui/Chip';
-import { LanguageSwitch } from '../../../components/ui/LanguageSwitch';
-import { ScreenHeader } from '../../../components/ui/ScreenHeader';
-import { Text } from '../../../components/ui/Text';
+import { useRouter } from "expo-router";
+import { useMemo } from "react";
+import { RefreshControl, StyleSheet, View } from "react-native";
+import { AppScreen } from "../../../components/ui/AppScreen";
+import { Chip } from "../../../components/ui/Chip";
+import { LanguageSwitch } from "../../../components/ui/LanguageSwitch";
+import { ScreenHeader } from "../../../components/ui/ScreenHeader";
+import { Text } from "../../../components/ui/Text";
 import {
-  buildPlayerPaymentDetailsRoute,
-  buildPlayerPaymentInvoiceRoute,
-} from '../../../constants/routes';
-import { useI18n } from '../../../hooks/useI18n';
-import { useTheme } from '../../../hooks/useTheme';
-import { getRowDirection } from '../../../utils/rtl';
-import { spacing } from '../../../theme/tokens';
+    buildPlayerPaymentDetailsRoute,
+    buildPlayerPaymentInvoiceRoute,
+} from "../../../constants/routes";
+import { useI18n } from "../../../hooks/useI18n";
+import { useTheme } from "../../../hooks/useTheme";
+import { spacing } from "../../../theme/tokens";
+import { getRowDirection } from "../../../utils/rtl";
 import {
-  PlayerKpiCard,
-  PlayerPaymentCard,
-  PortalEmptyState,
-  PortalErrorState,
-  PortalSectionCard,
-  PortalSkeletonCard,
-} from '../components';
-import { PLAYER_PAYMENT_FILTERS, usePlayerPayments } from '../hooks';
-import { formatAmountLabel, formatNumberLabel } from '../utils/playerPortal.formatters';
-import { resolvePortalGuardMessage } from '../utils/playerPortal.messages';
+    PlayerKpiCard,
+    PlayerPaymentCard,
+    PortalEmptyState,
+    PortalErrorState,
+    PortalSectionCard,
+    PortalSkeletonCard,
+} from "../components";
+import { PLAYER_PAYMENT_FILTERS, usePlayerPayments } from "../hooks";
+import {
+    formatAmountLabel,
+    formatNumberLabel,
+} from "../utils/playerPortal.formatters";
+import { resolvePortalGuardMessage } from "../utils/playerPortal.messages";
 
 const buildFilterItems = (t) => [
   {
     key: PLAYER_PAYMENT_FILTERS.ALL,
-    label: t('playerPortal.payments.filters.all'),
+    label: t("playerPortal.payments.filters.all"),
   },
   {
     key: PLAYER_PAYMENT_FILTERS.PENDING,
-    label: t('playerPortal.payments.filters.pending'),
+    label: t("playerPortal.payments.filters.pending"),
   },
   {
     key: PLAYER_PAYMENT_FILTERS.PAID,
-    label: t('playerPortal.payments.filters.paid'),
+    label: t("playerPortal.payments.filters.paid"),
   },
 ];
 
@@ -60,7 +63,8 @@ export function PlayerPaymentsScreen() {
   } = usePlayerPayments();
 
   const filters = useMemo(() => buildFilterItems(t), [t]);
-  const isInitialLoading = (isLoading || (!overview && !error)) && payments.length === 0;
+  const isInitialLoading =
+    (isLoading || (!overview && !error)) && payments.length === 0;
   const hasErrorOnly = Boolean(error) && payments.length === 0;
 
   return (
@@ -77,50 +81,61 @@ export function PlayerPaymentsScreen() {
       }
     >
       <ScreenHeader
-        title={t('playerPortal.payments.title')}
-        subtitle={t('playerPortal.payments.subtitle')}
+        title={t("playerPortal.payments.title")}
+        subtitle={t("playerPortal.payments.subtitle")}
         right={<LanguageSwitch compact />}
       />
 
       {!canFetch ? (
         <PortalSectionCard>
           <PortalEmptyState
-            title={t('playerPortal.home.unavailableTitle')}
+            title={t("playerPortal.home.unavailableTitle")}
             description={resolvePortalGuardMessage(guardReason, t)}
           />
         </PortalSectionCard>
       ) : null}
 
       {canFetch ? (
-        <View style={[styles.kpiRow, { flexDirection: getRowDirection(isRTL) }]}>
+        <View
+          style={[styles.kpiRow, { flexDirection: getRowDirection(isRTL) }]}
+        >
           <PlayerKpiCard
-            label={t('playerPortal.payments.summary.totalCount')}
-            value={formatNumberLabel(paymentSummary.totalCount, { locale, fallback: '0' })}
-            hint={t('playerPortal.payments.summary.records')}
+            label={t("playerPortal.payments.summary.totalCount")}
+            value={formatNumberLabel(paymentSummary.totalCount, {
+              locale,
+              fallback: "0",
+            })}
+            hint={t("playerPortal.payments.summary.records")}
             style={styles.kpiCard}
           />
           <PlayerKpiCard
-            label={t('playerPortal.payments.summary.pending')}
+            label={t("playerPortal.payments.summary.pending")}
             value={formatAmountLabel(paymentSummary.totalPendingAmount, {
               locale,
-              fallback: '0',
-              currency: 'JOD',
+              fallback: "0",
+              currency: "JD",
             })}
-            hint={t('playerPortal.payments.summary.pendingCount', {
-              count: formatNumberLabel(paymentSummary.pendingCount, { locale, fallback: '0' }),
+            hint={t("playerPortal.payments.summary.pendingCount", {
+              count: formatNumberLabel(paymentSummary.pendingCount, {
+                locale,
+                fallback: "0",
+              }),
             })}
             status="pending"
             style={styles.kpiCard}
           />
           <PlayerKpiCard
-            label={t('playerPortal.payments.summary.paid')}
+            label={t("playerPortal.payments.summary.paid")}
             value={formatAmountLabel(paymentSummary.totalPaidAmount, {
               locale,
-              fallback: '0',
-              currency: 'JOD',
+              fallback: "0",
+              currency: "JD",
             })}
-            hint={t('playerPortal.payments.summary.paidCount', {
-              count: formatNumberLabel(paymentSummary.paidCount, { locale, fallback: '0' }),
+            hint={t("playerPortal.payments.summary.paidCount", {
+              count: formatNumberLabel(paymentSummary.paidCount, {
+                locale,
+                fallback: "0",
+              }),
             })}
             status="paid"
             style={styles.kpiCard}
@@ -130,10 +145,15 @@ export function PlayerPaymentsScreen() {
 
       {canFetch ? (
         <PortalSectionCard
-          title={t('playerPortal.payments.sections.listTitle')}
-          subtitle={t('playerPortal.payments.sections.listSubtitle')}
+          title={t("playerPortal.payments.sections.listTitle")}
+          subtitle={t("playerPortal.payments.sections.listSubtitle")}
         >
-          <View style={[styles.filtersRow, { flexDirection: getRowDirection(isRTL) }]}>
+          <View
+            style={[
+              styles.filtersRow,
+              { flexDirection: getRowDirection(isRTL) },
+            ]}
+          >
             {filters.map((item) => (
               <Chip
                 key={item.key}
@@ -154,18 +174,18 @@ export function PlayerPaymentsScreen() {
 
           {!isInitialLoading && hasErrorOnly ? (
             <PortalErrorState
-              title={t('playerPortal.payments.errors.loadTitle')}
+              title={t("playerPortal.payments.errors.loadTitle")}
               error={error}
-              fallbackMessage={t('playerPortal.payments.errors.loadFallback')}
-              retryLabel={t('playerPortal.actions.retry')}
+              fallbackMessage={t("playerPortal.payments.errors.loadFallback")}
+              retryLabel={t("playerPortal.actions.retry")}
               onRetry={() => refetch()}
             />
           ) : null}
 
           {!isInitialLoading && !hasErrorOnly && payments.length === 0 ? (
             <PortalEmptyState
-              title={t('playerPortal.payments.empty.title')}
-              description={t('playerPortal.payments.empty.description')}
+              title={t("playerPortal.payments.empty.title")}
+              description={t("playerPortal.payments.empty.description")}
             />
           ) : null}
 
@@ -176,8 +196,12 @@ export function PlayerPaymentsScreen() {
                   key={item.id || `${item.label}-${item.dueDate}`}
                   item={item}
                   locale={locale}
-                  onPress={() => router.push(buildPlayerPaymentDetailsRoute(item.id))}
-                  onInvoicePress={() => router.push(buildPlayerPaymentInvoiceRoute(item.id))}
+                  onPress={() =>
+                    router.push(buildPlayerPaymentDetailsRoute(item.id))
+                  }
+                  onInvoicePress={() =>
+                    router.push(buildPlayerPaymentInvoiceRoute(item.id))
+                  }
                 />
               ))}
             </View>
@@ -187,7 +211,7 @@ export function PlayerPaymentsScreen() {
 
       {canFetch && error && payments.length > 0 ? (
         <Text variant="caption" color={colors.textMuted}>
-          {t('playerPortal.payments.errors.partialLoad')}
+          {t("playerPortal.payments.errors.partialLoad")}
         </Text>
       ) : null}
     </AppScreen>
@@ -199,14 +223,14 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   kpiRow: {
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
     gap: spacing.sm,
   },
   kpiCard: {
-    minWidth: '31%',
+    minWidth: "31%",
   },
   filtersRow: {
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
     gap: spacing.sm,
   },
   listWrap: {

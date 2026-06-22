@@ -191,8 +191,6 @@
     "login": {
       "title": "مرحبًا بعودتك",
       "subtitle": "سجّل الدخول لمتابعة رحلتك في سبورهايف.",
-      "modeLocked": "تم تثبيت الوضع حسب المسار الذي اخترته.",
-      "modeLockedHint": "أنت تتابع كـ {{mode}} وفق اختيارك السابق.",
       "redirectHint": "سيتم تحويلك إلى الصفحة المطلوبة بعد تسجيل الدخول.",
       "playerAccountHint": "حسابات اللاعبين يتم تزويدها من الأكاديمية."
     },
@@ -227,7 +225,6 @@
       "verifyCode": "تحقق من الرمز",
       "resetPassword": "تحديث كلمة المرور",
       "backToLogin": "العودة لتسجيل الدخول",
-      "changeMode": "تغيير الوضع",
       "revealPassword": "إظهار",
       "hidePassword": "إخفاء",
       "copyPassword": "نسخ"
@@ -305,6 +302,8 @@
   "errors": {
     "couldNotSaveChoice": "تعذر حفظ اختيارك. حاول مرة أخرى."
   },
+  "yes": "نعم",
+  "no": "لا",
   "playerPortal": {
     "guards": {
       "unauthenticated": "يلزم تسجيل الدخول كلاعب لفتح البوابة.",
@@ -954,6 +953,8 @@
         "contactSubtitle": "الهاتف والعنوان وروابط الموقع",
         "healthTitle": "المعلومات البدنية",
         "healthSubtitle": "بيانات الطول والوزن",
+        "additionalInfoTitle": "معلومات إضافية",
+        "additionalInfoSubtitle": "تفاصيل إضافية تم إدخالها أثناء التسجيل",
         "imageTitle": "الصورة الشخصية",
         "imageSubtitle": "اختيار ورفع صورة اللاعب"
       },
@@ -999,7 +1000,8 @@
         "weightLabel": "الوزن (كجم)",
         "heightLabel": "الطول (سم)",
         "imageSourceLabel": "رابط الصورة / مصدر Base64",
-        "imageSourcePlaceholder": "https://... أو data:image/..."
+        "imageSourcePlaceholder": "https://... أو data:image/...",
+        "dynamicFieldValue": "{{label}}: {{value}}"
       },
       "messages": {
         "updated": "تم تحديث الملف الشخصي بنجاح."
@@ -1009,6 +1011,7 @@
         "loadFallback": "يرجى إعادة محاولة تحميل الملف.",
         "submitTitle": "تعذر تحديث الملف الشخصي",
         "submitFallback": "راجع القيم ثم أعد المحاولة.",
+        "fixHighlighted": "يرجى تصحيح الحقول المحددة.",
         "imagePermission": "صلاحية الوسائط مطلوبة لاختيار صورة.",
         "imageSelect": "تعذر اختيار ملف الصورة."
       },
@@ -1021,7 +1024,21 @@
         "arabicName": "استخدم أحرفًا عربية فقط.",
         "googleMapsLocation": "يرجى إدخال رابط Google Maps صالح.",
         "weight": "يجب أن يكون الوزن رقمًا صالحًا ضمن النطاق المسموح.",
-        "height": "يجب أن يكون الطول رقمًا صالحًا ضمن النطاق المسموح."
+        "height": "يجب أن يكون الطول رقمًا صالحًا ضمن النطاق المسموح.",
+        "required": "هذا الحقل مطلوب.",
+        "invalidNumber": "أدخل رقمًا صالحًا.",
+        "invalidEmail": "أدخل بريدًا إلكترونيًا صالحًا.",
+        "invalidPhone": "أدخل رقم هاتف صالحًا.",
+        "invalidDate": "أدخل تاريخًا صالحًا.",
+        "maxLength": "يجب ألا يتجاوز النص {{count}} حرفًا.",
+        "minValue": "يجب أن تكون القيمة أكبر من أو تساوي {{count}}.",
+        "maxValue": "يجب أن تكون القيمة أقل من أو تساوي {{count}}.",
+        "minDate": "يجب أن يكون التاريخ في {{date}} أو بعده.",
+        "maxDate": "يجب أن يكون التاريخ في {{date}} أو قبله.",
+        "minSelections": "اختر ما لا يقل عن {{count}} خيارات.",
+        "maxSelections": "اختر ما لا يزيد على {{count}} خيارات.",
+        "invalidOption": "اختر خيارًا صالحًا.",
+        "invalidYesNo": "اختر نعم أو لا."
       }
     }
   },

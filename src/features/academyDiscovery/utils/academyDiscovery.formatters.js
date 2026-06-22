@@ -1,13 +1,13 @@
-import { normalizeJoinStatus } from './academyDiscovery.statuses';
-import { cleanString, toArray, toNumber } from './academyDiscovery.normalizers';
-import { toEnglishDigits } from '../../../utils/numbering';
 import {
-  formatPrice,
-  formatRange,
-  formatTime,
-  isArabicLocale,
-  isolateLTR,
+    formatPrice,
+    formatRange,
+    formatTime,
+    isArabicLocale,
+    isolateLTR,
 } from '../../../utils/formatting';
+import { toEnglishDigits } from '../../../utils/numbering';
+import { cleanString, toArray, toNumber } from './academyDiscovery.normalizers';
+import { normalizeJoinStatus } from './academyDiscovery.statuses';
 
 export const getLocalizedText = ({
   locale = 'en',
@@ -25,7 +25,7 @@ export const getLocalizedText = ({
 
 export const formatAcademyFee = (
   amount,
-  { locale = 'en', currency = 'JOD', feeType = '' } = {}
+  { locale = 'en', currency = 'JD', feeType = '' } = {}
 ) => {
   const formatted = formatPrice(amount, currency, locale, {
     minimumFractionDigits: 2,

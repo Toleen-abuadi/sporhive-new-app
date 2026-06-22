@@ -35,6 +35,8 @@
       "done": "Done",
       "selectDate": "Select date"
     },
+    "yes": "Yes",
+    "no": "No",
     "accessibility": {
       "closeToast": "Dismiss notification",
       "languageSwitch": "Language switch"
@@ -191,8 +193,6 @@
     "login": {
       "title": "Welcome Back",
       "subtitle": "Sign in to continue your SporHive journey.",
-      "modeLocked": "Mode is locked based on your selected entry path.",
-      "modeLockedHint": "You are continuing as {{mode}} based on your entry selection.",
       "redirectHint": "You will be redirected to your requested page after login.",
       "playerAccountHint": "Player accounts are provided by your academy."
     },
@@ -227,7 +227,6 @@
       "verifyCode": "Verify code",
       "resetPassword": "Update password",
       "backToLogin": "Back to login",
-      "changeMode": "Change mode",
       "revealPassword": "Reveal",
       "hidePassword": "Hide",
       "copyPassword": "Copy"
@@ -947,6 +946,8 @@
         "contactSubtitle": "Phone, address, and location links",
         "healthTitle": "Physical Information",
         "healthSubtitle": "Height and weight values",
+        "additionalInfoTitle": "Additional information",
+        "additionalInfoSubtitle": "Extra details provided during registration",
         "imageTitle": "Profile Image",
         "imageSubtitle": "Select and upload a player profile image"
       },
@@ -992,7 +993,8 @@
         "weightLabel": "Weight (kg)",
         "heightLabel": "Height (cm)",
         "imageSourceLabel": "Image URL / Base64 Source",
-        "imageSourcePlaceholder": "https://... or data:image/..."
+        "imageSourcePlaceholder": "https://... or data:image/...",
+        "dynamicFieldValue": "{{label}}: {{value}}"
       },
       "messages": {
         "updated": "Profile updated successfully."
@@ -1002,10 +1004,25 @@
         "loadFallback": "Please retry profile loading.",
         "submitTitle": "Unable to update profile",
         "submitFallback": "Review form values and retry.",
+        "fixHighlighted": "Please fix the highlighted fields.",
         "imagePermission": "Media permission is required to choose an image.",
         "imageSelect": "Unable to select image file."
       },
       "validation": {
+        "required": "This field is required.",
+        "invalidNumber": "Enter a valid number.",
+        "invalidEmail": "Enter a valid email address.",
+        "invalidPhone": "Enter a valid phone number.",
+        "invalidDate": "Enter a valid date.",
+        "maxLength": "Must be at most {{count}} characters.",
+        "minValue": "Must be at least {{value}}.",
+        "maxValue": "Must be at most {{value}}.",
+        "minDate": "Date must be on or after {{value}}.",
+        "maxDate": "Date must be on or before {{value}}.",
+        "minSelections": "Select at least {{count}} options.",
+        "maxSelections": "Select no more than {{count}} options.",
+        "invalidOption": "Select a valid option.",
+        "invalidYesNo": "Select Yes or No.",
         "phone1": "Primary phone number is required and must be valid.",
         "dateOfBirth": "Date of birth must use YYYY-MM-DD format.",
         "dateOfBirthFuture": "Date of birth cannot be in the future.",

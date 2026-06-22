@@ -367,7 +367,7 @@ const normalizePaymentInfo = (source) => {
     subType: pickFirstString(data.sub_type),
     status: normalizePaymentStatus(data.status),
     amount: pickFirstString(data.amount, '0'),
-    currency: pickFirstString(data.currency, data.currency_code, 'JOD'),
+    currency: pickFirstString(data.currency, data.currency_code, 'JD'),
     dueDate: normalizeIsoDate(data.due_date),
     paidOn: normalizeIsoDate(data.paid_on),
     paymentMethod: pickFirstString(data.payment_method),
