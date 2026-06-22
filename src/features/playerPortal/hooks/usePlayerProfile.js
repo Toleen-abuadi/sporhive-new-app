@@ -22,6 +22,15 @@ const hasDynamicFields = (value) => {
 
 const pickDynamicGroup = (...values) => values.find(hasDynamicFields) || null;
 
+const getProfileOverviewPayload = () => ({
+  include_availability: false,
+  include_performance: false,
+  include_history: false,
+  include_requests: false,
+  include_metadata: true,
+  mode: 'profile',
+});
+
 const mergePlayerPortalDynamicFields = (profile, fallbackProfile = null) => {
   if (!profile) return profile;
 
@@ -71,7 +80,8 @@ const mergePlayerPortalDynamicFields = (profile, fallbackProfile = null) => {
 
 export function usePlayerProfile() {
   const { actions, session } = usePlayerPortalStore();
-  const overviewQuery = usePlayerOverview({ auto: true, enabled: true });
+  const overviewPayload = useMemo(() => getProfileOverviewPayload(), []);
+  const overviewQuery = usePlayerOverview({ auto: true, enabled: true, payload: overviewPayload });
   const [isFetchingProfile, setIsFetchingProfile] = useState(false);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [profileError, setProfileError] = useState(null);
@@ -89,7 +99,16 @@ export function usePlayerProfile() {
 
   const profile = profileSnapshot || profileFromOverview || null;
 
-  const fetchProfile = useCallback(async () => {
+  const hasRequiredEditableFields = useCallback((value) => {
+    const profileValue = value || {};
+    return (
+      cleanString(profileValue.first_eng_name) !== '' &&
+      cleanString(profileValue.last_eng_name) !== '' &&
+      cleanString(profileValue.phone1) !== ''
+    );
+  }, []);
+
+  const fetchProfile = useCallback(async ({ fallbackOnly = false } = {}) => {
     if (!session.canFetchOverview || !session.requestContext) {
       const error = buildGuardError();
       setProfileError(error);
@@ -99,7 +118,22 @@ export function usePlayerProfile() {
     setIsFetchingProfile(true);
     setProfileError(null);
 
-    const result = await playerPortalApi.getProfile(session.requestContext);
+    let overviewProfile = null;
+
+    if (!fallbackOnly) {
+      const overviewResult = await overviewQuery.refetch();
+      if (overviewResult.success && overviewResult.data) {
+        overviewProfile = mapProfileFromOverview(overviewResult.data);
+        if (hasRequiredEditableFields(overviewProfile)) {
+          setIsFetchingProfile(false);
+          setProfileSnapshot(mergePlayerPortalDynamicFields(overviewProfile, profileSnapshot || profileFromOverview));
+          return overviewResult;
+        }
+      }
+    }
+
+    const result = await playerPortalApi.getProfile(session.requestContext, overviewPayload);
+
     setIsFetchingProfile(false);
 
     if (!result.success) {
@@ -108,21 +142,36 @@ export function usePlayerProfile() {
     }
 
     if (result.data) {
-      setProfileSnapshot(mergePlayerPortalDynamicFields(result.data, profileFromOverview || profileSnapshot));
+      setProfileSnapshot(mergePlayerPortalDynamicFields(result.data, overviewProfile || profileFromOverview || profileSnapshot));
     }
 
     return result;
-  }, [profileFromOverview, profileSnapshot, session.canFetchOverview, session.requestContext]);
+  }, [
+    hasRequiredEditableFields,
+    overviewPayload,
+    overviewQuery,
+    profileFromOverview,
+    profileSnapshot,
+    session.canFetchOverview,
+    session.requestContext,
+  ]);
 
   useEffect(() => {
+    const overviewReady = Boolean(profileFromOverview || overviewQuery.error || overviewQuery.lastFetchedAt);
     if (!session.canFetchOverview || !session.requestContext) return;
-    if (profile || isFetchingProfile || isUpdatingProfile) return;
+    if (!overviewReady) return;
+    if (profile && hasRequiredEditableFields(profile)) return;
+    if (isFetchingProfile || isUpdatingProfile) return;
     if (profileError) return;
-    fetchProfile();
+    fetchProfile({ fallbackOnly: true });
   }, [
+    hasRequiredEditableFields,
     fetchProfile,
     isFetchingProfile,
     isUpdatingProfile,
+    overviewQuery.error,
+    overviewQuery.lastFetchedAt,
+    profileFromOverview,
     profile,
     profileError,
     session.canFetchOverview,

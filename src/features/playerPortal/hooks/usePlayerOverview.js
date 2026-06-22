@@ -10,14 +10,14 @@ const buildGuardError = (reason) => ({
   details: { reason },
 });
 
-export function usePlayerOverview({ auto = true, enabled = true } = {}) {
+export function usePlayerOverview({ auto = true, enabled = true, payload = {} } = {}) {
   const { state, actions, session } = usePlayerPortalStore();
   const didAutoFetchRef = useRef(false);
 
   const canRun = enabled && session.canFetchOverview;
 
   const fetchOverview = useCallback(
-    async ({ refresh = false, force = false, payload = {} } = {}) => {
+    async ({ refresh = false, force = false, payload: requestPayload = {} } = {}) => {
       if (!enabled) {
         return {
           success: false,
@@ -36,7 +36,10 @@ export function usePlayerOverview({ auto = true, enabled = true } = {}) {
       }
 
       actions.startOverviewLoad(refresh);
-      const result = await playerPortalApi.getOverview(session.requestContext, payload);
+      const result = await playerPortalApi.getOverview(session.requestContext, {
+        ...payload,
+        ...requestPayload,
+      });
 
       if (result.success) {
         actions.setOverviewSuccess(result.data);
@@ -49,6 +52,7 @@ export function usePlayerOverview({ auto = true, enabled = true } = {}) {
     [
       actions,
       enabled,
+      payload,
       session.canFetchOverview,
       session.guardReason,
       session.requestContext,
