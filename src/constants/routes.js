@@ -31,6 +31,7 @@ export const ROUTES = Object.freeze({
   PLAYER_NEWS_DETAIL: '/(player)/news/[newsId]',
   PLAYER_FREEZE: '/(player)/freeze',
   PLAYER_RENEWAL: '/(player)/renewal',
+  PLAYER_CONTACT_ADMIN: '/(player)/contact-admin',
   PLAYER_PROFILE: '/(player)/profile',
   PLAYER_PROFILE_EDIT: '/(player)/profile/edit',
   BOOKING_HOME: '/(public)/playgrounds',

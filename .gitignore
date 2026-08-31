@@ -137,3 +137,12 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+.expo/
+
+# Android generated artifacts (must stay out of EAS upload)
+android/build/
+android/app/build/
+android/.gradle/
+android/.kotlin/
+android/app/.cxx/

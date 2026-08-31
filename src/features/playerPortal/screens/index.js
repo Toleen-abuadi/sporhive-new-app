@@ -16,3 +16,4 @@ export { PlayerFreezeScreen } from './PlayerFreezeScreen';
 export { PlayerRenewalScreen } from './PlayerRenewalScreen';
 export { PlayerProfileScreen } from './PlayerProfileScreen';
 export { PlayerProfileEditScreen } from './PlayerProfileEditScreen';
+export { PlayerContactAdminScreen } from './PlayerContactAdminScreen';

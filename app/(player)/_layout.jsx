@@ -7,6 +7,7 @@ import {
   Gauge,
   HandCoins,
   House,
+  MessageCircle,
   Newspaper,
   ShieldPlus,
   ShoppingBasket,
@@ -155,6 +156,12 @@ function PlayerMenuDrawer({ visible, onClose, onNavigate }) {
         label: t('playerPortal.actions.news'),
         icon: Newspaper,
         href: ROUTES.PLAYER_NEWS,
+      },
+      {
+        key: 'contactAdmin',
+        label: t('playerMessages.contactAdmin'),
+        icon: MessageCircle,
+        href: ROUTES.PLAYER_CONTACT_ADMIN,
       },
       {
         key: 'performance',

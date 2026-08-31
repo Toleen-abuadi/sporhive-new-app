@@ -1035,6 +1035,58 @@
       }
     }
   },
+  "playerMessages": {
+    "contactAdmin": "Contact Admin",
+    "contactSubtitle": "Send a question, complaint, note, or feedback to the academy admin.",
+    "newMessage": "New Message",
+    "category": {
+      "label": "Category",
+      "feedback": "Feedback",
+      "complaint": "Complaint",
+      "note": "Note",
+      "question": "Question",
+      "other": "Other"
+    },
+    "subject": "Subject",
+    "subjectPlaceholder": "Enter a clear subject",
+    "message": "Message",
+    "messagePlaceholder": "Write your message here...",
+    "priority": {
+      "label": "Priority",
+      "normal": "Normal",
+      "urgent": "Urgent"
+    },
+    "send": "Send",
+    "sending": "Sending...",
+    "history": "Message History",
+    "details": "Message Details",
+    "status": {
+      "unread": "Unread",
+      "read": "Read",
+      "inProgress": "In progress",
+      "resolved": "Resolved",
+      "closed": "Closed"
+    },
+    "empty": {
+      "title": "No messages yet.",
+      "description": "Send your first question or note to the academy admin."
+    },
+    "validation": {
+      "categoryRequired": "Category is required.",
+      "subjectRequired": "Subject is required.",
+      "messageRequired": "Message is required.",
+      "subjectTooLong": "Subject must be at most 255 characters.",
+      "messageTooLong": "Message must be at most 3000 characters."
+    },
+    "toast": {
+      "sent": "Your message was sent to the admin.",
+      "loadFailed": "Could not load messages from admin.",
+      "sendFailed": "Could not send your message. Please try again."
+    },
+    "retry": "Retry",
+    "createdAt": "Created",
+    "updatedAt": "Updated"
+  },
   "playgrounds": {
     "filters": {
       "title": "Filters",

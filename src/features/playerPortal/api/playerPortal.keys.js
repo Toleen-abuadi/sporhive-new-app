@@ -33,6 +33,7 @@ export const PLAYER_PORTAL_ENDPOINTS = Object.freeze({
 
   printInvoice: '/registration/print_invoice',
   newsList: '/news/list',
+  playerMessages: '/player-msg/messages',
 });
 
 export const playerPortalKeys = Object.freeze({

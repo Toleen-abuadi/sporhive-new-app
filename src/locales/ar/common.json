@@ -1042,6 +1042,58 @@
       }
     }
   },
+  "playerMessages": {
+    "contactAdmin": "تواصل مع الإدارة",
+    "contactSubtitle": "أرسل سؤالاً أو شكوى أو ملاحظة أو تغذية راجعة إلى إدارة الأكاديمية.",
+    "newMessage": "رسالة جديدة",
+    "category": {
+      "label": "الفئة",
+      "feedback": "تغذية راجعة",
+      "complaint": "شكوى",
+      "note": "ملاحظة",
+      "question": "سؤال",
+      "other": "أخرى"
+    },
+    "subject": "الموضوع",
+    "subjectPlaceholder": "أدخل موضوعًا واضحًا",
+    "message": "الرسالة",
+    "messagePlaceholder": "اكتب رسالتك هنا...",
+    "priority": {
+      "label": "الأولوية",
+      "normal": "عادية",
+      "urgent": "عاجلة"
+    },
+    "send": "إرسال",
+    "sending": "جاري الإرسال...",
+    "history": "سجل الرسائل",
+    "details": "تفاصيل الرسالة",
+    "status": {
+      "unread": "غير مقروءة",
+      "read": "مقروءة",
+      "inProgress": "قيد المتابعة",
+      "resolved": "تم الحل",
+      "closed": "مغلقة"
+    },
+    "empty": {
+      "title": "لا توجد رسائل بعد.",
+      "description": "أرسل أول سؤال أو ملاحظة إلى إدارة الأكاديمية."
+    },
+    "validation": {
+      "categoryRequired": "الفئة مطلوبة.",
+      "subjectRequired": "الموضوع مطلوب.",
+      "messageRequired": "الرسالة مطلوبة.",
+      "subjectTooLong": "لا يمكن أن يتجاوز الموضوع 255 حرفًا.",
+      "messageTooLong": "لا يمكن أن تتجاوز الرسالة 3000 حرف."
+    },
+    "toast": {
+      "sent": "تم إرسال رسالتك إلى الإدارة.",
+      "loadFailed": "تعذر تحميل الرسائل من الإدارة.",
+      "sendFailed": "تعذر إرسال رسالتك. يرجى المحاولة مرة أخرى."
+    },
+    "retry": "إعادة المحاولة",
+    "createdAt": "تاريخ الإنشاء",
+    "updatedAt": "آخر تحديث"
+  },
   "playgrounds": {
     "filters": {
       "title": "الفلاتر",

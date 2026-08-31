@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import {
     CreditCard,
     HandCoins,
+    MessageCircle,
     ShieldPlus,
     ShoppingBasket,
 } from "lucide-react-native";
@@ -122,6 +123,18 @@ export function PlayerHomeScreen() {
           <HandCoins size={15} color={colors.accentOrange} strokeWidth={2.3} />
         ),
         onPress: () => router.push(ROUTES.PLAYER_FREEZE),
+      },
+      {
+        key: "contactAdmin",
+        label: t("playerMessages.contactAdmin"),
+        icon: (
+          <MessageCircle
+            size={15}
+            color={colors.accentOrange}
+            strokeWidth={2.3}
+          />
+        ),
+        onPress: () => router.push(ROUTES.PLAYER_CONTACT_ADMIN),
       },
     ],
     [colors.accentOrange, router, t],

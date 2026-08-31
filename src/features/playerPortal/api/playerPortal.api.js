@@ -901,6 +901,47 @@ export const playerPortalApi = {
     }).then((result) => ensureProxyResultShape(result, mapNewsListResponse));
   },
 
+  listPlayerPortalMessages(context, payload = {}) {
+    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.playerMessages, {
+      context,
+      method: 'GET',
+      payload,
+      includePlayerId: false,
+      requirePlayerId: false,
+    });
+  },
+
+  createPlayerPortalMessage(context, payload = {}) {
+    return proxyRequest(PLAYER_PORTAL_ENDPOINTS.playerMessages, {
+      context,
+      payload,
+      includePlayerId: false,
+      requirePlayerId: false,
+    });
+  },
+
+  getPlayerPortalMessage(context, messageId, payload = {}) {
+    const safeMessageId = cleanString(messageId);
+    if (!safeMessageId) {
+      return {
+        success: false,
+        error: createPortalError({
+          code: 'BAD_REQUEST',
+          status: 400,
+          message: 'Message id is required.',
+        }),
+      };
+    }
+
+    return proxyRequest(`${PLAYER_PORTAL_ENDPOINTS.playerMessages}/${encodeURIComponent(safeMessageId)}`, {
+      context,
+      method: 'GET',
+      payload,
+      includePlayerId: false,
+      requirePlayerId: false,
+    });
+  },
+
   async getNewsById(context, newsId, payload = {}) {
     const targetId = toNumber(newsId);
     if (targetId == null) {
